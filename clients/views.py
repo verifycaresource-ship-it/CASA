@@ -239,4 +239,3 @@ class ClientViewSet(viewsets.ModelViewSet):
             })
         return Response({"success": False}, status=status.HTTP_404_NOT_FOUND)
 
-

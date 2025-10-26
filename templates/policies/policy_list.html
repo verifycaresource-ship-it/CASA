@@ -4,80 +4,132 @@
 {% block title %}Policies | Health Insurance{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+<div class="max-w-7xl mx-auto p-6 space-y-6">
 
-  <!-- Header -->
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">Policies</h1>
-    <a href="{% url 'policies:add_policy' %}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-      ➕ Add New Policy
-    </a>
+  <!-- Header & Actions -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <h1 class="text-3xl font-extrabold text-gray-900">Policies</h1>
+    <div class="flex flex-wrap gap-3">
+      <a href="{% url 'hospitals:assign_policyholder' %}" 
+         class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+        📝 Assign Policyholder
+      </a>
+      <a href="{% url 'policies:add_policy' %}" 
+         class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition">
+        ➕ Add New Policy
+      </a>
+      <button id="export-btn" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition">
+        📥 Export CSV
+      </button>
+    </div>
   </div>
 
-  <!-- Messages -->
-  {% if messages %}
-    {% for message in messages %}
-      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div id="monthly-card" 
+       class="flex flex-col justify-between p-6 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition cursor-pointer">
+      <div class="text-sm font-medium uppercase">Monthly Assigned Policies</div>
+      <div class="mt-2 text-3xl font-extrabold">{{ monthly_policies|length }}</div>
+    </div>
+
+    <div class="flex flex-col justify-between p-6 bg-gradient-to-r from-green-500 to-green-400 text-white rounded-xl shadow-lg">
+      <div class="text-sm font-medium uppercase">Total Policies</div>
+      <div class="mt-2 text-3xl font-extrabold">{{ policies|length }}</div>
+    </div>
+
+    <div class="flex flex-col justify-between p-6 bg-gradient-to-r from-yellow-500 to-yellow-400 text-white rounded-xl shadow-lg">
+      <div class="text-sm font-medium uppercase">Active Policies</div>
+      <div class="mt-2 text-3xl font-extrabold">{{ active_count }}</div>
+    </div>
+  </div>
 
   <!-- Policies Table -->
-  <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden text-sm">
-    <thead class="bg-gray-50">
-      <tr>
-        <th class="px-4 py-2 border-b">Policy #</th>
-        <th class="px-4 py-2 border-b">Client</th>
-        <th class="px-4 py-2 border-b">Type</th>
-        <th class="px-4 py-2 border-b">Premium</th>
-        <th class="px-4 py-2 border-b">Start Date</th>
-        <th class="px-4 py-2 border-b">Expiry Date</th>
-        <th class="px-4 py-2 border-b">Days Left</th>
-        <th class="px-4 py-2 border-b">Active</th>
-        <th class="px-4 py-2 border-b">Coverage</th>
-        <th class="px-4 py-2 border-b">Max Claim ($)</th>
-        <th class="px-4 py-2 border-b">Waiting Period (days)</th>
-        <th class="px-4 py-2 border-b">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for policy in policies %}
-      <tr class="hover:bg-gray-50">
-        <td class="px-4 py-2 border-b">{{ policy.policy_number }}</td>
-        <td class="px-4 py-2 border-b">{{ policy.client.first_name }} {{ policy.client.last_name }}</td>
-        <td class="px-4 py-2 border-b">{{ policy.get_policy_type_display }}</td>
-        <td class="px-4 py-2 border-b">${{ policy.premium }}</td>
-        <td class="px-4 py-2 border-b">{{ policy.start_date }}</td>
-        <td class="px-4 py-2 border-b">{{ policy.expiry_date }}</td>
-        <td class="px-4 py-2 border-b">
-          {% if policy.days_left >= 0 %}
-            <span class="text-green-600 font-semibold">{{ policy.days_left }} days</span>
-          {% else %}
-            <span class="text-red-600 font-semibold">Expired</span>
-          {% endif %}
-        </td>
-        <td class="px-4 py-2 border-b">
-          {% if policy.is_active %}
-            <span class="text-green-600 font-bold">Yes</span>
-          {% else %}
-            <span class="text-red-600 font-bold">No</span>
-          {% endif %}
-        </td>
-        <td class="px-4 py-2 border-b">{{ policy.coverage_details|truncatechars:40 }}</td>
-        <td class="px-4 py-2 border-b">${{ policy.max_claim_limit }}</td>
-        <td class="px-4 py-2 border-b">{{ policy.waiting_period_days }}</td>
-        <td class="px-4 py-2 border-b space-x-2">
-          <a href="{% url 'policies:policy_detail' policy.id %}" class="text-blue-600 hover:underline">View</a>
-          <a href="{% url 'policies:edit_policy' policy.id %}" class="text-yellow-600 hover:underline">Edit</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="12" class="text-center px-4 py-6 text-gray-500">No policies found.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="overflow-x-auto rounded-lg shadow border border-gray-200 mt-6">
+    <table id="policies-table" class="min-w-full divide-y divide-gray-200 text-sm bg-white">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-2 text-left font-semibold">Policy #</th>
+          <th class="px-4 py-2 text-left font-semibold">Client</th>
+          <th class="px-4 py-2 text-left font-semibold">Type</th>
+          <th class="px-4 py-2 text-left font-semibold">Premium</th>
+          <th class="px-4 py-2 text-left font-semibold">Start Date</th>
+          <th class="px-4 py-2 text-left font-semibold">Expiry Date</th>
+          <th class="px-4 py-2 text-left font-semibold">Days Left</th>
+          <th class="px-4 py-2 text-left font-semibold">Active</th>
+          <th class="px-4 py-2 text-left font-semibold">Coverage</th>
+          <th class="px-4 py-2 text-left font-semibold">Max Claim ($)</th>
+          <th class="px-4 py-2 text-left font-semibold">Waiting Period</th>
+          <th class="px-4 py-2 text-left font-semibold">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for policy in policies %}
+        <tr class="hover:bg-gray-50 transition {% if policy in monthly_policies %}monthly{% endif %}">
+          <td class="px-4 py-2">{{ policy.policy_number }}</td>
+          <td class="px-4 py-2">{{ policy.client.first_name }} {{ policy.client.last_name }}</td>
+          <td class="px-4 py-2">{{ policy.get_policy_type_display }}</td>
+          <td class="px-4 py-2">${{ policy.premium }}</td>
+          <td class="px-4 py-2">{{ policy.start_date }}</td>
+          <td class="px-4 py-2">{{ policy.expiry_date }}</td>
+          <td class="px-4 py-2">{% if policy.days_left >= 0 %}<span class="text-green-600 font-semibold">{{ policy.days_left }} days</span>{% else %}<span class="text-red-600 font-semibold">Expired</span>{% endif %}</td>
+          <td class="px-4 py-2">{% if policy.is_active %}<span class="text-green-600 font-bold">Yes</span>{% else %}<span class="text-red-600 font-bold">No</span>{% endif %}</td>
+          <td class="px-4 py-2">{{ policy.coverage_details|truncatechars:40 }}</td>
+          <td class="px-4 py-2">${{ policy.max_claim_limit }}</td>
+          <td class="px-4 py-2">{{ policy.waiting_period_days }}</td>
+          <td class="px-4 py-2 space-x-2">
+            <a href="{% url 'policies:policy_detail' policy.id %}" class="text-blue-600 hover:underline">View</a>
+            <a href="{% url 'policies:edit_policy' policy.id %}" class="text-yellow-600 hover:underline">Edit</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="12" class="px-4 py-6 text-center text-gray-500">No policies found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
 </div>
+
+<!-- JS: Filter Monthly + Export CSV -->
+<script>
+const monthlyCard = document.getElementById('monthly-card');
+const table = document.getElementById('policies-table');
+const exportBtn = document.getElementById('export-btn');
+let monthlyVisible = false;
+
+// Toggle monthly policies
+monthlyCard.addEventListener('click', () => {
+    monthlyVisible = !monthlyVisible;
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        if(row.classList.contains('monthly')) {
+            row.style.display = '';
+        } else {
+            row.style.display = monthlyVisible ? 'none' : '';
+        }
+    });
+    monthlyCard.classList.toggle('opacity-70', monthlyVisible);
+});
+
+// Export table as CSV
+exportBtn.addEventListener('click', () => {
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+        const cols = row.querySelectorAll('td, th');
+        const rowData = Array.from(cols).map(col => `"${col.innerText.replace(/"/g,'""')}"`);
+        csv.push(rowData.join(','));
+    });
+    const csvFile = new Blob([csv.join('\n')], { type: "text/csv" });
+    const downloadLink = document.createElement("a");
+    downloadLink.download = "policies_report.csv";
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+});
+</script>
 {% endblock %}

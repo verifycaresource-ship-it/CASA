@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow p-4">
+  <h2 class="mb-4">{{ dashboard_title }}</h2>
+
+  <form method="POST">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="hospital" class="form-label">Select Hospital</label>
+      <select name="hospital" id="hospital" class="form-select" required>
+        <option value="">-- Select Hospital --</option>
+        {% for hospital in hospitals %}
+          <option value="{{ hospital.id }}">{{ hospital.name }} ({{ hospital.city }}, {{ hospital.country }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="notes" class="form-label">Notes (optional)</label>
+      <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Assign Hospital</button>
+    <a href="{% url 'policies:policy_detail' policy.id %}" class="btn btn-secondary">Back</a>
+  </form>
+
+  {% if assignments %}
+    <hr class="my-4">
+    <h4>Existing Assignments</h4>
+    <table class="table table-bordered mt-2">
+      <thead>
+        <tr>
+          <th>Hospital</th>
+          <th>Status</th>
+          <th>Assigned By</th>
+          <th>Assigned At</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assignments %}
+        <tr>
+          <td>{{ a.hospital.name }}</td>
+          <td>{{ a.get_status_display }}</td>
+          <td>{{ a.assigned_by }}</td>
+          <td>{{ a.assigned_at|date:"Y-m-d H:i" }}</td>
+          <td>{{ a.notes|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endblock %}

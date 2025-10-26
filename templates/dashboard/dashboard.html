@@ -7,7 +7,9 @@
   <!-- Welcome -->
   <div class="flex justify-between items-center">
     <div>
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">👋 Welcome back, <span class="text-blue-500">{{ user.username|title }}</span></h1>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+        👋 Welcome back, <span class="text-blue-500">{{ user.username|title }}</span>
+      </h1>
       <p class="text-gray-500 dark:text-gray-400 mt-1">Role: {{ role|title }}</p>
     </div>
   </div>
@@ -16,13 +18,16 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
     {% for card in cards %}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition">
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500 dark:text-gray-400">{{ card.label }}</p>
-        <i data-feather="activity" class="w-5 h-5 text-{{ card.color }}-500"></i>
-      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400">{{ card.label }}</p>
       <h2 class="text-2xl font-bold text-{{ card.color }}-500 mt-2">{{ card.value }}</h2>
     </div>
     {% endfor %}
+
+    <!-- Pending Claims Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition">
+      <p class="text-sm text-gray-500 dark:text-gray-400">Pending Claims</p>
+      <h2 class="text-2xl font-bold text-yellow-500 mt-2">{{ claims_pending_count }}</h2>
+    </div>
   </div>
 
   <!-- Quick Actions -->
@@ -41,31 +46,87 @@
 
   <!-- Charts -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Policy Distribution -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700 p-6">
       <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">📋 Policy Distribution</h3>
       <canvas id="policiesChart" height="180"></canvas>
     </div>
+
+    <!-- Claims Overview -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700 p-6">
       <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">💰 Claims Overview</h3>
       <canvas id="claimsChart" height="180"></canvas>
     </div>
+
+    <!-- Hospital Verification -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700 p-6">
       <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">🏥 Hospital Verification</h3>
       <canvas id="hospitalsChart" height="180"></canvas>
     </div>
-  </div>
 
-  <!-- Trend Chart -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700 p-6 mt-6">
-    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">📈 Monthly Revenue vs Claims</h3>
-    <canvas id="trendChart" height="100"></canvas>
   </div>
-
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const textColor = document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151';
-  // (Insert your Chart.js JS initialization here, same as previous)
+const getTextColor = () => document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151';
+
+// 🟦 Policies Chart
+new Chart(document.getElementById('policiesChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ policies_labels|safe }},
+    datasets: [{
+      data: {{ policies_data|safe }},
+      backgroundColor: ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6'],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    plugins: { legend: { labels: { color: getTextColor() } } }
+  }
+});
+
+// 💰 Claims Chart
+new Chart(document.getElementById('claimsChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Approved', 'Pending', 'Rejected'],
+    datasets: [{
+      label: 'Claims Count',
+      data: [
+        {{ claims_approved_count }},
+        {{ claims_pending_count }},
+        {{ claims_rejected_count }}
+      ],
+      backgroundColor: ['#10B981', '#FBBF24', '#EF4444']
+    }]
+  },
+  options: {
+    plugins: { legend: { labels: { color: getTextColor() } } },
+    scales: {
+      y: { ticks: { color: getTextColor() }, beginAtZero: true },
+      x: { ticks: { color: getTextColor() } }
+    }
+  }
+});
+
+// 🏥 Hospitals Chart
+new Chart(document.getElementById('hospitalsChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ hospitals_labels|safe }},
+    datasets: [{
+      data: {{ hospitals_data|safe }},
+      backgroundColor: ['#10B981','#EF4444']
+    }]
+  },
+  options: {
+    plugins: { legend: { labels: { color: getTextColor() } } }
+  }
+});
 </script>
 {% endblock %}

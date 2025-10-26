@@ -1,73 +1,114 @@
 {% extends 'dashboard/base.html' %}
 {% load static %}
 
-{% block title %}Policy Details | Health Insurance{% endblock %}
+{% block title %}Policy Details{% endblock %}
+{% block header_title %}Policy Details{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+<div class="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 space-y-6">
 
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
-    <a href="{% url 'policies:policy_list' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-      ⬅ Back to Policies
-    </a>
+  <!-- Policy Title -->
+  <h2 class="text-3xl font-bold text-blue-600 mb-6">{{ policy.policy_number }}</h2>
+
+  <!-- Policy Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+    <p><strong>Policy Type:</strong> {{ policy.get_policy_type_display }}</p>
+    <p><strong>Coverage:</strong> {{ policy.coverage_details|truncatechars:50 }}</p>
+    <p><strong>Premium:</strong> ${{ policy.premium }} {{ policy.client.currency|default:"USD" }}</p>
+    <p><strong>Start Date:</strong> {{ policy.start_date|date:"M d, Y" }}</p>
+    <p><strong>Expiry Date:</strong> {{ policy.expiry_date|date:"M d, Y" }}</p>
+    <p><strong>Days Left:</strong>
+      {% if policy.days_left >= 0 %}
+        <span class="text-green-600 font-semibold">{{ policy.days_left }} days left</span>
+      {% else %}
+        <span class="text-red-600 font-semibold">
+          Expired {{ policy.expired_days }} days ago
+        </span>
+      {% endif %}
+    </p>
+    <p><strong>Status:</strong>
+      <span class="px-2 py-1 rounded-lg text-white
+        {% if policy.status == 'active' %}bg-green-500
+        {% elif policy.status == 'expired' %}bg-red-500
+        {% else %}bg-yellow-500{% endif %}">
+        {{ policy.status|title }}
+      </span>
+    </p>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div>
-      <h2 class="font-semibold text-gray-700">Policy Number</h2>
-      <p class="text-gray-900">{{ policy.policy_number }}</p>
-    </div>
-    <div>
-      <h2 class="font-semibold text-gray-700">Policy Type</h2>
-      <p class="text-gray-900">{{ policy.get_policy_type_display }}</p>
-    </div>
-    <div>
-      <h2 class="font-semibold text-gray-700">Client</h2>
-      <p class="text-gray-900">{{ policy.client.first_name }} {{ policy.client.last_name }}</p>
-    </div>
-    <div>
-      <h2 class="font-semibold text-gray-700">Premium</h2>
-      <p class="text-gray-900">${{ policy.premium }}</p>
-    </div>
-    <div>
-      <h2 class="font-semibold text-gray-700">Start Date</h2>
-      <p class="text-gray-900">{{ policy.start_date }}</p>
-    </div>
-    <div>
-      <h2 class="font-semibold text-gray-700">Expiry Date</h2>
-      <p class="text-gray-900">{{ policy.expiry_date }}</p>
-    </div>
-    <div class="md:col-span-2">
-      <h2 class="font-semibold text-gray-700">Coverage Details</h2>
-      <p class="text-gray-900 whitespace-pre-line">{{ policy.coverage_details|default:"No coverage details provided." }}</p>
-    </div>
-    <div>
-      <h2 class="font-semibold text-gray-700">Max Claim Limit</h2>
-      <p class="text-gray-900">${{ policy.max_claim_limit }}</p>
-    </div>
-    <div>
-      <h2 class="font-semibold text-gray-700">Waiting Period (Days)</h2>
-      <p class="text-gray-900">{{ policy.waiting_period_days }}</p>
-    </div>
-    <div class="md:col-span-2">
-      <h2 class="font-semibold text-gray-700">Status</h2>
-      <p class="text-gray-900">
-        {% if policy.is_active %}
-          <span class="text-green-600 font-semibold">Active</span>
-        {% else %}
-          <span class="text-red-600 font-semibold">Inactive</span>
-        {% endif %}
-      </p>
-    </div>
+  <!-- Assigned Clients -->
+  {% if assigned_clients %}
+  <div class="mt-8">
+    <h3 class="text-xl font-semibold mb-3">Assigned Clients</h3>
+    <table class="min-w-full border divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+      <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+        <tr>
+          <th class="px-4 py-2 text-left">Photo</th>
+          <th class="px-4 py-2 text-left">Client Name</th>
+          <th class="px-4 py-2 text-left">Email</th>
+          <th class="px-4 py-2 text-left">Phone</th>
+          <th class="px-4 py-2 text-left">Hospital</th>
+          <th class="px-4 py-2 text-left">Assignment Status</th>
+          <th class="px-4 py-2 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+        {% for assignment in assigned_clients %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+          <!-- Client Photo -->
+          <td class="px-4 py-2">
+            {% if assignment.client.photo %}
+              <img src="{{ assignment.client.photo.url }}" alt="Client Photo"
+                   class="w-12 h-12 rounded-full object-cover border">
+            {% else %}
+              <img src="{% static 'images/default-user.png' %}" alt="No Photo"
+                   class="w-12 h-12 rounded-full object-cover border">
+            {% endif %}
+          </td>
+          <td class="px-4 py-2">{{ assignment.client.first_name }} {{ assignment.client.last_name }}</td>
+          <td class="px-4 py-2">{{ assignment.client.email|default:"-" }}</td>
+          <td class="px-4 py-2">{{ assignment.client.phone|default:"-" }}</td>
+          <td class="px-4 py-2">{{ assignment.hospital.name }}</td>
+          <td class="px-4 py-2">
+            <span class="px-2 py-1 rounded-lg text-white
+              {% if assignment.status == 'accepted' %}bg-green-500
+              {% elif assignment.status == 'pending' %}bg-yellow-500
+              {% elif assignment.status == 'completed' %}bg-blue-500
+              {% else %}bg-red-500{% endif %}">
+              {{ assignment.status|title }}
+            </span>
+          </td>
+          <td class="px-4 py-2 space-x-2">
+            {% if user.role == 'hospital' and assignment.status == 'accepted' %}
+              <a href="{% url 'claims:add_claim' %}?client_id={{ assignment.client.id }}&policy_id={{ policy.id }}"
+                 class="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition">
+                 ➕ Submit Claim
+              </a>
+            {% elif user.is_superuser or user.role == 'admin' %}
+              <a href="{% url 'hospitals:assign_policyholder' %}"
+                 class="text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition">
+                 🏥 Assign Hospital
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-gray-500 py-4">No assigned clients yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+    <p class="text-gray-500 italic">No clients assigned to this policy yet.</p>
+  {% endif %}
 
-  <div class="mt-6 flex space-x-4">
-    <a href="{% url 'policies:edit_policy' policy.pk %}" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition">
-      ✏ Edit Policy
-    </a>
-    <a href="{% url 'policies:policy_list' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-      🡠 Back to List
+  <!-- Back Button -->
+  <div class="mt-6">
+    <a href="{% url 'policies:policy_list' %}"
+       class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-lg">
+       ← Back to Policies
     </a>
   </div>
 

@@ -1,35 +1,41 @@
 {% extends "dashboard/base.html" %}
+{% load static %}
+
 {% block title %}Agent Dashboard | HealthInsure{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-8 animate-fade-in">
+<div class="p-8 space-y-10 animate-fade-in">
 
   <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-        👋 Welcome, <span class="text-blue-500">{{ user.username|title }}</span>
+      <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+        👋 Welcome back, <span class="text-blue-500">{{ user.username|title }}</span>
       </h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1">Role: {{ user.role|title }}</p>
+      <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Empowering your clients one policy at a time.</p>
     </div>
-    <div class="mt-3 sm:mt-0 flex items-center gap-3">
+    <div class="flex items-center gap-3">
       <a href="{% url 'accounts:logout' %}" 
-         class="px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white shadow hover:bg-red-600 transition">
+         class="px-5 py-2 text-sm font-semibold rounded-lg bg-red-500 text-white shadow hover:bg-red-600 transition-all hover:scale-105">
         Logout
       </a>
     </div>
   </div>
 
-  <!-- Stats Cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  <!-- Stats Section -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
     {% for card in cards %}
-    <div class="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl border border-gray-100 dark:border-gray-700 transition transform hover:-translate-y-1">
+    <div class="group relative overflow-hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 transition-all hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02]">
+      <div class="absolute top-0 left-0 w-full h-1.5 bg-{{ card.color }}-500"></div>
       <div class="p-5 flex flex-col justify-between h-full">
-        <div>
-          <p class="text-sm text-gray-500 dark:text-gray-400">{{ card.label }}</p>
-          <h3 class="text-3xl font-bold text-{{ card.color }}-500 mt-2">{{ card.value }}</h3>
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ card.label }}</p>
+          <div class="p-2 bg-{{ card.color }}-100 dark:bg-{{ card.color }}-900/40 rounded-lg">
+            <i data-lucide="activity" class="w-5 h-5 text-{{ card.color }}-500"></i>
+          </div>
         </div>
-        <div class="mt-4 h-1.5 bg-{{ card.color }}-500/80 rounded-full"></div>
+        <h3 class="text-4xl font-bold text-{{ card.color }}-500 mt-3">{{ card.value }}</h3>
+        <p class="text-xs text-gray-400 mt-1">Updated just now</p>
       </div>
     </div>
     {% endfor %}
@@ -37,26 +43,56 @@
 
   <!-- Quick Actions -->
   {% if shortcuts %}
-  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+  <section class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
     <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">⚡ Quick Actions</h2>
     <div class="flex flex-wrap gap-3">
       {% for shortcut in shortcuts %}
       <a href="{{ shortcut.url }}" 
-         class="px-4 py-2.5 rounded-xl bg-{{ shortcut.color }}-500 text-white font-medium shadow hover:scale-105 hover:bg-{{ shortcut.color }}-600 transition-all duration-200">
+         class="px-4 py-2.5 rounded-xl bg-{{ shortcut.color }}-500 text-white font-semibold shadow-md hover:bg-{{ shortcut.color }}-600 hover:scale-105 transition-all duration-200">
         {{ shortcut.name }}
       </a>
       {% endfor %}
     </div>
-  </div>
+  </section>
   {% endif %}
 
+  <!-- Charts -->
+  {% if charts %}
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {% for chart in charts %}
+    <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 p-6">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{{ chart.title }}</h2>
+      <canvas id="{{ chart.id }}" height="200"></canvas>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
 </div>
+
+{% block extra_scripts %}
+<!-- Lucide Icons + Chart.js -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  lucide.createIcons();
+
+  const baseTextColor = document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151';
+
+  {% for chart in charts %}
+  new Chart(document.getElementById('{{ chart.id }}'), {
+    type: '{{ chart.type }}',
+    data: {{ chart.data|safe }},
+    options: {{ chart.options|safe }}
+  });
+  {% endfor %}
+</script>
+{% endblock %}
 
 <style>
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  .animate-fade-in { animation: fade-in 0.5s ease-out; }
+  .animate-fade-in { animation: fade-in 0.6s ease-out; }
 </style>
 {% endblock %}

@@ -2,54 +2,82 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from rest_framework import viewsets, permissions
 from django.utils import timezone
+from rest_framework import viewsets, permissions
 import uuid
 
 from .models import Policy
 from .serializers import PolicySerializer
 from clients.models import Client
 from accounts.utils import roles_required
+from hospitals.models import HospitalAssignment, Hospital
+from claims.models import Claim
 
-# ==============================
-# DRF API View
-# ==============================
+
+# ------------------------------
+# ✅ Assign Policy to Hospital
+# ------------------------------
+@login_required
+@roles_required("admin", "finance_officer")
+def assign_to_hospital(request, pk):
+    policy = get_object_or_404(Policy, pk=pk)
+    hospitals = Hospital.objects.filter(verified=True)
+
+    if request.method == "POST":
+        hospital_id = request.POST.get("hospital")
+        hospital = get_object_or_404(Hospital, id=hospital_id)
+
+        assignment, created = HospitalAssignment.objects.get_or_create(
+            client=policy.client,
+            policy=policy,
+            hospital=hospital,
+            defaults={"assigned_by": request.user}
+        )
+        if created:
+            messages.success(request, f"{policy.client} successfully assigned to {hospital.name}.")
+        else:
+            messages.info(request, f"{policy.client} is already assigned to {hospital.name}.")
+        return redirect("policies:policy_detail", pk=policy.pk)
+
+    return render(request, "policies/assign_hospital.html", {
+        "policy": policy,
+        "hospitals": hospitals,
+        "dashboard_title": f"Assign Hospital for {policy.policy_number}",
+    })
+
+
+# ------------------------------
+# ✅ DRF API View
+# ------------------------------
 class PolicyViewSet(viewsets.ModelViewSet):
     queryset = Policy.objects.all()
     serializer_class = PolicySerializer
     permission_classes = [permissions.IsAuthenticated]
 
-# ==============================
-# Web Views
-# ==============================
-from django.utils import timezone
 
+# ------------------------------
+# ✅ List of All Policies
+# ------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_list(request):
-    policies = Policy.objects.all()
-    now = timezone.now().date()
-    for policy in policies:
-        if policy.expiry_date:
-            policy.days_left = (policy.expiry_date - now).days
-        else:
-            policy.days_left = 0
+    policies = Policy.objects.select_related("client").all()
+
     return render(request, "policies/policy_list.html", {
         "policies": policies,
         "dashboard_title": "Policies",
-        "role": getattr(request.user, "role", "guest")
+        "role": getattr(request.user, "role", "guest"),
     })
 
 
+# ------------------------------
+# ✅ Add / Edit Policy Form
+# ------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_form(request, pk=None):
-    policy = None
-    if pk:
-        policy = get_object_or_404(Policy, pk=pk)
-
+    policy = get_object_or_404(Policy, pk=pk) if pk else None
     clients = Client.objects.all()
-    policy_types = Policy.POLICY_TYPE
     auto_policy_number = policy.policy_number if policy else f"POL-{uuid.uuid4().hex[:8].upper()}"
     today = timezone.now().date()
     next_year = today.replace(year=today.year + 1)
@@ -58,13 +86,12 @@ def policy_form(request, pk=None):
         data = request.POST
         client = get_object_or_404(Client, pk=data.get("client"))
         policy_number = data.get("policy_number") or auto_policy_number
-
-        # Required fields
         required_fields = ["policy_type", "start_date", "expiry_date", "premium"]
+
         if all(data.get(f) for f in required_fields):
             try:
                 if policy:
-                    # Update existing policy
+                    # Update existing
                     policy.client = client
                     policy.policy_number = policy_number
                     policy.policy_type = data.get("policy_type")
@@ -78,7 +105,7 @@ def policy_form(request, pk=None):
                     policy.save()
                     messages.success(request, f"Policy '{policy.policy_number}' updated successfully.")
                 else:
-                    # Create new policy
+                    # Create new
                     Policy.objects.create(
                         client=client,
                         policy_number=policy_number,
@@ -95,14 +122,14 @@ def policy_form(request, pk=None):
                     messages.success(request, f"Policy '{policy_number}' added successfully.")
                 return redirect("policies:policy_list")
             except IntegrityError:
-                messages.error(request, "Policy number conflict. Please try again.")
+                messages.error(request, "Policy number already exists.")
         else:
-            messages.error(request, "Please fill all required fields.")
+            messages.error(request, "Please fill in all required fields.")
 
     return render(request, "policies/policy_form.html", {
         "policy": policy,
         "clients": clients,
-        "policy_types": policy_types,
+        "policy_types": Policy.POLICY_TYPE,
         "dashboard_title": "Edit Policy" if policy else "Add New Policy",
         "role": getattr(request.user, "role", "guest"),
         "auto_policy_number": auto_policy_number,
@@ -111,32 +138,35 @@ def policy_form(request, pk=None):
     })
 
 
+# ------------------------------
+# ✅ Policy Detail View
+# ------------------------------
 @login_required
+@roles_required("admin", "finance_officer", "hospital")
 def policy_detail(request, pk):
     policy = get_object_or_404(Policy, pk=pk)
+    assigned_clients = policy.hospital_assignments.select_related("client", "hospital", "assigned_by")
+
     return render(request, "policies/policy_detail.html", {
         "policy": policy,
-        "dashboard_title": f"Policy: {policy.policy_number}",
-        "role": getattr(request.user, "role", "guest"),
+        "assigned_clients": assigned_clients,
     })
+from datetime import date
+from django.db.models import Q
+from .models import Policy
 
+def policy_list(request):
+    policies = Policy.objects.select_related("client").all().order_by("-start_date")
 
-# ==============================
-# Auto-create default health policy
-# ==============================
-def create_health_policy(client, created_by):
-    policy_number = f"H-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-    start_date = timezone.now().date()
-    expiry_date = start_date.replace(year=start_date.year + 1)
-    premium_amount = 500.00
-
-    return Policy.objects.create(
-        client=client,
-        policy_number=policy_number,
-        policy_type="health",
-        start_date=start_date,
-        expiry_date=expiry_date,
-        premium=premium_amount,
-        is_active=True,
-        created_by=created_by,
+    # Filter monthly assigned policies
+    today = date.today()
+    monthly_policies = policies.filter(
+        start_date__year=today.year, 
+        start_date__month=today.month
     )
+
+    context = {
+        "policies": policies,
+        "monthly_policies": monthly_policies,
+    }
+    return render(request, "policies/policy_list.html", context)

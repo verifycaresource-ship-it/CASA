@@ -1,0 +1,77 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Assignment Details | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-2xl shadow mt-8">
+  <h2 class="text-2xl font-semibold mb-6">📝 Assignment Details</h2>
+
+  <!-- Client Info -->
+  <div class="flex items-center space-x-6 mb-6">
+    {% if assignment.client.photo %}
+      <img src="{{ assignment.client.photo.url }}" alt="Client Photo" class="w-24 h-24 rounded-full object-cover border">
+    {% else %}
+    {% endif %}
+    <div>
+      <p class="text-xl font-semibold">{{ assignment.client.first_name }} {{ assignment.client.last_name }}</p>
+      <p class="text-gray-600">{{ assignment.client.email|default:"-" }}</p>
+      <p class="text-gray-600">{{ assignment.client.mobile|default:"-" }}</p>
+    </div>
+  </div>
+
+  <hr class="border-gray-300 dark:border-gray-600 mb-6">
+
+  <!-- Policy Info -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
+    <p><strong>Policy Number:</strong> {{ assignment.policy.policy_number }}</p>
+    <p><strong>Policy Type:</strong> {{ assignment.policy.get_policy_type_display|default:"Individual" }}</p>
+    <p><strong>Coverage:</strong> {{ assignment.policy.coverage_details|default:"Maternity, Inpatient, Checkup" }}</p>
+    <p><strong>Premium:</strong> ${{ assignment.policy.premium }}</p>
+    <p><strong>Start Date:</strong> {{ assignment.policy.start_date|date:"M d, Y" }}</p>
+    <p><strong>Expiry Date:</strong> {{ assignment.policy.expiry_date|date:"M d, Y" }}</p>
+    <p><strong>Days Left:</strong>
+      {% if assignment.policy.days_left >= 0 %}
+        <span class="text-green-600 font-semibold">{{ assignment.policy.days_left }} days left</span>
+      {% else %}
+        <span class="text-red-600 font-semibold">Expired {{ assignment.policy.expired_days }} days ago</span>
+      {% endif %}
+    </p>
+    <p><strong>Status:</strong>
+      <span class="px-2 py-1 rounded-lg text-white
+        {% if assignment.policy.status == 'active' %}bg-green-500
+        {% elif assignment.policy.status == 'expired' %}bg-red-500
+        {% else %}bg-yellow-500{% endif %}">
+        {{ assignment.policy.status|title }}
+      </span>
+    </p>
+  </div>
+
+  <hr class="border-gray-300 dark:border-gray-600 mb-6">
+
+  <!-- Assignment Info -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+    <p><strong>Hospital:</strong> {{ assignment.hospital.name }}</p>
+    <p><strong>Status:</strong> <span class="capitalize">{{ assignment.status }}</span></p>
+    <p><strong>Assigned By:</strong> {% if assignment.assigned_by %}{{ assignment.assigned_by.username }}{% else %}System{% endif %}</p>
+    <p><strong>Assigned At:</strong> {{ assignment.assigned_at|date:"M d, Y H:i" }}</p>
+    {% if assignment.notes %}
+      <p class="md:col-span-2"><strong>Notes:</strong> {{ assignment.notes }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Actions -->
+  <div class="mt-6 flex flex-wrap gap-2">
+    {% if assignment.status == 'pending' %}
+      <a href="{% url 'hospitals:approve_assignment' assignment.id %}" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm">Approve</a>
+      <a href="{% url 'hospitals:submit_claim_for_assignment' assignment.id %}" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">Submit Claim</a>
+      <a href="{% url 'hospitals:reject_assignment' assignment.id %}" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm">Reject</a>
+    {% elif assignment.status == 'claimed' %}
+      <a href="{% url 'claims:claim_detail' assignment.claims.first.id %}" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">View Claim</a>
+    {% endif %}
+  </div>
+
+  <!-- Back Button -->
+  <div class="mt-6">
+    <a href="{% url 'hospitals:assigned_clients' %}" class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-lg">← Back to Assignments</a>
+  </div>
+</div>
+{% endblock %}

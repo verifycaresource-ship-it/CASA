@@ -107,16 +107,16 @@ def dashboard(request):
         ]
 
     # === Charts ===
+    # Policy Distribution
     policies_labels = list(Policy.objects.values_list("policy_type", flat=True).distinct())
     policies_data = [Policy.objects.filter(policy_type=t).count() for t in policies_labels]
 
-    claims_labels = ["Pending", "Approved", "Rejected"]
-    claims_data = [
-        Claim.objects.filter(status="pending").count(),
-        Claim.objects.filter(status="approved").count(),
-        Claim.objects.filter(status="rejected").count(),
-    ]
+    # Claims Overview
+    claims_pending_count = Claim.objects.filter(status="pending").count()
+    claims_approved_count = Claim.objects.filter(status="approved").count()
+    claims_rejected_count = Claim.objects.filter(status="rejected").count()
 
+    # Hospital Verification
     hospitals_labels = ["Verified", "Unverified"]
     hospitals_data = [
         Hospital.objects.filter(verified=True).count(),
@@ -131,8 +131,9 @@ def dashboard(request):
         "shortcuts": shortcuts,
         "policies_labels": json.dumps(policies_labels),
         "policies_data": json.dumps(policies_data),
-        "claims_labels": json.dumps(claims_labels),
-        "claims_data": json.dumps(claims_data),
+        "claims_approved_count": claims_approved_count,
+        "claims_pending_count": claims_pending_count,
+        "claims_rejected_count": claims_rejected_count,
         "hospitals_labels": json.dumps(hospitals_labels),
         "hospitals_data": json.dumps(hospitals_data),
     }

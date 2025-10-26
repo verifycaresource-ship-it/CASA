@@ -12,24 +12,35 @@
   <!-- Navigation -->
   <nav class="flex-1 p-4 space-y-2 sidebar-scroll">
 
-    <!-- Dashboard Link (All Roles) -->
     {% if user.role == 'hospital' %}
+      <!-- Dashboard -->
       <a href="{% url 'hospitals:dashboard' %}" 
-         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/hospitals/dashboard/' in request.path %}bg-gray-200{% endif %}">
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'dashboard' %}bg-gray-200{% endif %}">
         🏥 Dashboard
       </a>
+
+      <!-- Assigned Clients -->
+      <a href="{% url 'hospitals:assigned_clients' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'assigned_clients' %}bg-gray-200{% endif %}">
+        📋 Assigned Clients
+      </a>
+
+      <!-- My Claims -->
       <a href="{% url 'claims:hospital_claim_dashboard' %}" 
-         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/claims/hospital-dashboard/' in request.path %}bg-gray-200{% endif %}">
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'hospital_claim_dashboard' %}bg-gray-200{% endif %}">
         💰 My Claims
       </a>
-      <a href="{% url 'claims:add_claim' %}" 
-         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-green-500 hover:text-white transition">
+
+      <!-- Submit Claim -->
+      <a href="{% url 'hospitals:submit_claim' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition">
         ➕ Submit Claim
       </a>
 
     {% elif user.role == 'agent' %}
+      <!-- Agent Dashboard -->
       <a href="{% url 'accounts:agent_dashboard' %}" 
-         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/accounts/agent/dashboard/' in request.path %}bg-gray-200{% endif %}">
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'agent_dashboard' %}bg-gray-200{% endif %}">
         👤 Dashboard
       </a>
       <a href="{% url 'clients:client_list' %}" 
@@ -37,14 +48,14 @@
         👥 Clients
       </a>
       <a href="{% url 'clients:add_client' %}" 
-         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-green-500 hover:text-white transition">
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition">
         ➕ Register Client
       </a>
 
     {% else %}
       <!-- Admin / Superuser -->
       <a href="{% url 'accounts:dashboard' %}" 
-         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/accounts/dashboard/' in request.path %}bg-gray-200{% endif %}">
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'dashboard' %}bg-gray-200{% endif %}">
         🏠 Dashboard
       </a>
       <a href="{% url 'clients:client_list' %}" 

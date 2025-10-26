@@ -11,6 +11,56 @@ from policies.models import Policy
 from hospitals.models import Hospital
 from accounts.utils import roles_required
 
+from hospitals.models import HospitalAssignment
+from .models import Claim
+
+
+@login_required
+@roles_required("hospital")
+def submit_claim_for_assignment(request, assignment_id):
+    """
+    Hospital user submits a claim for an accepted assignment.
+    """
+    assignment = get_object_or_404(
+        HospitalAssignment,
+        pk=assignment_id,
+        hospital=getattr(request.user, "hospital_profile", None),
+        status="accepted"
+    )
+
+    if request.method == "POST":
+        description = request.POST.get("description", "").strip()
+        amount = request.POST.get("claim_amount")
+        if not (description and amount):
+            messages.error(request, "All fields are required.")
+            return redirect("claims:submit_claim_for_assignment", assignment_id=assignment_id)
+
+        # Build claim_number — adapt format if you have your own convention
+        claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+
+        # The Claim model in your project appears to use field 'amount' and 'status'
+        Claim.objects.create(
+            claim_number=claim_number,
+            hospital=assignment.hospital,
+            client=assignment.client,
+            policy=assignment.policy,
+            submitted_by=request.user,
+            description=description,
+            amount=amount,
+            status="pending",  # match your claim status values
+        )
+
+        # mark assignment completed (change if you prefer a different lifecycle)
+        assignment.status = "completed"
+        assignment.save(update_fields=["status", "updated_at"])
+
+        messages.success(request, f"Claim {claim_number} submitted for {assignment.client}.")
+        return redirect("hospitals:assigned_clients")
+
+    return render(request, "claims/submit_claim.html", {
+        "assignment": assignment,
+        "dashboard_title": "Submit Claim",
+    })
 
 # -----------------------
 # 🏥 Hospital Claim Dashboard
