@@ -28,5 +28,6 @@ urlpatterns = [
     path("assignment/<int:pk>/", views.assignment_detail, name="assignment_detail"),
     # Submit a claim for a specific assignment
     path('submit-claim/<int:assignment_id>/', views.submit_claim_for_assignment, name='submit_claim_for_assignment'),
+    path("assignment/<int:assignment_id>/submit-claim/", views.submit_claim_for_assignment, name="submit_claim_for_assignment"),
 
 ]

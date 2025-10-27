@@ -91,6 +91,7 @@ def approve_assignment(request, pk):
     return redirect("hospitals:assigned_clients")
 
 
+
 @login_required
 @roles_required("hospital")
 def reject_assignment(request, pk):
@@ -360,7 +361,10 @@ def submit_claim(request):
 
     client = Client.objects.filter(id=client_id).first() if client_id else None
     policy = Policy.objects.filter(id=policy_id).first() if policy_id else None
-    assignment = HospitalAssignment.objects.filter(id=assignment_id).first() if assignment_id else None
+    assignment = (
+        HospitalAssignment.objects.filter(id=assignment_id).first()
+        if assignment_id else None
+    )
 
     if request.method == "POST":
         client_id = request.POST.get("client")
@@ -376,8 +380,10 @@ def submit_claim(request):
         client = get_object_or_404(Client, id=client_id)
         policy = get_object_or_404(Policy, id=policy_id)
 
+        # 🧾 Auto-generate claim number
         claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
 
+        # 🧱 Create the claim record
         claim = Claim.objects.create(
             claim_number=claim_number,
             client=client,
@@ -390,25 +396,40 @@ def submit_claim(request):
             status="pending",
         )
 
-        # ✅ Update assignment status
+        # 🔗 Link the claim to the hospital assignment
         if assignment:
             assignment.status = "claimed"
-            assignment.save()
+            assignment.claim = claim  # ✅ link the claim directly
+            assignment.save(update_fields=["status", "claim"])
 
         messages.success(request, f"Claim {claim.claim_number} submitted successfully.")
         return redirect("hospitals:assigned_clients")
 
-    clients = Client.objects.filter(hospital_assignments__hospital=hospital).distinct().order_by("first_name")
-    policies = Policy.objects.filter(client__in=clients, is_active=True).distinct().order_by("policy_number")
+    # 🧩 Fetch clients assigned to this hospital
+    clients = (
+        Client.objects.filter(hospital_assignments__hospital=hospital)
+        .distinct()
+        .order_by("first_name")
+    )
 
-    return render(request, "hospitals/submit_claim.html", {
+    # 📜 Fetch active policies of those clients
+    policies = (
+        Policy.objects.filter(client__in=clients, is_active=True)
+        .distinct()
+        .order_by("policy_number")
+    )
+
+    context = {
         "dashboard_title": "Submit Claim",
         "hospital": hospital,
         "clients": clients,
         "policies": policies,
         "selected_client": client,
         "selected_policy": policy,
-    })
+        "assignment": assignment,  # ✅ include assignment for hidden form input
+    }
+
+    return render(request, "hospitals/submit_claim.html", context)
 
 
 # =========================
@@ -418,18 +439,13 @@ def submit_claim(request):
 @roles_required("hospital")
 def submit_claim_for_assignment(request, assignment_id):
     """
-    Allows hospital to submit a claim directly from an assigned policyholder.
-    Pre-fills client, policy, and assignment.
+    Redirects to the submit_claim view with client, policy, and assignment pre-filled.
     """
-    hospital = getattr(request.user, "hospital_profile", None)
-    assignment = get_object_or_404(HospitalAssignment, id=assignment_id, hospital=hospital)
+    assignment = get_object_or_404(HospitalAssignment, id=assignment_id)
 
-    # Redirect if already claimed
-    if assignment.status != "pending":
-        messages.warning(request, "This assignment is already processed.")
-        return redirect("hospitals:assigned_clients")
-
-    # Redirect to submit claim page with query params
-    return redirect(
-        f"{reverse('hospitals:submit_claim')}?client={assignment.client.id}&policy={assignment.policy.id}&assignment={assignment.id}"
+    # Build the query parameters for pre-filling the form
+    url = (
+        reverse("hospitals:submit_claim")
+        + f"?client={assignment.client.id}&policy={assignment.policy.id}&assignment={assignment.id}"
     )
+    return redirect(url)

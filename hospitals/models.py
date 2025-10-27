@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.conf import settings  # ✅ Add this line
 from django.utils import timezone
 from clients.models import Client
 
@@ -40,10 +41,13 @@ class Hospital(models.Model):
         return self.name
 
 
+# hospitals/models.py
+
 class HospitalAssignment(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("accepted", "Accepted"),
+        ("claimed", "Claim Submitted"),
         ("completed", "Completed"),
         ("rejected", "Rejected"),
     ]
@@ -64,16 +68,29 @@ class HospitalAssignment(models.Model):
         related_name="assigned_clients"
     )
     assigned_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="assigned_hospital_tasks"
     )
+
+    # 🧾 NEW: track assignment’s overall progress
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+
     notes = models.TextField(blank=True, null=True)
     assigned_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # 🆕 NEW: link to Claim (optional, but very helpful)
+    claim = models.OneToOneField(
+        "claims.Claim",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assignment"
+    )
+
     def __str__(self):
-        return f"{self.client.first_name} {self.client.last_name} → {self.hospital.name}"
+        return f"{self.client.full_name} → {self.hospital.name}"
+
