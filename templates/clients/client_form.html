@@ -56,7 +56,6 @@
           </button>
           <span id="fingerprint-status" class="ml-2 text-red-600 font-medium">No fingerprint captured ❌</span>
 
-          <!-- Hidden input to store Base64 from SDK -->
           <input type="hidden" name="fingerprint_base64" id="fingerprint_base64">
       </div>
 
@@ -68,30 +67,31 @@
   </form>
 </div>
 
-<!-- Fingerprint SDK Integration (iPad) -->
 <script>
 document.getElementById("capture-fingerprint").addEventListener("click", async function() {
     const statusEl = document.getElementById("fingerprint-status");
+    statusEl.textContent = "Waiting for fingerprint...";
+    statusEl.classList.remove("text-red-600","text-green-600");
+    statusEl.classList.add("text-yellow-600");
 
     try {
-        // TODO: Replace this with your actual iPad SDK call
-        // Example: const fingerprintBase64 = await SDK.captureFingerprint();
-        const fingerprintBase64 = "SIMULATED_BASE64_FROM_SDK"; // placeholder
+        const response = await fetch("{% url 'clients:capture_fingerprint' %}");
+        const data = await response.json();
 
-        if(fingerprintBase64){
-            document.getElementById("fingerprint_base64").value = fingerprintBase64;
+        if(data.success && data.fingerprint){
+            document.getElementById("fingerprint_base64").value = data.fingerprint;
             statusEl.textContent = "Fingerprint Captured ✅";
-            statusEl.classList.remove("text-red-600");
+            statusEl.classList.remove("text-yellow-600","text-red-600");
             statusEl.classList.add("text-green-600");
         } else {
-            statusEl.textContent = "Capture failed ❌";
-            statusEl.classList.remove("text-green-600");
+            statusEl.textContent = "Capture failed ❌ Try again";
+            statusEl.classList.remove("text-yellow-600","text-green-600");
             statusEl.classList.add("text-red-600");
         }
-    } catch (err) {
+    } catch(err) {
         console.error(err);
         statusEl.textContent = "Error capturing fingerprint ❌";
-        statusEl.classList.remove("text-green-600");
+        statusEl.classList.remove("text-yellow-600","text-green-600");
         statusEl.classList.add("text-red-600");
     }
 });

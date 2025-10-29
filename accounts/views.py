@@ -1,19 +1,19 @@
 import datetime
 import io
-import json
 import csv
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum, F, FloatField
+from django.db.models import Sum, F, FloatField, Q
 from django.db.models.functions import Coalesce
 from django.utils.timezone import make_aware, now
 from django.http import HttpResponse
 from django.template.loader import render_to_string
-from rest_framework import viewsets, permissions
 import openpyxl
 from xhtml2pdf import pisa  # pip install xhtml2pdf
+from rest_framework import viewsets, permissions
 
 from .models import User
 from .forms import AgentRegistrationForm, AdminPasswordResetForm
@@ -31,31 +31,43 @@ from hospitals.models import Hospital
 @login_required(login_url="accounts:login")
 @roles_required("admin")
 def admin_reports(request):
-    """Admin report page with filters and export"""
+    """Admin report page with filters, summary, and export-ready data."""
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
-    status_filter = request.GET.get("status")
+    status_filter = request.GET.get("status")  # 'verified', 'pending', 'failed'
 
+    # Base querysets
     clients = Client.objects.all()
     policies = Policy.objects.all()
     claims = Claim.objects.all()
 
     # Date filtering
-    if start_date:
-        start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
-        clients = clients.filter(created_at__gte=start)
-        policies = policies.filter(created_at__gte=start)
-        claims = claims.filter(created_at__gte=start)
-    if end_date:
-        end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
-        clients = clients.filter(created_at__lte=end)
-        policies = policies.filter(created_at__lte=end)
-        claims = claims.filter(created_at__lte=end)
+    try:
+        if start_date:
+            start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
+            clients = clients.filter(created_at__gte=start)
+            policies = policies.filter(created_at__gte=start)
+            claims = claims.filter(created_at__gte=start)
+        if end_date:
+            end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
+            clients = clients.filter(created_at__lte=end)
+            policies = policies.filter(created_at__lte=end)
+            claims = claims.filter(created_at__lte=end)
+    except ValueError:
+        pass
 
     # Status filtering
     if status_filter:
         clients = clients.filter(status=status_filter)
         claims = claims.filter(status=status_filter)
+        policies = policies.filter(Q(status=status_filter) | Q(policy_type__isnull=False))
+
+    # Summary counts
+    summary = {
+        "clients": clients.count(),
+        "policies": policies.count(),
+        "claims": claims.count(),
+    }
 
     context = {
         "dashboard_title": "Admin Reports | HealthInsure",
@@ -65,6 +77,7 @@ def admin_reports(request):
         "start_date": start_date,
         "end_date": end_date,
         "status_filter": status_filter,
+        "summary": summary,
     }
     return render(request, "accounts/admin_reports.html", context)
 
@@ -72,7 +85,7 @@ def admin_reports(request):
 @login_required(login_url="accounts:login")
 @roles_required("admin")
 def export_report(request, format):
-    """Export reports as CSV, XLS, or PDF"""
+    """Export reports as CSV, XLS, or PDF."""
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
     status_filter = request.GET.get("status")
@@ -81,42 +94,48 @@ def export_report(request, format):
     policies = Policy.objects.all()
     claims = Claim.objects.all()
 
-    if start_date:
-        start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
-        clients = clients.filter(created_at__gte=start)
-        policies = policies.filter(created_at__gte=start)
-        claims = claims.filter(created_at__gte=start)
-    if end_date:
-        end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
-        clients = clients.filter(created_at__lte=end)
-        policies = policies.filter(created_at__lte=end)
-        claims = claims.filter(created_at__lte=end)
+    # Apply filters
+    try:
+        if start_date:
+            start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
+            clients = clients.filter(created_at__gte=start)
+            policies = policies.filter(created_at__gte=start)
+            claims = claims.filter(created_at__gte=start)
+        if end_date:
+            end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
+            clients = clients.filter(created_at__lte=end)
+            policies = policies.filter(created_at__lte=end)
+            claims = claims.filter(created_at__lte=end)
+    except ValueError:
+        pass
+
     if status_filter:
         clients = clients.filter(status=status_filter)
         claims = claims.filter(status=status_filter)
+        policies = policies.filter(Q(status=status_filter) | Q(policy_type__isnull=False))
 
     timestamp = now().strftime("%Y%m%d_%H%M%S")
 
-    # ---------------------
     # CSV Export
-    # ---------------------
     if format.lower() == "csv":
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="report_{timestamp}.csv"'
         writer = csv.writer(response)
-        writer.writerow(["Clients", "Policies", "Claims"])
-        writer.writerow([clients.count(), policies.count(), claims.count()])
+        writer.writerow(["Category", "Count"])
+        writer.writerow(["Clients", clients.count()])
+        writer.writerow(["Policies", policies.count()])
+        writer.writerow(["Claims", claims.count()])
         return response
 
-    # ---------------------
     # XLS Export
-    # ---------------------
-    elif format.lower() == "xls":
+    elif format.lower() in ["xls", "xlsx"]:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Report"
-        ws.append(["Clients", "Policies", "Claims"])
-        ws.append([clients.count(), policies.count(), claims.count()])
+        ws.append(["Category", "Count"])
+        ws.append(["Clients", clients.count()])
+        ws.append(["Policies", policies.count()])
+        ws.append(["Claims", claims.count()])
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
@@ -124,9 +143,7 @@ def export_report(request, format):
         wb.save(response)
         return response
 
-    # ---------------------
     # PDF Export
-    # ---------------------
     elif format.lower() == "pdf":
         html = render_to_string("accounts/report_pdf.html", {
             "clients": clients,
@@ -143,7 +160,7 @@ def export_report(request, format):
             return HttpResponse("Error generating PDF", status=500)
         return response
 
-    return HttpResponse("Invalid format", status=400)
+    return HttpResponse("Invalid export format", status=400)
 
 
 # ==============================
@@ -157,17 +174,17 @@ def login_view(request):
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
-
         if user:
             if not user.is_active_for_login():
                 messages.error(request, "Your account is inactive or suspended.")
             else:
                 login(request, user)
                 messages.success(request, f"Welcome back, {user.username}!")
-                return redirect({
+                redirect_map = {
                     "hospital": "claims:hospital_claim_dashboard",
                     "agent": "accounts:agent_dashboard"
-                }.get(user.role, "accounts:dashboard"))
+                }
+                return redirect(redirect_map.get(user.role, "accounts:dashboard"))
         else:
             messages.error(request, "Invalid username or password.")
 
@@ -186,11 +203,11 @@ def logout_view(request):
 # ==============================
 @login_required(login_url="accounts:login")
 def dashboard(request):
+    """Admin dashboard."""
     user = request.user
     if user.role == "agent":
         return redirect("accounts:agent_dashboard")
 
-    role = getattr(user, "role", "guest")
     total_clients = Client.objects.count()
     verified_clients = Client.objects.filter(status="verified").count()
     pending_clients = Client.objects.filter(status="pending").count()
@@ -214,8 +231,8 @@ def dashboard(request):
     ]
 
     shortcuts = []
-    if role in ["admin", "finance_officer"] or user.is_superuser:
-        shortcuts.extend([
+    if user.role in ["admin", "finance_officer"] or user.is_superuser:
+        shortcuts = [
             {"name": "👥 Manage Users", "url": "/accounts/users/", "color": "blue"},
             {"name": "➕ Add Client", "url": "/clients/add/", "color": "green"},
             {"name": "📑 Add Policy", "url": "/policies/add/", "color": "yellow"},
@@ -223,7 +240,7 @@ def dashboard(request):
             {"name": "🏥 Manage Hospitals", "url": "/hospitals/", "color": "red"},
             {"name": "➕ Add Agent", "url": "/accounts/agents/register/", "color": "green"},
             {"name": "📄 Reports & Export", "url": "/accounts/reports/", "color": "purple"},
-        ])
+        ]
 
     # Chart data
     policies_labels = list(Policy.objects.values_list("policy_type", flat=True).distinct())
@@ -237,7 +254,6 @@ def dashboard(request):
     context = {
         "dashboard_title": "Admin Dashboard | HealthInsure",
         "user": user,
-        "role": role,
         "cards": cards,
         "shortcuts": shortcuts,
         "policies_labels": json.dumps(policies_labels),
@@ -253,6 +269,7 @@ def dashboard(request):
 
 @login_required(login_url="accounts:login")
 def agent_dashboard(request):
+    """Agent dashboard."""
     user = request.user
     if user.role != "agent":
         return redirect("accounts:dashboard")
@@ -338,7 +355,7 @@ def add_user(request):
         email = request.POST.get("email")
         password = request.POST.get("password")
         role = request.POST.get("role")
-        if not (username and email and password and role):
+        if not all([username, email, password, role]):
             messages.error(request, "All fields are required.")
             return redirect("accounts:user_list")
         if User.objects.filter(username=username).exists():

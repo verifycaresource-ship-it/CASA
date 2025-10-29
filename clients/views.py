@@ -4,10 +4,13 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.db.models.functions import TruncMonth
-from datetime import datetime
-import base64
+from django.conf import settings
+from django.http import JsonResponse
 
-from rest_framework import viewsets, permissions, status
+import base64
+import requests
+
+from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -15,41 +18,55 @@ from .models import Client
 from .forms import ClientForm
 from .serializers import ClientSerializer
 from accounts.utils import roles_required
-from accounts.models import User  # Agents are users with role='agent'
+from accounts.models import User
 
-# ==========================
-# Helper function for fingerprint
-# ==========================
-def handle_fingerprint(client, fingerprint_file=None, fingerprint_base64=None):
-    """Update client fingerprint and status"""
-    if fingerprint_file:
-        client.fingerprint_data = fingerprint_file.read()
-        client.fingerprint_verified = True
-        client.status = "verified"
-    elif fingerprint_base64:
+# ---------------------------
+# Fingerprint Service
+# ---------------------------
+FINGERPRINT_SERVICE_URL = getattr(settings, "FINGERPRINT_SERVICE_URL", "http://127.0.0.1:5000/enroll")
+
+def capture_fingerprint_from_service():
+    """
+    Call the Flask fingerprint service to capture a fingerprint.
+    Returns Base64 string or None if failed.
+    """
+    try:
+        resp = requests.get(FINGERPRINT_SERVICE_URL, timeout=30)
+        data = resp.json()
+        if data.get("success") and data.get("fingerprint"):
+            return data["fingerprint"]
+    except Exception as e:
+        print("Fingerprint capture error:", e)
+    return None
+
+def handle_fingerprint(client, fingerprint_base64=None):
+    """
+    Update the client's fingerprint_data from Base64.
+    Sets verified status automatically.
+    """
+    if fingerprint_base64:
         try:
             client.fingerprint_data = base64.b64decode(fingerprint_base64)
             client.fingerprint_verified = True
             client.status = "verified"
         except Exception:
-            # Keep previous status if decoding fails
             messages.warning(None, "Invalid fingerprint data. Status not changed.")
-    # If neither, leave status unchanged for edit or pending for new client
     return client
 
+@login_required
+def capture_fingerprint(request):
+    """
+    AJAX endpoint to capture fingerprint from Flask service.
+    Returns JSON with fingerprint Base64 or error.
+    """
+    fingerprint_base64 = capture_fingerprint_from_service()
+    if fingerprint_base64:
+        return JsonResponse({"success": True, "fingerprint": fingerprint_base64})
+    return JsonResponse({"success": False, "fingerprint": None})
 
-# ==========================
+# ---------------------------
 # Web Views
-# ==========================
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.db.models.functions import TruncMonth
-from accounts.utils import roles_required
-from accounts.models import User
-from .models import Client
-
+# ---------------------------
 @login_required
 @roles_required("admin", "agent")
 def client_list(request):
@@ -58,13 +75,8 @@ def client_list(request):
     gender_filter = request.GET.get("gender", "").strip()
     agent_filter = request.GET.get("agent", "").strip()
 
-    # Base queryset
-    if user.role == "agent":
-        clients = Client.objects.filter(registered_by=user)
-    else:
-        clients = Client.objects.all()
+    clients = Client.objects.filter(registered_by=user) if user.role=="agent" else Client.objects.all()
 
-    # Apply search
     if search_query:
         clients = clients.filter(
             Q(first_name__icontains=search_query) |
@@ -72,50 +84,28 @@ def client_list(request):
             Q(email__icontains=search_query) |
             Q(phone__icontains=search_query)
         )
-
-    # Apply gender filter
     if gender_filter:
         clients = clients.filter(gender__iexact=gender_filter)
-
-    # Filter by agent (admin only)
-    if agent_filter and user.role == "admin":
+    if agent_filter and user.role=="admin":
         clients = clients.filter(registered_by_id=agent_filter)
 
-    # Pagination
     paginator = Paginator(clients.order_by("-created_at"), 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # Agents list for dropdown (admin only)
-    agents = User.objects.filter(role="agent") if user.role == "admin" else None
+    agents = User.objects.filter(role="agent") if user.role=="admin" else None
 
-    # Dashboard stats
     total_clients = clients.count()
     verified_clients = clients.filter(status="verified").count()
     pending_clients = clients.filter(status="pending").count()
     failed_clients = clients.filter(status="failed").count()
 
-    # KPI Cards
-    cards = [
-        {"title": "Total Clients", "value": total_clients, "color": "blue"},
-        {"title": "Verified", "value": verified_clients, "color": "green"},
-        {"title": "Pending", "value": pending_clients, "color": "yellow"},
-        {"title": "Failed", "value": failed_clients, "color": "red"},
-    ]
-
-    # Gender distribution
     gender_counts = clients.values("gender").annotate(count=Count("id"))
-    male_clients = next((g["count"] for g in gender_counts if g["gender"]=="Male"), 0)
-    female_clients = next((g["count"] for g in gender_counts if g["gender"]=="Female"), 0)
-    other_clients = next((g["count"] for g in gender_counts if g["gender"]=="Other"), 0)
+    male_clients = next((g["count"] for g in gender_counts if g["gender"]=="male"),0)
+    female_clients = next((g["count"] for g in gender_counts if g["gender"]=="female"),0)
+    other_clients = next((g["count"] for g in gender_counts if g["gender"]=="other"),0)
 
-    # Monthly registrations
-    month_counts = (
-        clients.annotate(month=TruncMonth("created_at"))
-               .values("month")
-               .annotate(count=Count("id"))
-               .order_by("month")
-    )
+    month_counts = clients.annotate(month=TruncMonth("created_at")).values("month").annotate(count=Count("id")).order_by("month")
     months = [m["month"].strftime("%b %Y") for m in month_counts]
     month_data = [m["count"] for m in month_counts]
 
@@ -126,38 +116,35 @@ def client_list(request):
         "search_query": search_query,
         "gender_filter": gender_filter,
         "agent_filter": agent_filter,
-        "dashboard_title": "Clients Dashboard",
         "total_clients": total_clients,
         "verified_clients": verified_clients,
         "pending_clients": pending_clients,
         "failed_clients": failed_clients,
-        "cards": cards,
         "male_clients": male_clients,
         "female_clients": female_clients,
         "other_clients": other_clients,
         "months": months,
         "month_data": month_data,
     }
-
     return render(request, "clients/client_list.html", context)
 
 
 @login_required
 @roles_required("admin", "agent")
 def add_client(request):
-    """Add/register a new client with optional fingerprint"""
     if request.method == "POST":
         form = ClientForm(request.POST, request.FILES)
         if form.is_valid():
             client = form.save(commit=False)
-            fingerprint_file = request.FILES.get("fingerprint_file")
             fingerprint_base64 = request.POST.get("fingerprint_base64")
-            client = handle_fingerprint(client, fingerprint_file, fingerprint_base64)
-            if not client.status:
-                client.status = "pending"
+
+            if not fingerprint_base64:
+                fingerprint_base64 = capture_fingerprint_from_service()
+
+            client = handle_fingerprint(client, fingerprint_base64)
             client.registered_by = request.user
             client.save()
-            messages.success(request, f"Client '{client}' registered successfully!")
+            messages.success(request, f"Client '{client.full_name}' registered successfully!")
             return redirect("clients:client_list")
         messages.error(request, "Please correct the errors below.")
     else:
@@ -177,11 +164,11 @@ def edit_client(request, pk):
         form = ClientForm(request.POST, request.FILES, instance=client)
         if form.is_valid():
             client = form.save(commit=False)
-            fingerprint_file = request.FILES.get("fingerprint_file")
             fingerprint_base64 = request.POST.get("fingerprint_base64")
-            client = handle_fingerprint(client, fingerprint_file, fingerprint_base64)
+            if fingerprint_base64:
+                client = handle_fingerprint(client, fingerprint_base64)
             client.save()
-            messages.success(request, f"Client '{client.first_name} {client.last_name}' updated successfully!")
+            messages.success(request, f"Client '{client.full_name}' updated successfully!")
             return redirect("clients:client_list")
         messages.error(request, "Please correct the errors below.")
     else:
@@ -189,7 +176,7 @@ def edit_client(request, pk):
 
     return render(request, "clients/client_form.html", {
         "form": form,
-        "dashboard_title": f"Edit Client: {client.first_name} {client.last_name}"
+        "dashboard_title": f"Edit Client: {client.full_name}"
     })
 
 
@@ -199,13 +186,13 @@ def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
     return render(request, "clients/client_detail.html", {
         "client": client,
-        "dashboard_title": f"Client: {client.first_name} {client.last_name}",
+        "dashboard_title": f"Client: {client.full_name}"
     })
 
 
-# ==========================
-# API Views (DRF)
-# ==========================
+# ---------------------------
+# DRF API
+# ---------------------------
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
@@ -215,8 +202,6 @@ class ClientViewSet(viewsets.ModelViewSet):
         fingerprint_base64 = self.request.data.get("fingerprint_base64")
         client = serializer.save(registered_by=self.request.user)
         client = handle_fingerprint(client, fingerprint_base64=fingerprint_base64)
-        if not client.status:
-            client.status = "pending"
         client.save()
 
     def perform_update(self, serializer):
@@ -230,12 +215,11 @@ class ClientViewSet(viewsets.ModelViewSet):
     def verify_fingerprint(self, request):
         fingerprint_base64 = request.data.get("fingerprint_base64")
         if not fingerprint_base64:
-            return Response({"error": "No fingerprint provided"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error":"No fingerprint provided"}, status=400)
         try:
             fingerprint_bytes = base64.b64decode(fingerprint_base64)
         except Exception:
-            return Response({"error": "Invalid Base64 fingerprint"}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({"error":"Invalid Base64"}, status=400)
         client = Client.objects.filter(fingerprint_data=fingerprint_bytes).first()
         if client:
             return Response({
@@ -244,4 +228,4 @@ class ClientViewSet(viewsets.ModelViewSet):
                 "status": client.status,
                 "fingerprint_verified": client.fingerprint_verified
             })
-        return Response({"success": False}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"success": False}, status=404)

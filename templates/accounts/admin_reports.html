@@ -64,7 +64,7 @@
           {% for client in clients %}
           <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
             <td class="px-4 py-2">{{ client.id }}</td>
-            <td class="px-4 py-2">{{ client.name }}</td>
+            <td class="px-4 py-2">{{ client.name|default:"-" }}</td>
             <td class="px-4 py-2">{{ client.email }}</td>
             <td class="px-4 py-2 capitalize">{{ client.status }}</td>
             <td class="px-4 py-2">{{ client.created_at|date:"Y-m-d" }}</td>
@@ -97,7 +97,7 @@
           {% for policy in policies %}
           <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
             <td class="px-4 py-2">{{ policy.id }}</td>
-            <td class="px-4 py-2">{{ policy.client.name }}</td>
+            <td class="px-4 py-2">{{ policy.client.name|default:policy.client.email }}</td>
             <td class="px-4 py-2">{{ policy.policy_type }}</td>
             <td class="px-4 py-2 capitalize">{{ policy.status }}</td>
             <td class="px-4 py-2">{{ policy.created_at|date:"Y-m-d" }}</td>
@@ -120,6 +120,7 @@
         <thead class="bg-gray-50 dark:bg-gray-700">
           <tr>
             <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">ID</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Client</th>
             <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Policy</th>
             <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Amount</th>
             <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Status</th>
@@ -130,14 +131,15 @@
           {% for claim in claims %}
           <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
             <td class="px-4 py-2">{{ claim.id }}</td>
+            <td class="px-4 py-2">{{ claim.policy.client.name|default:claim.policy.client.email }}</td>
             <td class="px-4 py-2">{{ claim.policy.policy_type }}</td>
-            <td class="px-4 py-2">{{ claim.amount }}</td>
+            <td class="px-4 py-2">${{ claim.amount|floatformat:2 }}</td>
             <td class="px-4 py-2 capitalize">{{ claim.status }}</td>
             <td class="px-4 py-2">{{ claim.created_at|date:"Y-m-d" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="px-4 py-2 text-center text-gray-500">No claims found.</td>
+            <td colspan="6" class="px-4 py-2 text-center text-gray-500">No claims found.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -147,3 +149,4 @@
 
 </div>
 {% endblock %}
+gr 
