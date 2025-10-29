@@ -2,10 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
+from django.db.models.functions import TruncMonth
+from datetime import datetime
 import base64
 
-from rest_framework import viewsets, permissions, serializers, status
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -13,10 +15,10 @@ from .models import Client
 from .forms import ClientForm
 from .serializers import ClientSerializer
 from accounts.utils import roles_required
-from accounts.models import User  # Agent as User with role='agent'
+from accounts.models import User  # Agents are users with role='agent'
 
 # ==========================
-# 🌍 Helper function
+# Helper function for fingerprint
 # ==========================
 def handle_fingerprint(client, fingerprint_file=None, fingerprint_base64=None):
     """Update client fingerprint and status"""
@@ -31,19 +33,22 @@ def handle_fingerprint(client, fingerprint_file=None, fingerprint_base64=None):
             client.status = "verified"
         except Exception:
             # Keep previous status if decoding fails
-            messages.warning(
-                None, "Invalid fingerprint data. Status not changed."
-            )
+            messages.warning(None, "Invalid fingerprint data. Status not changed.")
     # If neither, leave status unchanged for edit or pending for new client
     return client
 
 
 # ==========================
-# 🌍 Web Views
+# Web Views
 # ==========================
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
 from django.db.models.functions import TruncMonth
-from django.db.models import Count
-from datetime import datetime
+from accounts.utils import roles_required
+from accounts.models import User
+from .models import Client
 
 @login_required
 @roles_required("admin", "agent")
@@ -54,7 +59,10 @@ def client_list(request):
     agent_filter = request.GET.get("agent", "").strip()
 
     # Base queryset
-    clients = Client.objects.filter(agent=user) if getattr(user, "role", None) == "agent" else Client.objects.all()
+    if user.role == "agent":
+        clients = Client.objects.filter(registered_by=user)
+    else:
+        clients = Client.objects.all()
 
     # Apply search
     if search_query:
@@ -69,38 +77,45 @@ def client_list(request):
     if gender_filter:
         clients = clients.filter(gender__iexact=gender_filter)
 
-    # Filter by agent if admin
-    if agent_filter and getattr(user, "role", None) == "admin":
-        clients = clients.filter(agent_id=agent_filter)
+    # Filter by agent (admin only)
+    if agent_filter and user.role == "admin":
+        clients = clients.filter(registered_by_id=agent_filter)
 
     # Pagination
     paginator = Paginator(clients.order_by("-created_at"), 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # Agents list for filter dropdown
-    agents = User.objects.filter(role="agent") if getattr(user, "role", None) == "admin" else None
+    # Agents list for dropdown (admin only)
+    agents = User.objects.filter(role="agent") if user.role == "admin" else None
 
-    # === Dashboard Stats ===
+    # Dashboard stats
     total_clients = clients.count()
     verified_clients = clients.filter(status="verified").count()
     pending_clients = clients.filter(status="pending").count()
     failed_clients = clients.filter(status="failed").count()
 
-    # Gender distribution for charts
+    # KPI Cards
+    cards = [
+        {"title": "Total Clients", "value": total_clients, "color": "blue"},
+        {"title": "Verified", "value": verified_clients, "color": "green"},
+        {"title": "Pending", "value": pending_clients, "color": "yellow"},
+        {"title": "Failed", "value": failed_clients, "color": "red"},
+    ]
+
+    # Gender distribution
     gender_counts = clients.values("gender").annotate(count=Count("id"))
     male_clients = next((g["count"] for g in gender_counts if g["gender"]=="Male"), 0)
     female_clients = next((g["count"] for g in gender_counts if g["gender"]=="Female"), 0)
     other_clients = next((g["count"] for g in gender_counts if g["gender"]=="Other"), 0)
 
-    # Clients by registration month
+    # Monthly registrations
     month_counts = (
         clients.annotate(month=TruncMonth("created_at"))
                .values("month")
                .annotate(count=Count("id"))
                .order_by("month")
     )
-    # Prepare data for chart.js
     months = [m["month"].strftime("%b %Y") for m in month_counts]
     month_data = [m["count"] for m in month_counts]
 
@@ -112,21 +127,19 @@ def client_list(request):
         "gender_filter": gender_filter,
         "agent_filter": agent_filter,
         "dashboard_title": "Clients Dashboard",
-        # Stats
         "total_clients": total_clients,
         "verified_clients": verified_clients,
         "pending_clients": pending_clients,
         "failed_clients": failed_clients,
-        # Gender chart data
+        "cards": cards,
         "male_clients": male_clients,
         "female_clients": female_clients,
         "other_clients": other_clients,
-        # Monthly registration chart data
         "months": months,
         "month_data": month_data,
     }
-    return render(request, "clients/client_list.html", context)
 
+    return render(request, "clients/client_list.html", context)
 
 
 @login_required
@@ -139,12 +152,9 @@ def add_client(request):
             client = form.save(commit=False)
             fingerprint_file = request.FILES.get("fingerprint_file")
             fingerprint_base64 = request.POST.get("fingerprint_base64")
-
             client = handle_fingerprint(client, fingerprint_file, fingerprint_base64)
-
             if not client.status:
                 client.status = "pending"
-
             client.registered_by = request.user
             client.save()
             messages.success(request, f"Client '{client}' registered successfully!")
@@ -162,16 +172,13 @@ def add_client(request):
 @login_required
 @roles_required("admin", "agent")
 def edit_client(request, pk):
-    """Edit existing client"""
     client = get_object_or_404(Client, pk=pk)
-
     if request.method == "POST":
         form = ClientForm(request.POST, request.FILES, instance=client)
         if form.is_valid():
             client = form.save(commit=False)
             fingerprint_file = request.FILES.get("fingerprint_file")
             fingerprint_base64 = request.POST.get("fingerprint_base64")
-
             client = handle_fingerprint(client, fingerprint_file, fingerprint_base64)
             client.save()
             messages.success(request, f"Client '{client.first_name} {client.last_name}' updated successfully!")
@@ -197,7 +204,7 @@ def client_detail(request, pk):
 
 
 # ==========================
-# 🌐 API Views (DRF)
+# API Views (DRF)
 # ==========================
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
@@ -238,4 +245,3 @@ class ClientViewSet(viewsets.ModelViewSet):
                 "fingerprint_verified": client.fingerprint_verified
             })
         return Response({"success": False}, status=status.HTTP_404_NOT_FOUND)
-

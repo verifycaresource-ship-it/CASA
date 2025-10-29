@@ -1,6 +1,10 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.urls import reverse   # ✅ if you ever use get_absolute_url()
+from django.core.validators import RegexValidator  # ✅ optional: for phone validation
+import json
+
 
 class Client(models.Model):
     GENDER_CHOICES = [
@@ -8,7 +12,7 @@ class Client(models.Model):
         ("female", "Female"),
         ("other", "Other"),
     ]
-    
+
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("verified", "Verified"),
@@ -17,7 +21,12 @@ class Client(models.Model):
 
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    phone = models.CharField(max_length=20, blank=True, null=True)
+    phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        validators=[RegexValidator(r'^\+?1?\d{9,15}$', "Enter a valid phone number.")],
+    )
     email = models.EmailField(blank=True, null=True)
     dob = models.DateField(blank=True, null=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
@@ -26,7 +35,7 @@ class Client(models.Model):
     # 🖼️ Client photo
     photo = models.ImageField(upload_to="clients/photos/", blank=True, null=True)
 
-    # 🖐️ Fingerprint data for biometric verification
+    # 🖐️ Fingerprint data (binary)
     fingerprint_data = models.BinaryField(blank=True, null=True, editable=False)
     fingerprint_verified = models.BooleanField(default=False)
 
@@ -82,3 +91,22 @@ class Client(models.Model):
         if self.photo:
             return self.photo.url
         return "/static/images/default-avatar.png"
+
+    def get_absolute_url(self):
+        """Return detail page URL."""
+        return reverse("clients:client_detail", args=[str(self.id)])
+
+
+class WebAuthnCredential(models.Model):
+    client = models.OneToOneField(
+        "Client",
+        on_delete=models.CASCADE,
+        related_name="webauthn_credential"
+    )
+    credential_id = models.CharField(max_length=255, unique=True)
+    public_key = models.TextField()
+    sign_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"WebAuthn Credential for {self.client.full_name}"

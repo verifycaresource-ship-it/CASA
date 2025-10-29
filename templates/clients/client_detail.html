@@ -1,99 +1,110 @@
 {% extends 'dashboard/base.html' %}
 {% load static %}
 
-{% block title %}Client Health Card | CareSource Africa{% endblock %}
+{% block title %}Health ID Card | CareSource Africa{% endblock %}
 
 {% block content %}
-<div class="relative min-h-screen bg-gray-100 py-10 flex justify-center items-center">
+<div class="flex justify-center items-center min-h-screen bg-gray-100 py-10 px-4">
 
-  <!-- 🌄 Background Image -->
-  <div class="absolute inset-0">
-    <img 
-      src="https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8aGVhbHRofGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=1200" 
-      alt="Health Background"
-      class="w-full h-full object-cover">
-    <div class="absolute inset-0 bg-gradient-to-br from-blue-900/70 to-blue-500/60 backdrop-blur-sm"></div>
-  </div>
+  <!-- 💳 Health Card Container -->
+  <div class="relative w-[600px] h-[380px] rounded-3xl shadow-2xl overflow-hidden border border-blue-300 
+              bg-gradient-to-b from-blue-100 via-blue-50 to-white print:border-0 print:shadow-none">
 
-  <!-- 🪪 Health Card -->
-  <div class="relative max-w-3xl w-full bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-blue-200 p-8 print:border-0 print:shadow-none">
-
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6 border-b-2 border-blue-600 pb-3">
-      <div class="flex items-center space-x-3">
+    <!-- 🔷 Header -->
+    <div class="relative flex justify-between items-center px-6 pt-5 pb-3 
+                bg-gradient-to-r from-blue-900 via-blue-700 to-blue-500 border-b border-blue-300">
+      <div class="flex items-center gap-3">
         <img src="https://caresourceafrica.com/images/logo.jpeg" 
              alt="CareSource Africa Logo" 
-             class="h-12 w-12 object-contain rounded-full border border-gray-300">
-        <h1 class="text-2xl font-bold text-blue-700">CareSource Africa Insurance</h1>
+             class="h-12 w-12 rounded-full border border-blue-200 shadow-md">
+        <div>
+          <h1 class="text-white text-2xl font-bold tracking-wide drop-shadow-sm">CareSource Africa</h1>
+          <p class="text-blue-200 text-xs uppercase tracking-widest">Health Insurance Card</p>
+        </div>
       </div>
-      <div class="text-right text-sm text-gray-600">
-        <p>Issued: <span class="font-medium">{{ client.created_at|date:"M d, Y" }}</span></p>
-        <p>ID: <span class="font-semibold text-gray-800">#{{ client.id }}</span></p>
-        <p>
-          Status: 
-          {% if client.status == 'verified' %}
-            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">✅ Verified</span>
-          {% elif client.status == 'pending' %}
-            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">⏳ Pending</span>
-          {% else %}
-            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">❌ Failed</span>
-          {% endif %}
-        </p>
+      <div class="text-right text-sm text-blue-100">
+        <p>ID: <span class="text-yellow-300 font-semibold">#{{ client.id }}</span></p>
+        <p>Issued: {{ client.created_at|date:"M d, Y" }}</p>
       </div>
     </div>
 
-    <!-- Main Info -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+    <!-- 🌟 Embedded Gold Chip -->
+    <div class="absolute right-10 bottom-[48%] w-20 h-14 rounded-md overflow-hidden z-50
+                border border-yellow-400 bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600
+                shadow-[inset_0_2px_4px_rgba(0,0,0,0.3),0_0_18px_rgba(255,215,0,0.7),0_0_35px_rgba(255,215,0,0.4)]
+                transition-transform duration-300 hover:scale-105">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVv8MGSqD-2aNCeI1qZ4wRQySYByDUcnOpqg&s"
+           alt="Gold Chip"
+           class="w-full h-full object-cover rounded-md brightness-110 contrast-125 opacity-95 mix-blend-multiply">
+    </div>
 
-      <!-- Left: Photo -->
-      <div class="flex justify-center">
+    <!-- ✨ Sheen overlay -->
+    <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent 
+                opacity-60 pointer-events-none z-10"></div>
+
+    <!-- 🔸 Card Body -->
+    <div class="relative flex justify-between items-center h-[250px] px-8 py-6 
+                bg-gradient-to-b from-white via-blue-50 to-blue-100">
+
+      <!-- 🧍 Left Section: Photo -->
+      <div class="flex flex-col items-center w-[45%]">
         {% if client.photo %}
           <img src="{{ client.photo.url }}" 
                alt="{{ client.first_name }}" 
-               class="w-48 h-48 object-cover rounded-xl border-4 border-blue-600 shadow-lg">
+               class="w-40 h-40 object-cover rounded-2xl border-4 border-yellow-400 shadow-lg">
         {% else %}
-          <div class="w-48 h-48 bg-gray-200 flex items-center justify-center rounded-xl text-gray-500 text-sm">
-            No Photo
-          </div>
+          <img src="https://cdn.pixabay.com/photo/2020/02/18/10/07/african-man-4857311_1280.jpg"
+               alt="Somali Man"
+               class="w-40 h-40 object-cover rounded-2xl border-4 border-yellow-400 shadow-lg">
         {% endif %}
+        <div class="text-center mt-3">
+          <h2 class="text-lg font-semibold text-blue-900 drop-shadow-sm">
+            {{ client.first_name }} {{ client.last_name }}
+          </h2>
+          <p class="text-gray-600 text-xs tracking-wider">Member Since {{ client.created_at|date:"Y" }}</p>
+        </div>
       </div>
 
-      <!-- Right: Info -->
-      <div class="space-y-3 text-gray-700">
-        <h2 class="text-2xl font-semibold text-blue-800">{{ client.first_name }} {{ client.last_name }}</h2>
-        <p><strong>📧 Email:</strong> {{ client.email|default:"Not provided" }}</p>
-        <p><strong>📞 Phone:</strong> {{ client.phone|default:"Not provided" }}</p>
-        <p><strong>🎂 Date of Birth:</strong> {{ client.dob|date:"M d, Y" }}</p>
-        <p><strong>⚧ Gender:</strong> {{ client.gender|title|default:"Not specified" }}</p>
-        <p><strong>🏠 Address:</strong> {{ client.address|default:"Not provided" }}</p>
-        <p><strong>👔 Assigned Agent:</strong> {{ client.agent|default:"Unassigned" }}</p>
-        <p><strong>🧍 Registered By:</strong> {{ client.registered_by|default:"System" }}</p>
+      <!-- 📋 Right Section: Info -->
+      <div class="w-[55%] text-gray-800 space-y-1.5">
+        <p><span class="font-semibold text-blue-900">Gender:</span> {{ client.gender|title|default:"Not specified" }}</p>
+        <p><span class="font-semibold text-blue-900">DOB:</span> {{ client.dob|date:"M d, Y" }}</p>
+        <p><span class="font-semibold text-blue-900">Address:</span> {{ client.address|default:"Not provided" }}</p>
+        <p><span class="font-semibold text-blue-900">Phone:</span> {{ client.phone|default:"Not provided" }}</p>
+        <p><span class="font-semibold text-blue-900">Agent:</span> {{ client.agent|default:"Unassigned" }}</p>
+        <p><span class="font-semibold text-blue-900">Registered By:</span> {{ client.registered_by|default:"System" }}</p>
         <p>
-          <strong>🛡️ Fingerprint Verified:</strong> 
+          <span class="font-semibold text-blue-900">Fingerprint Verified:</span>
           {% if client.fingerprint_verified %}
             <span class="text-green-700 font-semibold">✅ Yes</span>
           {% else %}
             <span class="text-red-700 font-semibold">❌ No</span>
           {% endif %}
         </p>
+        <p>
+          <span class="font-semibold text-blue-900">Status:</span>
+          {% if client.status == 'verified' %}
+            <span class="text-green-700 font-semibold">Verified</span>
+          {% elif client.status == 'pending' %}
+            <span class="text-yellow-600 font-semibold">Pending</span>
+          {% else %}
+            <span class="text-red-700 font-semibold">Failed</span>
+          {% endif %}
+        </p>
       </div>
     </div>
 
-    <!-- Footer / Actions -->
-    <div class="mt-8 flex justify-between items-center border-t border-blue-200 pt-4">
-      <a href="{% url 'clients:client_list' %}" 
-         class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition">
-        ⬅ Back
-      </a>
-      <div class="flex space-x-2">
+    <!-- 🔹 Footer -->
+    <div class="absolute bottom-0 w-full flex justify-between items-center px-6 py-3 
+                bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 border-t border-blue-300">
+      <p class="text-xs text-blue-100">© {{ now|date:"Y" }} CareSource Africa • All rights reserved</p>
+      <div class="flex space-x-2 print:hidden">
+        <a href="{% url 'clients:client_list' %}" 
+           class="px-3 py-1 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition">⬅ Back</a>
         <a href="{% url 'clients:edit_client' client.id %}" 
-           class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-          ✏️ Edit
-        </a>
+           class="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition">✏ Edit</a>
         <button onclick="window.print()" 
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-          🖨️ Print Card
-        </button>
+                class="px-3 py-1 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition">🖨 Print</button>
       </div>
     </div>
 
@@ -103,11 +114,15 @@
 <!-- 🖨️ Print Styles -->
 <style>
   @media print {
-    body * { visibility: hidden; }
-    .relative.max-w-3xl, .relative.max-w-3xl * { visibility: visible; }
-    .relative.max-w-3xl { margin: 0; padding: 0; box-shadow: none; border: none; }
+    body * { visibility: hidden !important; }
+    .w-\[600px\] { 
+      visibility: visible !important; 
+      position: absolute; 
+      top: 0; left: 0; 
+      box-shadow: none; 
+      border: none; 
+    }
     button, a { display: none !important; }
-    .absolute.inset-0 { display: none !important; }
   }
 </style>
 {% endblock %}
