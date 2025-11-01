@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "policies",
     "claims",
     "hospitals",
+    'django_extensions',
 ]
 
 # ----------------------------

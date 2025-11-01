@@ -8,18 +8,18 @@ from .models import Claim
 from .serializers import ClaimSerializer
 from clients.models import Client
 from policies.models import Policy
-from hospitals.models import Hospital
+from hospitals.models import Hospital, HospitalAssignment
 from accounts.utils import roles_required
 
-from hospitals.models import HospitalAssignment
-from .models import Claim
 
-
+# -----------------------
+# 🏥 Submit Claim for Assignment
+# -----------------------
 @login_required
 @roles_required("hospital")
 def submit_claim_for_assignment(request, assignment_id):
     """
-    Hospital user submits a claim for an accepted assignment.
+    Hospital submits a claim for an accepted assignment.
     """
     assignment = get_object_or_404(
         HospitalAssignment,
@@ -31,26 +31,31 @@ def submit_claim_for_assignment(request, assignment_id):
     if request.method == "POST":
         description = request.POST.get("description", "").strip()
         amount = request.POST.get("claim_amount")
+
+        # Step 1: Verify client before claim submission (future feature)
+        # Example placeholder:
+        # verified = verify_client_identity(assignment.client)
+        # if not verified:
+        #     messages.error(request, "Client verification failed.")
+        #     return redirect("claims:submit_claim_for_assignment", assignment_id=assignment_id)
+
         if not (description and amount):
             messages.error(request, "All fields are required.")
             return redirect("claims:submit_claim_for_assignment", assignment_id=assignment_id)
 
-        # Build claim_number — adapt format if you have your own convention
         claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
 
-        # The Claim model in your project appears to use field 'amount' and 'status'
         Claim.objects.create(
             claim_number=claim_number,
             hospital=assignment.hospital,
             client=assignment.client,
             policy=assignment.policy,
-            submitted_by=request.user,
-            description=description,
             amount=amount,
-            status="pending",  # match your claim status values
+            status="pending",
+            notes=description,
+            created_by=request.user,
         )
 
-        # mark assignment completed (change if you prefer a different lifecycle)
         assignment.status = "completed"
         assignment.save(update_fields=["status", "updated_at"])
 
@@ -61,6 +66,7 @@ def submit_claim_for_assignment(request, assignment_id):
         "assignment": assignment,
         "dashboard_title": "Submit Claim",
     })
+
 
 # -----------------------
 # 🏥 Hospital Claim Dashboard
@@ -76,20 +82,15 @@ def hospital_claim_dashboard(request):
         messages.error(request, "Hospital profile not found.")
         return redirect("accounts:dashboard")
 
-    total_claims = Claim.objects.filter(hospital=hospital).count()
-    pending_claims = Claim.objects.filter(hospital=hospital, status="pending").count()
-    approved_claims = Claim.objects.filter(hospital=hospital, status="approved").count()
-    rejected_claims = Claim.objects.filter(hospital=hospital, status="rejected").count()
-
     claims = Claim.objects.filter(hospital=hospital).select_related("client", "policy").order_by("-created_at")
 
     context = {
         "hospital": hospital,
         "dashboard_title": f"{hospital.name} Claims Dashboard",
-        "total_claims": total_claims,
-        "pending_claims": pending_claims,
-        "approved_claims": approved_claims,
-        "rejected_claims": rejected_claims,
+        "total_claims": claims.count(),
+        "pending_claims": claims.filter(status="pending").count(),
+        "approved_claims": claims.filter(status="approved").count(),
+        "rejected_claims": claims.filter(status="rejected").count(),
         "claims": claims,
     }
 

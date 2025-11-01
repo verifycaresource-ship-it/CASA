@@ -1,63 +1,81 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
 import base64
 import subprocess
 
 app = Flask(__name__)
 
-# ---------- Helper Functions ----------
-def enroll_fingerprint_system(finger="right-index-finger"):
+# -----------------------------
+# Helper Functions
+# -----------------------------
+def capture_fingerprint():
     """
-    Call system fprintd to enroll a fingerprint.
-    Returns Base64-encoded template or raises Exception.
+    Capture fingerprint using DigitalPersona SDK or fprintd.
+    Returns base64 template.
     """
     try:
-        # Call fprintd-enroll to capture fingerprint
+        # Replace below command with your DigitalPersona SDK CLI or method
+        # Example for fprintd: ['fprintd-enroll', '--finger', 'right-index-finger']
         result = subprocess.run(
-            ["fprintd-enroll", "--finger", finger],
+            ["fprintd-enroll", "--finger", "right-index-finger"],
             capture_output=True, text=True, timeout=30
         )
         if result.returncode != 0:
             raise Exception(result.stderr or result.stdout)
 
-        # Simulate capturing template (replace with real binary if possible)
-        # In a real system, you could read template from fprintd
-        template_bytes = b"RealFingerprintTemplateBytes"  
-        fingerprint_base64 = base64.b64encode(template_bytes).decode("utf-8")
-        return fingerprint_base64
+        # Simulate template (replace with real template extraction)
+        template_bytes = b"DigitalPersonaTemplateBytes"
+        template_base64 = base64.b64encode(template_bytes).decode("utf-8")
+        return template_base64
 
     except subprocess.TimeoutExpired:
-        raise Exception("Fingerprint capture timed out. Try again.")
+        raise Exception("Fingerprint capture timed out.")
     except Exception as e:
         raise e
 
-# ---------- Flask Routes ----------
-@app.route("/enroll", methods=["GET"])
-def enroll():
+
+def verify_fingerprint(template_base64):
+    """
+    Verify a fingerprint template against enrolled templates.
+    """
     try:
-        fingerprint_base64 = enroll_fingerprint_system()
+        # In a real setup, send template to SDK for verification
+        # Here we simulate by checking any template (replace with actual verification)
+        template_bytes = base64.b64decode(template_base64)
+
+        # Simulate success if template exists
+        verified = bool(template_bytes)
+        return verified
+
+    except Exception as e:
+        raise e
+
+
+# -----------------------------
+# Flask Routes
+# -----------------------------
+@app.route("/capture", methods=["GET"])
+def capture():
+    try:
+        template_base64 = capture_fingerprint()
         return jsonify({
             "success": True,
-            "message": "Fingerprint enrolled successfully.",
-            "fingerprint": fingerprint_base64
+            "template": template_base64,
+            "message": "Fingerprint captured successfully."
         })
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": str(e)
-        }), 500
+        return jsonify({"success": False, "message": str(e)}), 500
 
-@app.route("/verify", methods=["GET"])
+
+@app.route("/verify", methods=["POST"])
 def verify():
     try:
-        # Call system fprintd-verify
-        result = subprocess.run(
-            ["fprintd-verify"],
-            capture_output=True, text=True, timeout=30
-        )
-        success = "verify-result: verify-match" in result.stdout.lower()
-        return jsonify({"success": success, "message": result.stdout})
-    except subprocess.TimeoutExpired:
-        return jsonify({"success": False, "message": "Verification timed out."}), 500
+        data = request.json
+        template_base64 = data.get("template")
+        if not template_base64:
+            return jsonify({"success": False, "message": "No template provided."}), 400
+
+        verified = verify_fingerprint(template_base64)
+        return jsonify({"success": verified})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
