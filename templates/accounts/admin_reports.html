@@ -64,7 +64,7 @@
           {% for client in clients %}
           <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
             <td class="px-4 py-2">{{ client.id }}</td>
-            <td class="px-4 py-2">{{ client.name|default:"-" }}</td>
+            <td class="px-4 py-2">{{ client.first_name}}</td>
             <td class="px-4 py-2">{{ client.email }}</td>
             <td class="px-4 py-2 capitalize">{{ client.status }}</td>
             <td class="px-4 py-2">{{ client.created_at|date:"Y-m-d" }}</td>

@@ -12,7 +12,7 @@ from django.utils.timezone import make_aware, now
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 import openpyxl
-from xhtml2pdf import pisa  # pip install xhtml2pdf
+from xhtml2pdf import pisa
 from rest_framework import viewsets, permissions
 
 from .models import User
@@ -23,144 +23,6 @@ from clients.models import Client
 from policies.models import Policy
 from claims.models import Claim
 from hospitals.models import Hospital
-
-
-# ==============================
-# ADMIN REPORTS
-# ==============================
-@login_required(login_url="accounts:login")
-@roles_required("admin")
-def admin_reports(request):
-    """Admin report page with filters, summary, and export-ready data."""
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
-    status_filter = request.GET.get("status")  # 'verified', 'pending', 'failed'
-
-    # Base querysets
-    clients = Client.objects.all()
-    policies = Policy.objects.all()
-    claims = Claim.objects.all()
-
-    # Date filtering
-    try:
-        if start_date:
-            start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
-            clients = clients.filter(created_at__gte=start)
-            policies = policies.filter(created_at__gte=start)
-            claims = claims.filter(created_at__gte=start)
-        if end_date:
-            end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
-            clients = clients.filter(created_at__lte=end)
-            policies = policies.filter(created_at__lte=end)
-            claims = claims.filter(created_at__lte=end)
-    except ValueError:
-        pass
-
-    # Status filtering
-    if status_filter:
-        clients = clients.filter(status=status_filter)
-        claims = claims.filter(status=status_filter)
-        policies = policies.filter(Q(status=status_filter) | Q(policy_type__isnull=False))
-
-    # Summary counts
-    summary = {
-        "clients": clients.count(),
-        "policies": policies.count(),
-        "claims": claims.count(),
-    }
-
-    context = {
-        "dashboard_title": "Admin Reports | HealthInsure",
-        "clients": clients,
-        "policies": policies,
-        "claims": claims,
-        "start_date": start_date,
-        "end_date": end_date,
-        "status_filter": status_filter,
-        "summary": summary,
-    }
-    return render(request, "accounts/admin_reports.html", context)
-
-
-@login_required(login_url="accounts:login")
-@roles_required("admin")
-def export_report(request, format):
-    """Export reports as CSV, XLS, or PDF."""
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
-    status_filter = request.GET.get("status")
-
-    clients = Client.objects.all()
-    policies = Policy.objects.all()
-    claims = Claim.objects.all()
-
-    # Apply filters
-    try:
-        if start_date:
-            start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
-            clients = clients.filter(created_at__gte=start)
-            policies = policies.filter(created_at__gte=start)
-            claims = claims.filter(created_at__gte=start)
-        if end_date:
-            end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
-            clients = clients.filter(created_at__lte=end)
-            policies = policies.filter(created_at__lte=end)
-            claims = claims.filter(created_at__lte=end)
-    except ValueError:
-        pass
-
-    if status_filter:
-        clients = clients.filter(status=status_filter)
-        claims = claims.filter(status=status_filter)
-        policies = policies.filter(Q(status=status_filter) | Q(policy_type__isnull=False))
-
-    timestamp = now().strftime("%Y%m%d_%H%M%S")
-
-    # CSV Export
-    if format.lower() == "csv":
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="report_{timestamp}.csv"'
-        writer = csv.writer(response)
-        writer.writerow(["Category", "Count"])
-        writer.writerow(["Clients", clients.count()])
-        writer.writerow(["Policies", policies.count()])
-        writer.writerow(["Claims", claims.count()])
-        return response
-
-    # XLS Export
-    elif format.lower() in ["xls", "xlsx"]:
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Report"
-        ws.append(["Category", "Count"])
-        ws.append(["Clients", clients.count()])
-        ws.append(["Policies", policies.count()])
-        ws.append(["Claims", claims.count()])
-        response = HttpResponse(
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        response["Content-Disposition"] = f'attachment; filename="report_{timestamp}.xlsx"'
-        wb.save(response)
-        return response
-
-    # PDF Export
-    elif format.lower() == "pdf":
-        html = render_to_string("accounts/report_pdf.html", {
-            "clients": clients,
-            "policies": policies,
-            "claims": claims,
-            "start_date": start_date,
-            "end_date": end_date,
-            "status_filter": status_filter,
-        })
-        response = HttpResponse(content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="report_{timestamp}.pdf"'
-        pisa_status = pisa.CreatePDF(io.BytesIO(html.encode("UTF-8")), dest=response)
-        if pisa_status.err:
-            return HttpResponse("Error generating PDF", status=500)
-        return response
-
-    return HttpResponse("Invalid export format", status=400)
 
 
 # ==============================
@@ -182,7 +44,7 @@ def login_view(request):
                 messages.success(request, f"Welcome back, {user.username}!")
                 redirect_map = {
                     "hospital": "claims:hospital_claim_dashboard",
-                    "agent": "accounts:agent_dashboard"
+                    "agent": "accounts:dashboard"
                 }
                 return redirect(redirect_map.get(user.role, "accounts:dashboard"))
         else:
@@ -199,39 +61,57 @@ def logout_view(request):
 
 
 # ==============================
-# DASHBOARDS
+# DASHBOARD (Unified for all roles)
 # ==============================
 @login_required(login_url="accounts:login")
 def dashboard(request):
-    """Admin dashboard."""
     user = request.user
-    if user.role == "agent":
-        return redirect("accounts:agent_dashboard")
+    role = getattr(user, "role", "guest")
 
-    total_clients = Client.objects.count()
-    verified_clients = Client.objects.filter(status="verified").count()
-    pending_clients = Client.objects.filter(status="pending").count()
-    failed_clients = Client.objects.filter(status="failed").count()
-    active_policies = Policy.objects.filter(is_active=True).count()
-    total_claims = Claim.objects.count()
-    total_hospitals = Hospital.objects.count()
-    total_revenue = Claim.objects.filter(status__in=["approved","reimbursed"]).aggregate(
-        total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
-    )["total"]
+    # --------------------------
+    # Admin / Superuser / Finance
+    # --------------------------
+    if user.is_superuser or role in ["admin", "finance_officer"]:
+        # Client stats
+        total_clients = Client.objects.count()
+        verified_clients = Client.objects.filter(status="verified").count()
+        pending_clients = Client.objects.filter(status="pending").count()
+        failed_clients = Client.objects.filter(status="failed").count()
 
-    cards = [
-        {"label": "Clients", "value": total_clients, "color": "blue"},
-        {"label": "Verified Clients", "value": verified_clients, "color": "green"},
-        {"label": "Pending Clients", "value": pending_clients, "color": "yellow"},
-        {"label": "Failed Clients", "value": failed_clients, "color": "red"},
-        {"label": "Active Policies", "value": active_policies, "color": "green"},
-        {"label": "Claims", "value": total_claims, "color": "yellow"},
-        {"label": "Hospitals", "value": total_hospitals, "color": "red"},
-        {"label": "Revenue Collected", "value": f"${total_revenue:,.2f}", "color": "teal"},
-    ]
+        # Policy stats
+        active_policies = Policy.objects.filter(is_active=True).count()
+        shariah_policies_count = Policy.objects.filter(shariah_approved=True).count()
+        non_shariah_policies_count = Policy.objects.filter(shariah_approved=False).count()
 
-    shortcuts = []
-    if user.role in ["admin", "finance_officer"] or user.is_superuser:
+        # Claim stats
+        total_claims = Claim.objects.count()
+        claims_pending_count = Claim.objects.filter(status="pending").count()
+        claims_approved_count = Claim.objects.filter(status="approved").count()
+        claims_rejected_count = Claim.objects.filter(status="rejected").count()
+
+        # Hospital stats
+        total_hospitals = Hospital.objects.count()
+        shariah_hospitals_count = Hospital.objects.filter(shariah_approved=True).count()
+        non_shariah_hospitals_count = Hospital.objects.filter(shariah_approved=False).count()
+
+        # Revenue
+        total_revenue = Claim.objects.filter(status__in=["approved", "reimbursed"]).aggregate(
+            total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
+        )["total"]
+
+        cards = [
+            {"label": "Clients", "value": total_clients, "color": "blue"},
+            {"label": "Verified Clients", "value": verified_clients, "color": "green"},
+            {"label": "Pending Clients", "value": pending_clients, "color": "yellow"},
+            {"label": "Failed Clients", "value": failed_clients, "color": "red"},
+            {"label": "Active Policies", "value": active_policies, "color": "green"},
+            {"label": "Shariah Policies", "value": shariah_policies_count, "color": "teal"},
+            {"label": "Non-Shariah Policies", "value": non_shariah_policies_count, "color": "purple"},
+            {"label": "Claims", "value": total_claims, "color": "yellow"},
+            {"label": "Hospitals", "value": total_hospitals, "color": "red"},
+            {"label": "Revenue Collected", "value": f"${total_revenue:,.2f}", "color": "teal"},
+        ]
+
         shortcuts = [
             {"name": "👥 Manage Users", "url": "/accounts/users/", "color": "blue"},
             {"name": "➕ Add Client", "url": "/clients/add/", "color": "green"},
@@ -242,63 +122,268 @@ def dashboard(request):
             {"name": "📄 Reports & Export", "url": "/accounts/reports/", "color": "purple"},
         ]
 
-    # Chart data
-    policies_labels = list(Policy.objects.values_list("policy_type", flat=True).distinct())
-    policies_data = [Policy.objects.filter(policy_type=t).count() for t in policies_labels]
-    claims_pending_count = Claim.objects.filter(status="pending").count()
-    claims_approved_count = Claim.objects.filter(status="approved").count()
-    claims_rejected_count = Claim.objects.filter(status="rejected").count()
-    hospitals_labels = ["Verified", "Unverified"]
-    hospitals_data = [Hospital.objects.filter(verified=True).count(), Hospital.objects.filter(verified=False).count()]
+        # Charts
+        policies_labels = list(Policy.objects.values_list("policy_type", flat=True).distinct())
+        policies_data = [Policy.objects.filter(policy_type=t).count() for t in policies_labels]
+        hospitals_labels = ["Verified", "Unverified"]
+        hospitals_data = [Hospital.objects.filter(verified=True).count(),
+                          Hospital.objects.filter(verified=False).count()]
+
+        context = {
+            "dashboard_title": "Admin Dashboard | HealthInsure",
+            "user": user,
+            "role": role,
+            "cards": cards,
+            "shortcuts": shortcuts,
+            "policies_labels": json.dumps(policies_labels),
+            "policies_data": json.dumps(policies_data),
+            "claims_pending_count": claims_pending_count,
+            "claims_approved_count": claims_approved_count,
+            "claims_rejected_count": claims_rejected_count,
+            "hospitals_labels": json.dumps(hospitals_labels),
+            "hospitals_data": json.dumps(hospitals_data),
+            "shariah_policies_count": shariah_policies_count,
+            "non_shariah_policies_count": non_shariah_policies_count,
+            "shariah_hospitals_count": shariah_hospitals_count,
+            "non_shariah_hospitals_count": non_shariah_hospitals_count,
+            "last_7_days": json.dumps([(now() - datetime.timedelta(days=i)).strftime("%b %d") for i in reversed(range(7))])
+        }
+        return render(request, "dashboard/dashboard.html", context)
+
+    # --------------------------
+    # Agent Dashboard
+    # --------------------------
+    elif role == "agent":
+        clients_qs = Client.objects.filter(agent=user)
+        total_clients = clients_qs.count()
+        verified_clients = clients_qs.filter(status="verified").count()
+        pending_clients = clients_qs.filter(status="pending").count()
+        failed_clients = clients_qs.filter(status="failed").count()
+
+        shariah_policies_count = Policy.objects.filter(client__agent=user, shariah_approved=True).count()
+        non_shariah_policies_count = Policy.objects.filter(client__agent=user, shariah_approved=False).count()
+
+        cards = [
+            {"label": "My Clients", "value": total_clients, "color": "blue"},
+            {"label": "Verified", "value": verified_clients, "color": "green"},
+            {"label": "Pending", "value": pending_clients, "color": "yellow"},
+            {"label": "Failed", "value": failed_clients, "color": "red"},
+            {"label": "Shariah Policies", "value": shariah_policies_count, "color": "teal"},
+            {"label": "Non-Shariah Policies", "value": non_shariah_policies_count, "color": "purple"},
+        ]
+
+        shortcuts = [
+            {"name": "➕ Register Client", "url": "/clients/add/", "color": "green"},
+            {"name": "👥 View Clients", "url": "/clients/", "color": "blue"},
+        ]
+
+        context = {
+            "dashboard_title": "Agent Dashboard | HealthInsure",
+            "user": user,
+            "role": role,
+            "cards": cards,
+            "shortcuts": shortcuts,
+            "last_7_days": json.dumps([(now() - datetime.timedelta(days=i)).strftime("%b %d") for i in reversed(range(7))])
+        }
+        return render(request, "accounts/agent_dashboard.html", context)
+
+    # --------------------------
+    # Hospital Dashboard
+    # --------------------------
+    elif role == "hospital":
+        hospital = getattr(user, "hospital_profile", None)
+        if not hospital:
+            messages.error(request, "Hospital profile not found.")
+            return redirect("accounts:login")
+
+        total_claims = Claim.objects.filter(hospital=hospital).count()
+        pending_claims = Claim.objects.filter(hospital=hospital, status="pending").count()
+        approved_claims = Claim.objects.filter(hospital=hospital, status="approved").count()
+        rejected_claims = Claim.objects.filter(hospital=hospital, status="rejected").count()
+
+        cards = [
+            {"label": "Total Claims", "value": total_claims, "color": "blue"},
+            {"label": "Pending Claims", "value": pending_claims, "color": "yellow"},
+            {"label": "Approved Claims", "value": approved_claims, "color": "green"},
+            {"label": "Rejected Claims", "value": rejected_claims, "color": "red"},
+        ]
+
+        shortcuts = [
+            {"name": "📄 View My Claims", "url": "/claims/hospital/", "color": "blue"},
+        ]
+
+        context = {
+            "dashboard_title": f"Hospital Dashboard | {hospital.name}",
+            "user": user,
+            "cards": cards,
+            "shortcuts": shortcuts,
+        }
+        return render(request, "accounts/hospital_dashboard.html", context)
+
+    else:
+        messages.error(request, "Access denied for your role.")
+        return redirect("accounts:login")
+
+
+# ==============================
+# ADMIN REPORTS
+# ==============================
+@login_required(login_url="accounts:login")
+@roles_required("admin")
+def admin_reports(request):
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    status_filter = request.GET.get("status")
+    shariah_filter = request.GET.get("shariah")
+
+    clients = Client.objects.all()
+    policies = Policy.objects.all()
+    claims = Claim.objects.all()
+    hospitals = Hospital.objects.all()
+
+    try:
+        if start_date:
+            start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
+            clients = clients.filter(created_at__gte=start)
+            policies = policies.filter(created_at__gte=start)
+            claims = claims.filter(created_at__gte=start)
+            hospitals = hospitals.filter(created_at__gte=start)
+        if end_date:
+            end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
+            clients = clients.filter(created_at__lte=end)
+            policies = policies.filter(created_at__lte=end)
+            claims = claims.filter(created_at__lte=end)
+            hospitals = hospitals.filter(created_at__lte=end)
+    except ValueError:
+        pass
+
+    if status_filter:
+        clients = clients.filter(status=status_filter)
+        claims = claims.filter(status=status_filter)
+        policies = policies.filter(Q(policy_type__isnull=False) | Q(status=status_filter))
+
+    if shariah_filter == "yes":
+        policies = policies.filter(shariah_approved=True)
+        hospitals = hospitals.filter(shariah_approved=True)
+        claims = claims.filter(policy__shariah_approved=True)
+    elif shariah_filter == "no":
+        policies = policies.filter(shariah_approved=False)
+        hospitals = hospitals.filter(shariah_approved=False)
+        claims = claims.filter(policy__shariah_approved=False)
+
+    summary = {
+        "clients": clients.count(),
+        "policies": policies.count(),
+        "claims": claims.count(),
+        "hospitals": hospitals.count(),
+    }
 
     context = {
-        "dashboard_title": "Admin Dashboard | HealthInsure",
-        "user": user,
-        "cards": cards,
-        "shortcuts": shortcuts,
-        "policies_labels": json.dumps(policies_labels),
-        "policies_data": json.dumps(policies_data),
-        "claims_approved_count": claims_approved_count,
-        "claims_pending_count": claims_pending_count,
-        "claims_rejected_count": claims_rejected_count,
-        "hospitals_labels": json.dumps(hospitals_labels),
-        "hospitals_data": json.dumps(hospitals_data),
+        "dashboard_title": "Admin Reports | HealthInsure",
+        "clients": clients,
+        "policies": policies,
+        "claims": claims,
+        "hospitals": hospitals,
+        "start_date": start_date,
+        "end_date": end_date,
+        "status_filter": status_filter,
+        "shariah_filter": shariah_filter,
+        "summary": summary,
     }
-    return render(request, "dashboard/dashboard.html", context)
+    return render(request, "accounts/admin_reports.html", context)
 
 
 @login_required(login_url="accounts:login")
-def agent_dashboard(request):
-    """Agent dashboard."""
-    user = request.user
-    if user.role != "agent":
-        return redirect("accounts:dashboard")
+@roles_required("admin")
+def export_report(request, format):
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    status_filter = request.GET.get("status")
+    shariah_filter = request.GET.get("shariah")
 
-    clients_qs = Client.objects.filter(agent=user)
-    total_clients = clients_qs.count()
-    verified_clients = clients_qs.filter(status="verified").count()
-    pending_clients = clients_qs.filter(status="pending").count()
-    failed_clients = clients_qs.filter(status="failed").count()
+    clients = Client.objects.all()
+    policies = Policy.objects.all()
+    claims = Claim.objects.all()
+    hospitals = Hospital.objects.all()
 
-    cards = [
-        {"label": "My Clients", "value": total_clients, "color": "blue"},
-        {"label": "Verified", "value": verified_clients, "color": "green"},
-        {"label": "Pending", "value": pending_clients, "color": "yellow"},
-        {"label": "Failed", "value": failed_clients, "color": "red"},
-    ]
+    try:
+        if start_date:
+            start = make_aware(datetime.datetime.strptime(start_date, "%Y-%m-%d"))
+            clients = clients.filter(created_at__gte=start)
+            policies = policies.filter(created_at__gte=start)
+            claims = claims.filter(created_at__gte=start)
+            hospitals = hospitals.filter(created_at__gte=start)
+        if end_date:
+            end = make_aware(datetime.datetime.strptime(end_date, "%Y-%m-%d")) + datetime.timedelta(days=1)
+            clients = clients.filter(created_at__lte=end)
+            policies = policies.filter(created_at__lte=end)
+            claims = claims.filter(created_at__lte=end)
+            hospitals = hospitals.filter(created_at__lte=end)
+    except ValueError:
+        pass
 
-    shortcuts = [
-        {"name": "➕ Register Client", "url": "/clients/add/", "color": "green"},
-        {"name": "👥 View Clients", "url": "/clients/", "color": "blue"},
-    ]
+    if status_filter:
+        clients = clients.filter(status=status_filter)
+        claims = claims.filter(status=status_filter)
+        policies = policies.filter(Q(policy_type__isnull=False) | Q(status=status_filter))
 
-    context = {
-        "dashboard_title": "Agent Dashboard | HealthInsure",
-        "user": user,
-        "cards": cards,
-        "shortcuts": shortcuts,
-    }
-    return render(request, "accounts/agent_dashboard.html", context)
+    if shariah_filter == "yes":
+        policies = policies.filter(shariah_approved=True)
+        hospitals = hospitals.filter(shariah_approved=True)
+        claims = claims.filter(policy__shariah_approved=True)
+    elif shariah_filter == "no":
+        policies = policies.filter(shariah_approved=False)
+        hospitals = hospitals.filter(shariah_approved=False)
+        claims = claims.filter(policy__shariah_approved=False)
+
+    timestamp = now().strftime("%Y%m%d_%H%M%S")
+
+    if format.lower() == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="report_{timestamp}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(["Category", "Count"])
+        writer.writerow(["Clients", clients.count()])
+        writer.writerow(["Policies", policies.count()])
+        writer.writerow(["Claims", claims.count()])
+        writer.writerow(["Hospitals", hospitals.count()])
+        return response
+
+    elif format.lower() in ["xls", "xlsx"]:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Report"
+        ws.append(["Category", "Count"])
+        ws.append(["Clients", clients.count()])
+        ws.append(["Policies", policies.count()])
+        ws.append(["Claims", claims.count()])
+        ws.append(["Hospitals", hospitals.count()])
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="report_{timestamp}.xlsx"'
+        wb.save(response)
+        return response
+
+    elif format.lower() == "pdf":
+        html = render_to_string("accounts/report_pdf.html", {
+            "clients": clients,
+            "policies": policies,
+            "claims": claims,
+            "hospitals": hospitals,
+            "start_date": start_date,
+            "end_date": end_date,
+            "status_filter": status_filter,
+            "shariah_filter": shariah_filter,
+        })
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="report_{timestamp}.pdf"'
+        pisa_status = pisa.CreatePDF(io.BytesIO(html.encode("UTF-8")), dest=response)
+        if pisa_status.err:
+            return HttpResponse("Error generating PDF", status=500)
+        return response
+
+    return HttpResponse("Invalid export format", status=400)
 
 
 # ==============================

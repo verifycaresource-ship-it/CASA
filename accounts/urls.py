@@ -8,9 +8,8 @@ urlpatterns = [
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
 
-    # DASHBOARDS
+    # DASHBOARD (Unified for all roles)
     path("dashboard/", views.dashboard, name="dashboard"),
-    path("agent/dashboard/", views.agent_dashboard, name="agent_dashboard"),
 
     # USER MANAGEMENT
     path("users/", views.user_list, name="user_list"),

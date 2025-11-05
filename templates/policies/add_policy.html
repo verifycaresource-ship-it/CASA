@@ -70,10 +70,18 @@
         {% endif %}
       </div>
 
-      <div class="md:col-span-2 flex items-center space-x-4 mt-2">
-        <input type="checkbox" name="active" id="active" class="h-5 w-5 text-green-600" 
-               {% if policy.active %}checked{% endif %}>
-        <label for="active" class="text-gray-700 font-medium">Active</label>
+      <!-- Active & Shariah Compliance -->
+      <div class="md:col-span-2 flex flex-wrap gap-6 mt-2 items-center">
+        <div class="flex items-center space-x-2">
+          <input type="checkbox" name="active" id="active" class="h-5 w-5 text-green-600" 
+                 {% if policy.active %}checked{% endif %}>
+          <label for="active" class="text-gray-700 font-medium">Active</label>
+        </div>
+        <div class="flex items-center space-x-2">
+          <input type="checkbox" name="shariah_approved" id="shariah_approved" class="h-5 w-5 text-teal-600"
+                 {% if policy.shariah_approved %}checked{% endif %}>
+          <label for="shariah_approved" class="text-gray-700 font-medium">Shariah Compliant</label>
+        </div>
       </div>
     </div>
 

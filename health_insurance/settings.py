@@ -1,12 +1,16 @@
 """
 Django settings for health_insurance project.
-
-Structured configuration for development and future production readiness.
+Production-ready configuration using PostgreSQL in production.
 """
 
 from pathlib import Path
 import os
 from datetime import timedelta
+import dj_database_url
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # ----------------------------
 # Base directory
@@ -16,20 +20,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ----------------------------
 # Security
 # ----------------------------
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-zh)q)o4&m)57i6!whqr^#@&(kf_%tc3i+o7-+kp38!!0m^dcjk"
-)
-DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.environ.get(
-    "DJANGO_ALLOWED_HOSTS", "0.0.0.0,127.0.0.1,localhost"
-).split(",")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key")
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
+
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
+
+
 
 # ----------------------------
 # Applications
 # ----------------------------
 INSTALLED_APPS = [
-    # Core Django apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -37,28 +38,25 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "widget_tweaks",
-
-    # Third-party apps
     "rest_framework",
     "rest_framework.authtoken",
     "django_filters",
     "corsheaders",
-
-    # Local apps
     "accounts",
     "clients",
     "policies",
     "claims",
     "hospitals",
-    'django_extensions',
+    "django_extensions",
 ]
 
 # ----------------------------
 # Middleware
 # ----------------------------
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # must be first for CORS
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Static files
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -74,15 +72,22 @@ ROOT_URLCONF = "health_insurance.urls"
 WSGI_APPLICATION = "health_insurance.wsgi.application"
 
 # ----------------------------
-# Database
+# Database: PostgreSQL production / SQLite dev
 # ----------------------------
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",  # Development DB
+        "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
-# ✅ Development SQLite; switch to PostgreSQL/MySQL in production
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    DATABASES["default"] = dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=True  # Ensure SSL in production
+    )
 
 # ----------------------------
 # Authentication
@@ -108,9 +113,14 @@ SIMPLE_JWT = {
 }
 
 # ----------------------------
-# CORS (for API Frontend)
+# CORS Security
 # ----------------------------
-CORS_ALLOW_ALL_ORIGINS = True  # ✅ Dev only; specify origins in production
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+if not DEBUG:
+    cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS")
+    if cors_origins:
+        CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(",")]
 
 # ----------------------------
 # Password validation
@@ -134,11 +144,15 @@ USE_TZ = True
 # Static & Media Files
 # ----------------------------
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+if DEBUG:
+    STATICFILES_DIRS = [BASE_DIR / "static"]
+else:
+    STATIC_ROOT = BASE_DIR / "staticfiles"
+    STATICFILES_DIRS = []
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ----------------------------
 # Templates
@@ -146,7 +160,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # root templates folder
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -158,6 +172,17 @@ TEMPLATES = [
         },
     },
 ]
+
+# ----------------------------
+# Security for Production
+# ----------------------------
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # ----------------------------
 # Logging
