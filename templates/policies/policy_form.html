@@ -4,7 +4,7 @@
 {% block title %}{{ dashboard_title }} | Health Insurance{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+<div class="max-w-5xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
 
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
@@ -26,6 +26,8 @@
 
     <!-- Policy Info -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <!-- Policy Number -->
       <div>
         <label class="block text-gray-700 font-semibold mb-1">Policy Number</label>
         <input type="text" name="policy_number" required
@@ -33,6 +35,7 @@
                class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
       </div>
 
+      <!-- Policy Type -->
       <div>
         <label class="block text-gray-700 font-semibold mb-1">Type</label>
         <select name="policy_type" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
@@ -45,13 +48,33 @@
         </select>
       </div>
 
+      <!-- Payment Mode -->
       <div>
-        <label class="block text-gray-700 font-semibold mb-1">Premium</label>
-        <input type="number" name="premium" step="0.01" required
-               value="{{ policy.premium|default:'' }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+        <label class="block text-gray-700 font-semibold mb-1">Payment Mode</label>
+        <select name="payment_mode" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+          <option value="">Select Payment Mode</option>
+          {% for key, label in payment_modes %}
+            <option value="{{ key }}" {% if policy and policy.payment_mode == key %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
       </div>
 
+      <!-- Coverage Level -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-1">Coverage Level</label>
+        <select name="coverage_level" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+          <option value="">Select Coverage Level</option>
+          {% for key, label in coverage_levels %}
+            <option value="{{ key }}" {% if policy and policy.coverage_level == key %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Client -->
       <div>
         <label class="block text-gray-700 font-semibold mb-1">Client</label>
         <select name="client" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
@@ -64,6 +87,15 @@
         </select>
       </div>
 
+      <!-- Premium -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-1">Premium</label>
+        <input type="number" name="premium" step="0.01" required
+               value="{{ policy.premium|default:'' }}"
+               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      <!-- Start Date -->
       <div>
         <label class="block text-gray-700 font-semibold mb-1">Start Date</label>
         <input type="date" name="start_date" required
@@ -71,6 +103,7 @@
                class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
       </div>
 
+      <!-- Expiry Date -->
       <div>
         <label class="block text-gray-700 font-semibold mb-1">Expiry Date</label>
         <input type="date" name="expiry_date" required
@@ -78,12 +111,22 @@
                class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
       </div>
 
+      <!-- NRIC / Passport -->
+      <div class="md:col-span-2">
+        <label class="block text-gray-700 font-semibold mb-1">NRIC / Passport</label>
+        <input type="text" name="nric_or_passport"
+               value="{{ policy.nric_or_passport|default:'' }}"
+               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      <!-- Active Checkbox -->
       <div class="flex items-center space-x-4 mt-2">
         <input type="checkbox" name="is_active" id="active" class="h-5 w-5 text-green-600"
                {% if policy and policy.is_active %}checked{% endif %}>
         <label for="active" class="text-gray-700 font-medium">Active</label>
       </div>
 
+      <!-- Coverage Details -->
       <div class="md:col-span-2">
         <label class="block text-gray-700 font-semibold mb-1">Coverage Details</label>
         <textarea name="coverage_details" rows="4"
@@ -91,6 +134,7 @@
                   placeholder="Example: Hospitalization, Dental, Maternity...">{{ policy.coverage_details|default:'' }}</textarea>
       </div>
 
+      <!-- Max Claim Limit -->
       <div>
         <label class="block text-gray-700 font-semibold mb-1">Max Claim Limit</label>
         <input type="number" name="max_claim_limit" step="0.01"
@@ -98,12 +142,14 @@
                class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
       </div>
 
+      <!-- Waiting Period -->
       <div>
         <label class="block text-gray-700 font-semibold mb-1">Waiting Period (days)</label>
         <input type="number" name="waiting_period_days"
                value="{{ policy.waiting_period_days|default:0 }}"
                class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
       </div>
+
     </div>
 
     <!-- Insured Persons -->
@@ -114,7 +160,7 @@
         {% if policy and policy.insured_persons.exists %}
           {% for person in policy.insured_persons.all %}
           <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-lg bg-gray-50 relative">
-            <input type="hidden" name="person_id[]" value="{{ person.id }}">
+            <input type="hidden" name="insured_id[]" value="{{ person.id }}">
             <input type="text" name="insured_full_name[]" placeholder="Full Name" value="{{ person.full_name }}" class="w-full px-3 py-2 border rounded-lg">
             <input type="text" name="insured_relationship[]" placeholder="Relationship" value="{{ person.relationship }}" class="w-full px-3 py-2 border rounded-lg">
             <input type="date" name="insured_dob[]" value="{{ person.dob|date:'Y-m-d' }}" class="w-full px-3 py-2 border rounded-lg">
@@ -137,7 +183,7 @@
         {% else %}
           <!-- Empty row for new insured person -->
           <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-lg bg-gray-50 relative">
-            <input type="hidden" name="person_id[]" value="">
+            <input type="hidden" name="insured_id[]" value="">
             <input type="text" name="insured_full_name[]" placeholder="Full Name" class="w-full px-3 py-2 border rounded-lg">
             <input type="text" name="insured_relationship[]" placeholder="Relationship" class="w-full px-3 py-2 border rounded-lg">
             <input type="date" name="insured_dob[]" class="w-full px-3 py-2 border rounded-lg">

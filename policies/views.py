@@ -8,26 +8,27 @@ from django.db import IntegrityError
 from django.utils import timezone
 from rest_framework import viewsets, permissions
 
-from .models import Policy, InsuredPerson
+from .models import Policy, InsuredPerson, PAYMENT_MODE_CHOICES, COVERAGE_LEVEL_CHOICES
 from .serializers import PolicySerializer
 from clients.models import Client
 from accounts.utils import roles_required
 from hospitals.models import HospitalAssignment, Hospital
 from claims.models import Claim
+from .models import Policy, InsuredPerson, PAYMENT_MODE_CHOICES, COVERAGE_LEVEL_CHOICES, GENDER_CHOICES
 
 
-# ------------------------------
-# DRF API View
-# ------------------------------
+# -------------------------------------------------------------------
+# DRF API VIEW
+# -------------------------------------------------------------------
 class PolicyViewSet(viewsets.ModelViewSet):
     queryset = Policy.objects.all()
     serializer_class = PolicySerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
-# ------------------------------
-# Policy List
-# ------------------------------
+# -------------------------------------------------------------------
+# POLICY LIST
+# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_list(request):
@@ -44,9 +45,9 @@ def policy_list(request):
     return render(request, "policies/policy_list.html", context)
 
 
-# ------------------------------
-# Add / Edit Policy (with Insured Persons)
-# ------------------------------
+# -------------------------------------------------------------------
+# ADD / EDIT POLICY (WITH INSURED PERSONS)
+# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_form(request, pk=None):
@@ -59,130 +60,139 @@ def policy_form(request, pk=None):
     if request.method == "POST":
         data = request.POST
         files = request.FILES
+
         client = get_object_or_404(Client, pk=data.get("client"))
         policy_number = data.get("policy_number") or auto_policy_number
+
         required_fields = ["policy_type", "start_date", "expiry_date", "premium"]
+        if not all(data.get(f) for f in required_fields):
+            messages.error(request, "Please fill in all required fields.")
+            return redirect(request.path)
 
-        if all(data.get(f) for f in required_fields):
-            try:
-                if policy:
-                    # Update existing policy
-                    policy.client = client
-                    policy.policy_number = policy_number
-                    policy.policy_type = data.get("policy_type")
-                    policy.start_date = data.get("start_date")
-                    policy.expiry_date = data.get("expiry_date")
-                    policy.premium = data.get("premium")
-                    policy.is_active = data.get("is_active") == "on"
-                    policy.coverage_details = data.get("coverage_details", "")
-                    policy.max_claim_limit = data.get("max_claim_limit") or 0
-                    policy.waiting_period_days = data.get("waiting_period_days") or 0
-                    policy.save()
-                    messages.success(request, f"Policy '{policy.policy_number}' updated successfully.")
-                else:
-                    # Create new policy
-                    policy = Policy.objects.create(
-                        client=client,
-                        policy_number=policy_number,
-                        policy_type=data.get("policy_type"),
-                        start_date=data.get("start_date"),
-                        expiry_date=data.get("expiry_date"),
-                        premium=data.get("premium"),
-                        is_active=data.get("is_active") == "on",
-                        coverage_details=data.get("coverage_details", ""),
-                        max_claim_limit=data.get("max_claim_limit") or 0,
-                        waiting_period_days=data.get("waiting_period_days") or 0,
-                        created_by=request.user,
-                    )
-                    messages.success(request, f"Policy '{policy_number}' added successfully.")
+        try:
+            # ---------------- Update or Create Policy ----------------
+            if policy:
+                policy.client = client
+                policy.policy_number = policy_number
+                policy.policy_type = data.get("policy_type")
+                policy.payment_mode = data.get("payment_mode")
+                policy.coverage_level = data.get("coverage_level")
+                policy.nric_or_passport = data.get("nric_or_passport")
+                policy.start_date = data.get("start_date")
+                policy.expiry_date = data.get("expiry_date")
+                policy.premium = data.get("premium")
+                policy.is_active = data.get("is_active") == "on"
+                policy.coverage_details = data.get("coverage_details", "")
+                policy.max_claim_limit = data.get("max_claim_limit") or 0
+                policy.waiting_period_days = data.get("waiting_period_days") or 0
+                policy.save()
+                messages.success(request, f"Policy '{policy.policy_number}' updated successfully.")
+            else:
+                policy = Policy.objects.create(
+                    client=client,
+                    policy_number=policy_number,
+                    policy_type=data.get("policy_type"),
+                    payment_mode=data.get("payment_mode"),
+                    coverage_level=data.get("coverage_level"),
+                    nric_or_passport=data.get("nric_or_passport"),
+                    start_date=data.get("start_date"),
+                    expiry_date=data.get("expiry_date"),
+                    premium=data.get("premium"),
+                    is_active=data.get("is_active") == "on",
+                    coverage_details=data.get("coverage_details", ""),
+                    max_claim_limit=data.get("max_claim_limit") or 0,
+                    waiting_period_days=data.get("waiting_period_days") or 0,
+                    created_by=request.user,
+                )
+                messages.success(request, f"Policy '{policy_number}' added successfully.")
 
-                # ----------------------
-                # Handle Insured Persons
-                # ----------------------
-                full_names = data.getlist("insured_full_name[]")
-                relationships = data.getlist("insured_relationship[]")
-                dobs = data.getlist("insured_dob[]")
-                genders = data.getlist("insured_gender[]")
-                photos = files.getlist("insured_photo[]")
-                insured_ids = data.getlist("insured_id[]")  # hidden inputs
+            # ---------------- Insured Persons ----------------
+            full_names = data.getlist("insured_full_name[]")
+            relationships = data.getlist("insured_relationship[]")
+            dobs = data.getlist("insured_dob[]")
+            genders = data.getlist("insured_gender[]")
+            photos = files.getlist("insured_photo[]")
+            insured_ids = data.getlist("insured_id[]")
 
-                for i in range(len(full_names)):
-                    name = full_names[i].strip() if i < len(full_names) else ""
-                    rel = relationships[i].strip() if i < len(relationships) else ""
-                    dob_str = dobs[i] if i < len(dobs) else ""
-                    gender = genders[i] if i < len(genders) else ""
-                    photo = photos[i] if i < len(photos) else None
-                    insured_id = insured_ids[i] if i < len(insured_ids) else None
+            for i in range(len(full_names)):
+                name = full_names[i].strip()
+                relationship = relationships[i].strip()
+                if not name or not relationship:
+                    continue
 
-                    if not name or not rel:
+                dob_value = None
+                if dobs[i]:
+                    try:
+                        dob_value = datetime.strptime(dobs[i], "%Y-%m-%d").date()
+                    except ValueError:
+                        pass
+
+                gender = genders[i] if i < len(genders) else None
+                photo = photos[i] if i < len(photos) else None
+                insured_id = insured_ids[i] if i < len(insured_ids) else None
+
+                # Update existing person
+                if insured_id:
+                    person = InsuredPerson.objects.filter(id=insured_id, policy=policy).first()
+                    if person:
+                        person.full_name = name
+                        person.relationship = relationship
+                        person.gender = gender or person.gender
+                        if dob_value:
+                            person.dob = dob_value
+                        if photo:
+                            person.photo = photo
+                        person.save()
                         continue
 
-                    dob_value = None
-                    if dob_str:
-                        try:
-                            dob_value = datetime.strptime(dob_str, "%Y-%m-%d").date()
-                        except ValueError:
-                            dob_value = None
+                # Create new person
+                new_person = InsuredPerson.objects.create(
+                    policy=policy,
+                    full_name=name,
+                    relationship=relationship,
+                    dob=dob_value,
+                    gender=gender,
+                    photo=photo,
+                )
 
-                    # Update existing insured
-                    if insured_id:
-                        insured = InsuredPerson.objects.filter(id=insured_id, policy=policy).first()
-                        if insured:
-                            insured.full_name = name
-                            insured.relationship = rel
-                            insured.dob = dob_value or insured.dob
-                            insured.gender = gender or insured.gender
-                            if photo:
-                                insured.photo = photo
-                            insured.save()
-                            continue
+                # Save fingerprint if adult
+                fingerprint_base64 = data.get(f"fingerprint_base64_{i}")
+                if new_person.is_adult and fingerprint_base64:
+                    new_person.fingerprint_data = base64.b64decode(fingerprint_base64)
+                    new_person.fingerprint_verified = True
+                    new_person.save()
 
-                    # Create new insured
-                    insured = InsuredPerson.objects.create(
-                        policy=policy,
-                        full_name=name,
-                        relationship=rel,
-                        dob=dob_value,
-                        gender=gender or None,
-                        photo=photo
-                    )
+            return redirect("policies:policy_detail", pk=policy.pk)
 
-                    # Fingerprint capture for adults
-                    if insured.is_adult:
-                        fingerprint_base64 = data.get(f"fingerprint_base64_{i}")
-                        if fingerprint_base64:
-                            insured.fingerprint_data = base64.b64decode(fingerprint_base64)
-                            insured.fingerprint_verified = True
-                            insured.save()
-
-                return redirect("policies:policy_detail", pk=policy.pk)
-
-            except IntegrityError:
-                messages.error(request, "Policy number already exists.")
-        else:
-            messages.error(request, "Please fill in all required fields.")
+        except IntegrityError:
+            messages.error(request, "Policy number already exists.")
 
     return render(request, "policies/policy_form.html", {
         "policy": policy,
         "clients": clients,
         "policy_types": Policy.POLICY_TYPE,
+        "payment_modes": PAYMENT_MODE_CHOICES,
+        "coverage_levels": COVERAGE_LEVEL_CHOICES,
         "dashboard_title": "Edit Policy" if policy else "Add New Policy",
         "role": getattr(request.user, "role", "guest"),
         "auto_policy_number": auto_policy_number,
         "today": today,
         "next_year": next_year,
-        "GENDER_CHOICES": Client.GENDER_CHOICES,  # ✅ Pass gender choices
+        "GENDER_CHOICES": GENDER_CHOICES,   # <-- add here
+
     })
 
 
-# ------------------------------
-# Policy Detail
-# ------------------------------
+# -------------------------------------------------------------------
+# POLICY DETAIL
+# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer", "hospital")
 def policy_detail(request, pk):
     policy = get_object_or_404(Policy, pk=pk)
-    assigned_clients = policy.hospital_assignments.select_related("client", "hospital", "assigned_by")
+    assigned_clients = policy.hospital_assignments.select_related(
+        "client", "hospital", "assigned_by"
+    )
     insured_persons = policy.insured_persons.all()
 
     return render(request, "policies/policy_detail.html", {
@@ -192,9 +202,9 @@ def policy_detail(request, pk):
     })
 
 
-# ------------------------------
-# Assign Policy to Hospital
-# ------------------------------
+# -------------------------------------------------------------------
+# ASSIGN POLICY TO HOSPITAL
+# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def assign_to_hospital(request, pk):
@@ -202,9 +212,7 @@ def assign_to_hospital(request, pk):
     hospitals = Hospital.objects.filter(verified=True)
 
     if request.method == "POST":
-        hospital_id = request.POST.get("hospital")
-        hospital = get_object_or_404(Hospital, id=hospital_id)
-
+        hospital = get_object_or_404(Hospital, id=request.POST.get("hospital"))
         assignment, created = HospitalAssignment.objects.get_or_create(
             client=policy.client,
             policy=policy,
@@ -212,9 +220,10 @@ def assign_to_hospital(request, pk):
             defaults={"assigned_by": request.user}
         )
         if created:
-            messages.success(request, f"{policy.client} successfully assigned to {hospital.name}.")
+            messages.success(request, f"{policy.client} assigned to {hospital.name}.")
         else:
             messages.info(request, f"{policy.client} is already assigned to {hospital.name}.")
+
         return redirect("policies:policy_detail", pk=policy.pk)
 
     return render(request, "policies/assign_hospital.html", {
@@ -224,9 +233,9 @@ def assign_to_hospital(request, pk):
     })
 
 
-# ------------------------------
-# Add Insured Person separately
-# ------------------------------
+# -------------------------------------------------------------------
+# ADD INSURED PERSON
+# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def add_insured_person(request, policy_id):
@@ -244,31 +253,31 @@ def add_insured_person(request, policy_id):
             try:
                 dob_value = datetime.strptime(dob_str, "%Y-%m-%d").date()
             except ValueError:
-                dob_value = None
+                pass
 
         if full_name and relationship and dob_value:
-            insured = policy.insured_persons.create(
+            person = policy.insured_persons.create(
                 full_name=full_name.strip(),
                 relationship=relationship.strip(),
                 dob=dob_value,
-                gender=gender or None,
-                photo=photo
+                gender=gender if gender else None,
+                photo=photo,
             )
-            if insured.is_adult and fingerprint_base64:
-                insured.fingerprint_data = base64.b64decode(fingerprint_base64)
-                insured.fingerprint_verified = True
-                insured.save()
+            if person.is_adult and fingerprint_base64:
+                person.fingerprint_data = base64.b64decode(fingerprint_base64)
+                person.fingerprint_verified = True
+                person.save()
             messages.success(request, f"{full_name} added to policy {policy.policy_number}.")
             return redirect("policies:policy_detail", pk=policy.id)
-        else:
-            messages.error(request, "Full name, relationship, and valid DOB are required.")
 
-    return render(request, "policies/add_insured_person.html", {"policy": policy, "GENDER_CHOICES": Client.GENDER_CHOICES})
+        messages.error(request, "Full name, relationship and valid DOB are required.")
+
+    return render(request, "policies/add_insured_person.html", {"policy": policy})
 
 
-# ------------------------------
-# Edit Insured Person
-# ------------------------------
+# -------------------------------------------------------------------
+# EDIT INSURED PERSON
+# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def edit_insured_person(request, person_id):
@@ -289,27 +298,25 @@ def edit_insured_person(request, person_id):
             try:
                 person.dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
             except ValueError:
-                messages.warning(request, "Invalid date format, DOB not updated.")
-
-        person.gender = gender if gender else person.gender
-
+                messages.warning(request, "Invalid date format.")
+        if gender:
+            person.gender = gender
         if request.FILES.get("photo"):
             person.photo = request.FILES.get("photo")
 
         person.save()
-        messages.success(request, f"{person.full_name} updated successfully.")
+        messages.success(request, "Insured person updated successfully.")
         return redirect("policies:policy_detail", pk=policy.id)
 
     return render(request, "policies/edit_insured_person.html", {
         "person": person,
         "policy": policy,
-        "GENDER_CHOICES": Client.GENDER_CHOICES
     })
 
 
-# ------------------------------
-# Delete Insured Person
-# ------------------------------
+# -------------------------------------------------------------------
+# DELETE INSURED PERSON
+# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def delete_insured_person(request, person_id):
@@ -317,5 +324,5 @@ def delete_insured_person(request, person_id):
     policy_id = person.policy.id
     if request.method == "POST":
         person.delete()
-        messages.success(request, f"{person.full_name} removed successfully.")
+        messages.success(request, "Insured person removed.")
     return redirect("policies:policy_detail", pk=policy_id)

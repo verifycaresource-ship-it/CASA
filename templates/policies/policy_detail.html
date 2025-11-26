@@ -32,6 +32,11 @@
         {{ policy.status|title }}
       </span>
     </p>
+
+    <!-- New Fields -->
+    <p><strong>Payment Mode:</strong> {{ policy.payment_mode|default:"-" }}</p>
+    <p><strong>Coverage Level:</strong> {{ policy.coverage_level|default:"-" }}</p>
+    <p><strong>NRIC / Passport:</strong> {{ policy.nric_or_passport|default:"-" }}</p>
   </div>
 
   <!-- Insured Persons -->
