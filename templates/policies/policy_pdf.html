@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +10,11 @@
       color: #333;
       margin: 0;
       padding: 0;
+      border-left: 8px solid #16a34a; /* green left margin */
+      border-right: 8px solid #16a34a; /* green right margin */
+      padding-left: 20px;
+      padding-right: 20px;
+      background-color: #fdfdfd;
     }
     .container {
       width: 90%;
@@ -18,18 +22,18 @@
       padding: 20px;
     }
     h1, h2, h3 {
-      color: #1D4ED8;
+      color: #1D4ED8; /* navy blue */
       margin-bottom: 10px;
     }
     h1 {
       text-align: center;
-      font-size: 20px;
+      font-size: 22px;
       margin-bottom: 15px;
     }
     h2 {
       font-size: 16px;
       margin-top: 20px;
-      border-bottom: 1px solid #ccc;
+      border-bottom: 2px solid #1D4ED8; /* navy underline */
       padding-bottom: 5px;
     }
     table {
@@ -45,7 +49,8 @@
       vertical-align: top;
     }
     th {
-      background-color: #f3f3f3;
+      background-color: #dbeafe; /* light blue */
+      color: #1D4ED8;
     }
     ul {
       margin: 5px 0 10px 20px;
@@ -61,9 +66,6 @@
       text-align: center;
       font-size: 12px;
     }
-    .page-break {
-      page-break-after: always;
-    }
     .photo {
       width: 50px;
       height: 50px;
@@ -74,21 +76,24 @@
       text-align: justify;
       font-size: 12px;
     }
+    .logo img {
+      max-width: 150px;
+      display: block;
+      margin: 0 auto 15px auto;
+    }
   </style>
 </head>
 <body>
 <div class="container">
 
   <!-- Header -->
-  <h1>CASA Insurance Policy Agreement</h1>
-  <p style="text-align:center;">Policy Number: <strong>{{ policy.policy_number }}</strong></p>
-   <!-- Logo -->
-<div class="text-center mb-4">
-  <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1764158147/casa_sqopru.jpg" 
-       alt="Company Logo" 
-       class="mx-auto" 
-       style="max-width:150px;">
-</div>
+  <h1 style="color:#1E3A8A;">CASA Insurance Policy Agreement</h1>
+  <p style="text-align:center; font-weight:bold;">Policy Number: {{ policy.policy_number }}</p>
+  <p style="text-align:right; font-weight:bold;">Date: ___/_____/_______</p>
+  <!-- Logo -->
+  <div class="logo">
+    <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1764158147/casa_sqopru.jpg" alt="Company Logo">
+  </div>
 
   <!-- Section 1: Policy Details -->
   <h2>Section 1: Policy Details</h2>
@@ -114,8 +119,6 @@
     <li>The insurer reserves the right to request medical reports or additional documents before acceptance.</li>
     <li>Upon acceptance and payment, this proposal becomes part of the insurance contract.</li>
   </ul>
-
-
 
   <!-- Section 4: Insured Persons -->
   <h2>Section 4: Insured Persons</h2>
@@ -154,39 +157,37 @@
   <p class="justify">
     At the end of each financial year, the Fund calculates surplus/deficit. 30% of the surplus is retained for the Fund’s viability, and 70% is distributed among participants, or credited to charity if below US$10.
   </p>
-  <!-- Section 5: Shariah Declaration & BAYAAN -->
-  <h2 class="text-lg font-semibold text-blue-600 mt-6">Section 5: Shariah Principal and Declaration</h2>
-  <p class="justify text-sm mt-2">
+
+  <!-- Shariah Declaration & BAYAAN -->
+  <h2>Section 5: Shariah Principal and BAYAAN</h2>
+  <p class="justify">
     MABAADI'DA SHARCIGA ISLAAMKA (SHARIAH) IYO BAYAANKA
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     Aniga/Annagu waxaan aqbalaynaa ka-qaybgalka nidaamkan Takaful-ka Guud ee ku dhisan mabda'a Takafulka, waxaana oggol nahay inaan bixino tabarru' (deeq) si aan u kaalmeyno ka-qaybgallayaasha kale ee la kulma dhibaato caymisku aqbali karto. Iyadoo ku salaysan tabarru', aniga/annagu waxaan xaq u yeelaneynaa cayminta takafulka sida ku cad shuruudaha iyo xeerarka ku lifaaqan heshiiska takafulka.
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     Waxaan sidoo kale aqbalaynaa in tabarru' lagu shubo Sanduuqa Takafulka Guud (Takaful Fund), isla markaana aan kula heshiiney wakiilashada Caresourceafrica Company (CASA) maamuleysa maalglinta nidaamka Mudarabaha ee Sanduuqa iyadoo raaceysa mabaadi'da Shariah-da.
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     Waxaan u fasaxaynaa Caresourceafrica Company (CASA) inay ka bixiso si wakil ah magdhowga iyo dheeriga, si ku saleysan siyaasadaha shirkadda Caresourceafrica (CASA), isla markaana ay ku mudato qidmadda dhan 30%.
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     Haddii dhammaadka sannadka maaliyadeed uu jiro faa'idada maalgelinta ee ka dhasha dakhliga, waxaan aqbalaynaa in Caresourceafrica (CASA) ay qaadato 40% oo ah saamiga horey loo cayimay ee wadaagga faa'iidada (Mudarabah Investment), halka 60% kalena lagu qoondeeyo qaybinta ka-qaybgalayaasha iyadoo ku xiran shuruudaha qandaraaska.
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     Waxaan sidoo kale aqbalaynaa in haddii haraaga sannadku ka hooseeyo US$10, lacagtaasi lagu shubo Sanduuqa Samafalka oo loo adeegsan doono camal-jariyah oo lagu samaynayo magaca ka-qaybgalayaasha.
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     Dhammaadka sannad kasta, Sanduuqu wuxuu xisaabiyaa inta u dhaxeysa tabarru’ga, dakhliga kale, Wakalah Fee-ga, lacagaha magdhowga, Retakaful-ka, iyo kaydka la dhisayo, isagoo raacaya hagidda hay’adaha awoodda leh. Haddii natiijadu noqoto haraag (surplus) oo aysan ahayn khasaare, 30% haraaga la xisaabiyey waxaa lagu haynayaa Sanduuqa si loo ilaaliyo joogteyntiisa muddada fog, halka 70% kalena loo tixgeliyo haraag la qaybin karo.
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     BAYAAN: Aniga/Annagu waxaan caddeyneynaa in dhammaan xogta iyo bayaannada aan bixinnay ay sax yihiin oo dhammeystiran yihiin, ayna ku jiraan dhammaan xogta aan ognahay ee khuseysa halista la cayminta. Sidoo kale, waxaan aqbalaynaa in bayaanka qoran ee aniga/annaga ama aniga/annaga wakiilkeena ku qoray ujeeddada caymiska uu noqonayo saldhigga heshiiska, laguna dari doono heshiiska u dhexeeya aniga/annaga iyo Caresourceafrica (CASA), isla markaana uu waajib noqonayo.
   </p>
-  <p class="justify text-sm mt-1">
+  <p class="justify">
     Waxaa intaa dheer in haddii codsigan uu buuxiyo wakiilka/brooker-ka caymiska, wakiilkaas loo tixgelin doono inuu ku shaqeynayo magaca caymiska ee buuxinta codsiga.
   </p>
 
-
-
-</div>
   <!-- Section 6: Declaration & Signatures -->
   <h2>Section 6: Declaration & Signatures</h2>
   <div class="signature-box">
