@@ -326,3 +326,47 @@ def delete_insured_person(request, person_id):
         person.delete()
         messages.success(request, "Insured person removed.")
     return redirect("policies:policy_detail", pk=policy_id)
+
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from .models import Policy
+
+@login_required
+def download_policy_pdf(request, pk):
+    # Get the policy
+    policy = get_object_or_404(Policy, pk=pk)
+
+    # Get related insured persons (use the actual related_name in your model)
+    insured_persons = policy.insured_persons.all()
+
+    # Render HTML template
+    html_string = render_to_string("policies/policy_pdf.html", {
+        "policy": policy,
+        "insured_persons": insured_persons,
+        "user": request.user,  # if you need user info for signatures, verification, etc.
+    })
+
+    # Convert HTML to PDF
+    pdf_file = HTML(string=html_string).write_pdf()
+
+    # Return as downloadable response
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Policy_{policy.policy_number}.pdf"'
+
+    return response
+
+from django.shortcuts import render, get_object_or_404
+from .models import Policy
+
+@login_required
+def view_policy_document(request, pk):
+    policy = get_object_or_404(Policy, pk=pk)
+    insured_persons = policy.insured_persons.all()  # use related_name from your model
+
+    return render(request, "policies/policy_document.html", {
+        "policy": policy,
+        "insured_persons": insured_persons,
+        "user": request.user,
+    })

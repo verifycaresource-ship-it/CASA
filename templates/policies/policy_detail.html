@@ -6,6 +6,9 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 space-y-6">
+<a href="{% url 'policies:download_policy_pdf' policy.id %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+  📄 Download PDF
+</a>
 
   <!-- Policy Title -->
   <h2 class="text-3xl font-bold text-blue-600 mb-6">{{ policy.policy_number }}</h2>
