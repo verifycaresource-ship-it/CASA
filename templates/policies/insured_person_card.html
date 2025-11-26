@@ -1,0 +1,68 @@
+{% load static %}
+<div class="bg-white dark:bg-gray-700 shadow-md rounded-lg p-4 flex items-center space-x-4">
+
+  <!-- Photo -->
+  <div class="flex-shrink-0">
+    {% if person.photo %}
+      <img src="{{ person.photo.url }}" alt="{{ person.full_name }}"
+           class="w-16 h-16 rounded-full object-cover border">
+    {% else %}
+      <img src="{% static 'images/default-user.png' %}" alt="No Photo"
+           class="w-16 h-16 rounded-full object-cover border">
+    {% endif %}
+  </div>
+
+  <!-- Info -->
+  <div class="flex-1">
+    <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+      {{ person.full_name }}
+    </h4>
+
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      {{ person.relationship|default:"-" }}
+    </p>
+
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      DOB:
+      {% if person.dob %}
+          {{ person.dob|date:"M d, Y" }}
+      {% else %}
+          -
+      {% endif %}
+
+      {% if person.age %}
+          ({{ person.age }} yrs)
+      {% endif %}
+    </p>
+
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      Gender: {{ person.gender|default:"-" }}
+    </p>
+
+    <p class="text-sm text-green-600 dark:text-green-400">
+      {% if person.is_adult %}Adult{% else %}Minor{% endif %}
+    </p>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex flex-col items-end space-y-2">
+    {% if user.is_superuser or user.role == 'admin' %}
+      
+      <a href="{% url 'policies:edit_insured_person' person.id %}" 
+         class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm transition">
+         ✏️ Edit
+      </a>
+
+      <form action="{% url 'policies:delete_insured_person' person.id %}" method="POST" class="inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm transition"
+                onclick="return confirm('Are you sure you want to delete {{ person.full_name }}?');">
+          🗑 Delete
+        </button>
+      </form>
+
+    {% endif %}
+  </div>
+
+</div>

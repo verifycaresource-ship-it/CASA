@@ -4,15 +4,25 @@ from . import views
 
 app_name = 'policies'
 
+# DRF Router
 router = routers.DefaultRouter()
 router.register(r'policies', views.PolicyViewSet, basename='policy')
 
 urlpatterns = [
+    # Policy list & CRUD
     path('', views.policy_list, name='policy_list'),
     path('add/', views.policy_form, name='add_policy'),
     path('<int:pk>/edit/', views.policy_form, name='edit_policy'),
     path('<int:pk>/', views.policy_detail, name='policy_detail'),
+
+    # Assign policy to hospital
     path('<int:pk>/assign-hospital/', views.assign_to_hospital, name='assign_to_hospital'),
+
+    # Insured persons
+    path('policy/<int:policy_id>/add-insured/', views.add_insured_person, name='add_insured_person'),
+    path('insured/<int:person_id>/edit/', views.edit_insured_person, name='edit_insured_person'),
+    path('insured/<int:person_id>/delete/', views.delete_insured_person, name='delete_insured_person'),
+
+    # API routes
     path('api/', include(router.urls)),
-    
 ]

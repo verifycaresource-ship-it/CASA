@@ -1,36 +1,28 @@
-# fingerprint_service.py
-from flask import Flask, Response
-import base64, time, json
+import requests
+import base64
+from .models import Client
+from django.conf import settings
+from cryptography.fernet import Fernet
 
-app = Flask(__name__)
+FINGERPRINT_SERVICE_URL = getattr(settings, "FINGERPRINT_SERVICE_URL", "http://127.0.0.1:5000/enroll")
+FINGERPRINT_ENCRYPTION_KEY = getattr(settings, "FINGERPRINT_ENCRYPTION_KEY", Fernet.generate_key())
+fernet = Fernet(FINGERPRINT_ENCRYPTION_KEY)
 
-with open("/mnt/data/fa2b31ff-0e42-489f-9fe3-0775f4cd29ae.png", "rb") as f:
-    fingerprint_image_base64 = base64.b64encode(f.read()).decode("utf-8")
+def capture_fingerprint_from_service(timeout=30) -> bytes | None:
+    """Call external fingerprint service; returns raw bytes or None."""
+    try:
+        resp = requests.get(FINGERPRINT_SERVICE_URL, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("success") and data.get("template"):
+            return base64.b64decode(data["template"])
+    except Exception as e:
+        print("Fingerprint capture error:", e)
+    return None
 
-def capture_fingerprint_live():
-    total_steps = 10
-    for step in range(total_steps):
-        progress = int((step + 1) / total_steps * 100)
-        time.sleep(0.5)
-        yield {"progress": progress, "status": "scanning"}
-
-    template_bytes = b"DigitalPersonaTemplateBytes"
-    template_base64 = base64.b64encode(template_bytes).decode("utf-8")
-
-    yield {
-        "progress": 100,
-        "success": True,
-        "template": template_base64,
-        "image": fingerprint_image_base64,
-        "status": "done"
-    }
-
-@app.route("/enroll", methods=["GET"])
-def enroll():
-    def event_stream():
-        for step in capture_fingerprint_live():
-            yield f"data: {json.dumps(step)}\n\n"
-    return Response(event_stream(), mimetype="text/event-stream")
-
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, threaded=True)
+def find_matching_client(template_bytes: bytes, sdk_match_func) -> "Client | None":
+    """Iterate over all active clients and find the first match using SDK."""
+    for client in Client.objects.filter(is_active=True):
+        if client.fingerprint_data and sdk_match_func(fernet.decrypt(client.fingerprint_data), template_bytes):
+            return client
+    return None

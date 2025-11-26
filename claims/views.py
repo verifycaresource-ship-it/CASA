@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-
 from rest_framework import viewsets, permissions
 
 from .models import Claim
@@ -14,11 +13,14 @@ from accounts.utils import roles_required
 
 
 # -----------------------
-# 🏥 Hospital submits claim for an assignment
+# 🏥 Submit Claim for Assignment
 # -----------------------
 @login_required
 @roles_required("hospital")
 def submit_claim_for_assignment(request, assignment_id):
+    """
+    Hospital submits a claim for an accepted assignment.
+    """
     assignment = get_object_or_404(
         HospitalAssignment,
         pk=assignment_id,
@@ -30,11 +32,19 @@ def submit_claim_for_assignment(request, assignment_id):
         description = request.POST.get("description", "").strip()
         amount = request.POST.get("claim_amount")
 
+        # Step 1: Verify client before claim submission (future feature)
+        # Example placeholder:
+        # verified = verify_client_identity(assignment.client)
+        # if not verified:
+        #     messages.error(request, "Client verification failed.")
+        #     return redirect("claims:submit_claim_for_assignment", assignment_id=assignment_id)
+
         if not (description and amount):
             messages.error(request, "All fields are required.")
             return redirect("claims:submit_claim_for_assignment", assignment_id=assignment_id)
 
         claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+
         Claim.objects.create(
             claim_number=claim_number,
             hospital=assignment.hospital,
@@ -59,12 +69,15 @@ def submit_claim_for_assignment(request, assignment_id):
 
 
 # -----------------------
-# 🏥 Hospital claim dashboard
+# 🏥 Hospital Claim Dashboard
 # -----------------------
 @login_required
 @roles_required("hospital")
 def hospital_claim_dashboard(request):
-    hospital = getattr(request.user, "hospital_profile", None)
+    """Dashboard for hospitals to view and manage their submitted claims."""
+    user = request.user
+    hospital = getattr(user, "hospital_profile", None)
+
     if not hospital:
         messages.error(request, "Hospital profile not found.")
         return redirect("accounts:dashboard")
@@ -80,11 +93,12 @@ def hospital_claim_dashboard(request):
         "rejected_claims": claims.filter(status="rejected").count(),
         "claims": claims,
     }
+
     return render(request, "claims/hospital_dashboard.html", context)
 
 
 # -----------------------
-# 🧩 Claim list (all roles)
+# 🧩 Claim List (all roles)
 # -----------------------
 @login_required
 def claim_list(request):
@@ -93,7 +107,7 @@ def claim_list(request):
 
     if user.is_superuser or role in ["admin", "claim_officer"]:
         claims = Claim.objects.select_related("client", "hospital", "policy").all()
-        title = "All Claims"
+        title = "All Hospital Claims"
     elif role == "agent":
         claims = Claim.objects.filter(client__agent=user)
         title = "My Clients' Claims"
@@ -113,12 +127,15 @@ def claim_list(request):
 
 
 # -----------------------
-# 🏥 Add claim (hospital)
+# 🏥 Add Claim (Hospital)
 # -----------------------
 @login_required
 @roles_required("hospital")
 def add_claim(request):
-    hospital = getattr(request.user, "hospital_profile", None)
+    """Hospitals submit a new claim for a client with an active policy."""
+    user = request.user
+    hospital = getattr(user, "hospital_profile", None)
+
     if not hospital:
         messages.error(request, "Your hospital profile is missing.")
         return redirect("claims:claim_list")
@@ -132,6 +149,7 @@ def add_claim(request):
         if client_id and policy_id and amount:
             client = get_object_or_404(Client, pk=client_id)
             policy = get_object_or_404(Policy, pk=policy_id, is_active=True)
+
             claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
             Claim.objects.create(
                 claim_number=claim_number,
@@ -141,7 +159,7 @@ def add_claim(request):
                 amount=amount,
                 status="pending",
                 notes=notes,
-                created_by=request.user,
+                created_by=user,
             )
             messages.success(request, f"Claim {claim_number} submitted successfully.")
             return redirect("claims:claim_list")
@@ -150,6 +168,7 @@ def add_claim(request):
 
     clients = Client.objects.all()
     policies = Policy.objects.filter(is_active=True)
+
     return render(request, "claims/add_claim.html", {
         "dashboard_title": "Submit New Claim",
         "clients": clients,
@@ -158,7 +177,7 @@ def add_claim(request):
 
 
 # -----------------------
-# ✏️ Edit claim (admin/claim officer)
+# ✏️ Edit Claim (Admin/Claim Officer)
 # -----------------------
 @login_required
 @roles_required("admin", "claim_officer")
@@ -181,7 +200,7 @@ def edit_claim(request, pk):
 
 
 # -----------------------
-# 🔍 Claim detail
+# 🔍 Claim Detail
 # -----------------------
 @login_required
 def claim_detail(request, pk):
@@ -189,15 +208,18 @@ def claim_detail(request, pk):
     user = request.user
     role = getattr(user, "role", None)
 
-    if role == "hospital":
+    if user.is_superuser:
+        role = "admin"
+    elif role == "hospital":
         hospital = getattr(user, "hospital_profile", None)
         if not hospital or claim.hospital != hospital:
             messages.error(request, "You are not authorized to view this claim.")
             return redirect("claims:claim_list")
-    elif role == "agent" and claim.client.agent != user:
-        messages.error(request, "You are not authorized to view this claim.")
-        return redirect("claims:claim_list")
-    elif role not in ["admin", "claim_officer"] and not user.is_superuser:
+    elif role == "agent":
+        if claim.client.agent != user:
+            messages.error(request, "You are not authorized to view this claim.")
+            return redirect("claims:claim_list")
+    elif role not in ["admin", "claim_officer"]:
         messages.error(request, "Access denied.")
         return redirect("claims:claim_list")
 
@@ -209,7 +231,7 @@ def claim_detail(request, pk):
 
 
 # -----------------------
-# ✅ Approve / Reject / Reimburse
+# ✅ Approve Claim
 # -----------------------
 @login_required
 @roles_required("admin", "claim_officer")
@@ -224,6 +246,9 @@ def approve_claim(request, pk):
     return redirect("claims:claim_detail", pk=pk)
 
 
+# -----------------------
+# ❌ Reject Claim
+# -----------------------
 @login_required
 @roles_required("admin", "claim_officer")
 def reject_claim(request, pk):
@@ -237,6 +262,9 @@ def reject_claim(request, pk):
     return redirect("claims:claim_detail", pk=pk)
 
 
+# -----------------------
+# 💰 Reimburse Claim
+# -----------------------
 @login_required
 @roles_required("admin")
 def reimburse_claim(request, pk):

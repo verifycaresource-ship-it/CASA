@@ -30,16 +30,6 @@ class Policy(models.Model):
     max_claim_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     waiting_period_days = models.PositiveIntegerField(default=0)
     deductible = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-
-    # ----------------------
-    # Shariah Compliance
-    # ----------------------
-    shariah_approved = models.BooleanField(default=False, help_text="Approved by Shariah board")
-    shariah_review_notes = models.TextField(blank=True, null=True)
-
-    # ----------------------
-    # Auditing
-    # ----------------------
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -49,9 +39,6 @@ class Policy(models.Model):
     def __str__(self):
         return self.policy_number
 
-    # ----------------------
-    # Helper Properties
-    # ----------------------
     @property
     def days_left(self):
         """Returns positive days left or negative if expired."""
@@ -68,29 +55,49 @@ class Policy(models.Model):
 
     @property
     def status(self):
-        """
-        Returns human-readable status considering:
-        - Shariah approval
-        - Active/inactive
-        - Expiry
-        """
-        if not self.shariah_approved:
-            return "pending_shariah_approval"
+        """Return readable status for template: active, expired, or upcoming."""
         if self.expiry_date and self.expiry_date < timezone.now().date():
             return "expired"
-        return "active" if self.is_active else "inactive"
+        elif self.is_active:
+            return "active"
+        return "inactive"
 
-    # ----------------------
-    # Workflow Methods
-    # ----------------------
-    def approve_shariah(self, reviewer=None, notes=None):
-        """Mark policy as Shariah-approved."""
-        self.shariah_approved = True
-        if notes:
-            self.shariah_review_notes = notes
-        self.save(update_fields=["shariah_approved", "shariah_review_notes", "updated_at"])
+from django.db import models
+from django.utils import timezone
+from clients.models import Client
 
-    def deactivate(self):
-        """Soft deactivate the policy."""
-        self.is_active = False
-        self.save(update_fields=["is_active", "updated_at"])
+GENDER_CHOICES = [
+    ("male", "Male"),
+    ("female", "Female"),
+    ("other", "Other"),
+]
+
+class InsuredPerson(models.Model):
+    policy = models.ForeignKey("Policy", on_delete=models.CASCADE, related_name="insured_persons")
+    full_name = models.CharField(max_length=255)
+    dob = models.DateField()
+    relationship = models.CharField(max_length=50)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+    photo = models.ImageField(upload_to="insured/photos/", blank=True, null=True)
+    fingerprint_data = models.BinaryField(blank=True, null=True)
+    fingerprint_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.full_name} ({self.relationship})"
+
+    @property
+    def age(self):
+        today = timezone.now().date()
+        return (
+            today.year - self.dob.year 
+            - ((today.month, today.day) < (self.dob.month, self.dob.day))
+        )
+
+    @property
+    def is_adult(self):
+        return self.age >= 18
+

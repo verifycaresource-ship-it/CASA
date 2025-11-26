@@ -1,0 +1,63 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Edit {{ person.full_name }} | Health Insurance{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-lg mt-8">
+  <h1 class="text-2xl font-bold mb-4">Edit Insured Person</h1>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data" class="space-y-4">
+    {% csrf_token %}
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Full Name</label>
+      <input type="text" name="full_name" value="{{ person.full_name }}"
+             class="w-full px-3 py-2 border rounded-lg">
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Relationship</label>
+      <input type="text" name="relationship" value="{{ person.relationship }}"
+             class="w-full px-3 py-2 border rounded-lg">
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Date of Birth</label>
+      <input type="date" name="dob" value="{{ person.dob|date:'Y-m-d' }}"
+             class="w-full px-3 py-2 border rounded-lg">
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Gender</label>
+      <select name="gender" class="w-full px-3 py-2 border rounded-lg">
+        <option value="">Select Gender</option>
+        <option value="male" {% if person.gender == "male" %}selected{% endif %}>Male</option>
+        <option value="female" {% if person.gender == "female" %}selected{% endif %}>Female</option>
+        <option value="other" {% if person.gender == "other" %}selected{% endif %}>Other</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Photo</label>
+      {% if person.photo %}
+        <img src="{{ person.photo.url }}" alt="Current Photo" class="w-24 h-24 rounded-full mb-2">
+      {% endif %}
+      <input type="file" name="photo" class="w-full px-3 py-2 border rounded-lg">
+      <p class="text-sm text-gray-500">Leave blank to keep existing photo.</p>
+    </div>
+
+    <button type="submit" class="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+      💾 Save Changes
+    </button>
+  </form>
+</div>
+{% endblock %}
