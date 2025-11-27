@@ -16,6 +16,16 @@ from hospitals.models import HospitalAssignment, Hospital
 from claims.models import Claim
 from .models import Policy, InsuredPerson, PAYMENT_MODE_CHOICES, COVERAGE_LEVEL_CHOICES, GENDER_CHOICES
 
+from PyPDF2 import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import io
+import requests
+from PIL import Image
+
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
 
 # -------------------------------------------------------------------
 # DRF API VIEW
@@ -335,24 +345,67 @@ from .models import Policy
 
 @login_required
 def download_policy_pdf(request, pk):
-    # Get the policy
+    # Get the policy and insured persons
     policy = get_object_or_404(Policy, pk=pk)
-
-    # Get related insured persons (use the actual related_name in your model)
     insured_persons = policy.insured_persons.all()
 
-    # Render HTML template
+    # Render HTML
     html_string = render_to_string("policies/policy_pdf.html", {
         "policy": policy,
         "insured_persons": insured_persons,
-        "user": request.user,  # if you need user info for signatures, verification, etc.
     })
 
-    # Convert HTML to PDF
+    # Convert HTML to PDF (WeasyPrint)
     pdf_file = HTML(string=html_string).write_pdf()
 
-    # Return as downloadable response
-    response = HttpResponse(pdf_file, content_type='application/pdf')
+    # ---------------------------------------------------------------------
+    # 1️⃣ Create a temporary PDF containing only the seal image
+    # ---------------------------------------------------------------------
+    seal_url = "https://res.cloudinary.com/dzflw2ka9/image/upload/v1764246165/casaseal_mrw3dw.png"
+
+    # Download seal image
+    seal_img = Image.open(io.BytesIO(requests.get(seal_url).content))
+    seal_img_io = io.BytesIO()
+    seal_img.save(seal_img_io, format="PNG")
+
+    # Create temporary PDF with reportlab
+    seal_pdf_stream = io.BytesIO()
+    c = canvas.Canvas(seal_pdf_stream, pagesize=letter)
+
+    # Seal position (bottom center)
+    seal_width = 150
+    seal_height = 150
+
+    page_width, page_height = letter
+    x = (page_width - seal_width) / 2
+    y = 40  # bottom
+
+    c.drawImage(ImageReader(seal_img), x, y, width=seal_width, height=seal_height, mask='auto')
+    c.save()
+    seal_pdf_stream.seek(0)
+
+    # ---------------------------------------------------------------------
+    # 2️⃣ Merge seal ONLY into last page
+    # ---------------------------------------------------------------------
+    reader = PdfReader(io.BytesIO(pdf_file))
+    seal_reader = PdfReader(seal_pdf_stream)
+
+    writer = PdfWriter()
+    seal_page = seal_reader.pages[0]
+
+    total_pages = len(reader.pages)
+
+    for i, page in enumerate(reader.pages):
+        if i == total_pages - 1:  # LAST PAGE
+            page.merge_page(seal_page)
+        writer.add_page(page)
+
+    # Output final PDF
+    final_pdf_stream = io.BytesIO()
+    writer.write(final_pdf_stream)
+    final_pdf_stream.seek(0)
+
+    response = HttpResponse(final_pdf_stream.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Policy_{policy.policy_number}.pdf"'
 
     return response

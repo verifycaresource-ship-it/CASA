@@ -81,19 +81,38 @@
       display: block;
       margin: 0 auto 15px auto;
     }
+.casa-seal {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  opacity: 0.9;
+}
+@page:last {
+  @bottom-center {
+    content: url("https://res.cloudinary.com/dzflw2ka9/image/upload/v1764246165/casaseal_mrw3dw.png");
+  }
+}
+
+@page:last @bottom-center {
+  opacity: 0.9;
+  width: 130px;
+}
+
   </style>
 </head>
 <body>
 <div class="container">
-
-  <!-- Header -->
-  <h1 style="color:#1E3A8A;">CASA Insurance Policy Agreement</h1>
-  <p style="text-align:center; font-weight:bold;">Policy Number: {{ policy.policy_number }}</p>
-  <p style="text-align:right; font-weight:bold;">Date: ___/_____/_______</p>
   <!-- Logo -->
   <div class="logo">
     <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1764158147/casa_sqopru.jpg" alt="Company Logo">
   </div>
+  <!-- Header -->
+  <h1 style="color:#1E3A8A;">CASA Insurance Policy Agreement</h1>
+  <p style="text-align:center; font-weight:bold; padding-left:45%">Policy Number: {{ policy.policy_number }}</p>
+  <p style="text-align:right; font-weight:bold;">Date: ___/_____/_______</p>
+
 
   <!-- Section 1: Policy Details -->
   <h2>Section 1: Policy Details</h2>
@@ -121,7 +140,7 @@
   </ul>
 
   <!-- Section 4: Insured Persons -->
-  <h2>Section 4: Insured Persons</h2>
+  <h2>Section 4: spouce and depedant</h2>
   {% if insured_persons %}
   <table>
     <thead>
@@ -200,6 +219,8 @@
       <p>Signature (Office Use Only): ______________________</p>
     </div>
   </div>
+<!-- CASA Official Seal -->
+
 
 </div>
 </body>
