@@ -1,7 +1,8 @@
 from django.urls import path, include
 from rest_framework import routers
 from . import views
-
+from django.conf import settings
+from django.conf.urls.static import static
 app_name = 'policies'
 
 # DRF Router
@@ -29,3 +30,10 @@ urlpatterns = [
     path('policy/<int:pk>/view/', views.view_policy_document, name='view_policy_document'),
 
 ]
+
+
+
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

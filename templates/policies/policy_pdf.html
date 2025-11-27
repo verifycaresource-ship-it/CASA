@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,10 +105,33 @@
 </head>
 <body>
 <div class="container">
-  <!-- Logo -->
-  <div class="logo">
-    <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1764158147/casa_sqopru.jpg" alt="Company Logo">
-  </div>
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+  <tr>
+
+    <!-- LEFT SIDE -->
+    <td style="width: 30%; vertical-align: top; font-size: 12px; line-height: 18px;">
+       <div class="logo">
+        <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1764158147/casa_sqopru.jpg"
+             alt="Company Logo"
+             style="height: 65px; margin-bottom: 6px;">
+      </div>
+
+    <!-- CENTER TITLE -->
+    <td style="width: 40%; text-align: center; vertical-align: middle;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: bold;">
+        CASA Insurance Policy Agreement
+      </h2>
+    </td>
+
+    <!-- RIGHT SIDE WITH LOGO + CONTACT -->
+    <td style="width: 30%; text-align: right; vertical-align: top; font-size: 12px; line-height: 18px;">
+      <strong>Email:</strong>nfo@caresourceafrica
+      <strong>Contact:</strong> 0798883849
+    </td>
+
+  </tr>
+</table>
+
   <!-- Header -->
   <h1 style="color:#1E3A8A;">CASA Insurance Policy Agreement</h1>
   <p style="text-align:center; font-weight:bold; padding-left:45%">Policy Number: {{ policy.policy_number }}</p>
@@ -119,6 +143,9 @@
   <table>
     <tr><th>Policy Type</th><td>{{ policy.get_policy_type_display }}</td></tr>
     <tr><th>Name of Proposer</th><td>{{ policy.client.first_name }} {{ policy.client.last_name }}</td></tr>
+    <tr><th>Contact</th><td>{{ policy.client.phone }}</td></tr>
+    <tr><th>Address</th><td>{{ policy.client.address }}</td></tr>
+
     <tr><th>Coverage</th><td>{{ policy.coverage_details }}</td></tr>
     <tr><th>Premium</th><td>${{ policy.premium }} {{ policy.client.currency|default:"USD" }}</td></tr>
     <tr><th>Payment Mode</th><td>{{ policy.payment_mode|default:"-" }}</td></tr>

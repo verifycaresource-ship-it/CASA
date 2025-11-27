@@ -181,3 +181,6 @@ LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/clients/login/"
 FINGERPRINT_SERVICE_URL = "http://127.0.0.1:5000/enroll"
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
