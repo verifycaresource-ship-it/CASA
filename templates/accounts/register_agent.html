@@ -1,5 +1,4 @@
 {% extends 'dashboard/base.html' %}
-
 {% load widget_tweaks %}
 
 {% block title %}Register Agent | HealthInsure{% endblock %}
@@ -12,116 +11,72 @@
     ➕ Register New Agent
   </h2>
 
-  <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+  <!-- Registration Form -->
+  <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
     {% csrf_token %}
+    {% for field in form %}
+      <div class="flex flex-col {% if field.name in 'address daamiin profile_picture' %}sm:col-span-2{% endif %}">
+        <label class="font-semibold">{{ field.label }}</label>
+        {{ field|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+        {% for error in field.errors %}
+          <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
 
-    {% comment %} Username {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.username.label }}</label>
-      {{ form.username|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.username.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} First Name {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.first_name.label }}</label>
-      {{ form.first_name|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.first_name.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Last Name {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.last_name.label }}</label>
-      {{ form.last_name|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.last_name.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Phone {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.phone.label }}</label>
-      {{ form.phone|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.phone.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} DOB {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.dob.label }}</label>
-      {{ form.dob|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.dob.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Gender {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.gender.label }}</label>
-      {{ form.gender|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.gender.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Address {% endcomment %}
-    <div class="flex flex-col sm:col-span-2">
-      <label class="font-semibold">{{ form.address.label }}</label>
-      {{ form.address|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.address.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Damiin {% endcomment %}
-    <div class="flex flex-col sm:col-span-2">
-      <label class="font-semibold">{{ form.daamiin.label }}</label>
-      {{ form.daamiin|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.daamiin.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Profile Picture {% endcomment %}
-    <div class="flex flex-col sm:col-span-2">
-      <label class="font-semibold">{{ form.profile_picture.label }}</label>
-      {{ form.profile_picture|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.profile_picture.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Password {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.password1.label }}</label>
-      {{ form.password1|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.password1.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    {% comment %} Confirm Password {% endcomment %}
-    <div class="flex flex-col">
-      <label class="font-semibold">{{ form.password2.label }}</label>
-      {{ form.password2|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-      {% for error in form.password2.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-      {% endfor %}
-    </div>
-
-    <!-- Submit Button -->
     <div class="sm:col-span-2 flex justify-end">
       <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition">
         Register Agent
       </button>
     </div>
-
   </form>
+
+  <!-- Existing Agents Table -->
+  <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Existing Agents</h3>
+  {% if agents %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 bg-white shadow rounded-lg">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">#</th>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Username</th>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Email</th>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Phone</th>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for agent in agents %}
+        <tr>
+          <td class="px-6 py-4 text-sm text-gray-700">{{ forloop.counter }}</td>
+          <td class="px-6 py-4 text-sm text-gray-700">{{ agent.username }}</td>
+          <td class="px-6 py-4 text-sm text-gray-700">{{ agent.email }}</td>
+          <td class="px-6 py-4 text-sm text-gray-700">{{ agent.phone|default:"-" }}</td>
+          <td class="px-6 py-4 text-sm">
+            {% if agent.is_active %}
+              <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Active</span>
+            {% else %}
+              <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4 text-sm space-x-2">
+            <a href="{% url 'accounts:toggle_agent_status' agent.id %}" class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs">Toggle Status</a>
+            <a href="{% url 'accounts:reset_agent_password' agent.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs">Reset Password</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-4 text-center text-gray-500">No agents found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="text-gray-500">No agents registered yet.</p>
+  {% endif %}
+
 </div>
 
 <style>

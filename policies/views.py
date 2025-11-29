@@ -51,20 +51,163 @@ class PolicyViewSet(viewsets.ModelViewSet):
 # -------------------------------------------------------------------
 # POLICY LIST
 # -------------------------------------------------------------------
+from datetime import date, timedelta
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncMonth
+from django.shortcuts import render
+from django.core.paginator import Paginator
+
+from accounts.decorators import roles_required
+from .models import Policy
+
+
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_list(request):
-    policies = Policy.objects.select_related("client").all().order_by("-start_date")
+
     today = date.today()
-    monthly_policies = policies.filter(start_date__year=today.year, start_date__month=today.month)
+
+    policies = Policy.objects.select_related("client").all().order_by("-start_date")
+
+    # =============================
+    # FILTERS
+    # =============================
+
+    search = request.GET.get("search")
+    policy_type = request.GET.get("type")
+    active = request.GET.get("active")
+    month_only = request.GET.get("monthly")
+    start_date = request.GET.get("start")
+    end_date = request.GET.get("end")
+
+    if search:
+        policies = policies.filter(
+            policy_number__icontains=search
+            | models.Q(client__first_name__icontains=search)
+            | models.Q(client__last_name__icontains=search)
+        )
+
+    if policy_type:
+        policies = policies.filter(policy_type=policy_type)
+
+    if active == "true":
+        policies = policies.filter(is_active=True)
+    elif active == "false":
+        policies = policies.filter(is_active=False)
+
+    if start_date:
+        policies = policies.filter(start_date__gte=start_date)
+
+    if end_date:
+        policies = policies.filter(start_date__lte=end_date)
+
+    if month_only:
+        policies = policies.filter(
+            start_date__year=today.year,
+            start_date__month=today.month
+        )
+
+    # =============================
+    # KPI COUNTS
+    # =============================
+
+    total_count = Policy.objects.count()
+    active_count = Policy.objects.filter(is_active=True).count()
+
+    monthly_count = Policy.objects.filter(
+        start_date__month=today.month,
+        start_date__year=today.year
+    ).count()
+
+    total_revenue = Policy.objects.aggregate(
+        total=Sum("premium")
+    )["total"] or 0
+
+    monthly_revenue = Policy.objects.filter(
+        start_date__month=today.month,
+        start_date__year=today.year
+    ).aggregate(
+        total=Sum("premium")
+    )["total"] or 0
+
+    # =============================
+    # EXPIRY ALERTS
+    # =============================
+
+    renewals = Policy.objects.filter(
+        expiry_date__gte=today,
+        expiry_date__lte=today + timedelta(days=30)
+    ).order_by("expiry_date")
+
+    expired_alerts = Policy.objects.filter(
+        expiry_date__lt=today
+    ).order_by("-expiry_date")[:10]
+
+    # =============================
+    # ANALYTICS
+    # =============================
+
+    monthly_sales = (
+        Policy.objects
+        .annotate(month=TruncMonth("start_date"))
+        .values("month")
+        .annotate(
+            count=Count("id"),
+            revenue=Sum("premium")
+        )
+        .order_by("month")
+    )
+
+    chart_labels = [m["month"].strftime("%b %Y") for m in monthly_sales]
+    chart_counts = [m["count"] for m in monthly_sales]
+    chart_revenue = [float(m["revenue"] or 0) for m in monthly_sales]
+
+
+    # =============================
+    # PAGINATION
+    # =============================
+
+    paginator = Paginator(policies, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+
+    # =============================
+    # CONTEXT
+    # =============================
 
     context = {
-        "policies": policies,
-        "monthly_policies": monthly_policies,
-        "dashboard_title": "Policies",
+        "policies": page_obj.object_list,
+        "page_obj": page_obj,
+
+        "search": search,
+        "policy_type": policy_type,
+        "active": active,
+        "start": start_date,
+        "end": end_date,
+
+        # KPI
+        "total_count": total_count,
+        "active_count": active_count,
+        "monthly_count": monthly_count,
+        "total_revenue": total_revenue,
+        "monthly_revenue": monthly_revenue,
+
+        # Renewal alerts
+        "renewals": renewals,
+        "expired_alerts": expired_alerts,
+
+        # Chart
+        "chart_labels": chart_labels,
+        "chart_counts": chart_counts,
+        "chart_revenue": chart_revenue,
+
+        "dashboard_title": "Policy Analytics",
         "role": getattr(request.user, "role", "guest"),
     }
+
     return render(request, "policies/policy_list.html", context)
+
 
 
 # -------------------------------------------------------------------

@@ -48,8 +48,8 @@ class Policy(models.Model):
         related_name="created_policies"
     )
 
-    policy_number = models.CharField(max_length=50, unique=True)
-    policy_type = models.CharField(max_length=20, choices=POLICY_TYPE)
+    policy_number = models.CharField(max_length=50, unique=True, db_index=True)
+    policy_type = models.CharField(max_length=20, choices=POLICY_TYPE, db_index=True)
 
     # New fields
     payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, default="annual")
@@ -58,9 +58,9 @@ class Policy(models.Model):
 
     coverage_details = models.TextField(blank=True, null=True)
     premium = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    start_date = models.DateField()
+    start_date = models.DateField(db_index=True)
     expiry_date = models.DateField()
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     max_claim_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     waiting_period_days = models.PositiveIntegerField(default=0)
     deductible = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
@@ -132,3 +132,8 @@ class InsuredPerson(models.Model):
     @property
     def is_adult(self):
         return self.age >= 18
+    
+def save(self, *args, **kwargs):
+    if self.expiry_date and self.expiry_date < timezone.now().date():
+        self.is_active = False
+    super().save(*args, **kwargs)
