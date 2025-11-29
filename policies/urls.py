@@ -28,10 +28,9 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('policy/<int:pk>/download/', views.download_policy_pdf, name='download_policy_pdf'),
     path('policy/<int:pk>/view/', views.view_policy_document, name='view_policy_document'),
+    path('policy/<int:pk>/pdf/', views.view_policy_pdf, name='view_policy_pdf'),
 
 ]
-
-
 
 
 

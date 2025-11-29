@@ -7,7 +7,19 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.utils import timezone
 from rest_framework import viewsets, permissions
-
+import io
+import requests
+from PIL import Image
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import ImageReader
+from PyPDF2 import PdfReader, PdfWriter
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from django.contrib.auth.decorators import login_required
+from .models import Policy
 from .models import Policy, InsuredPerson, PAYMENT_MODE_CHOICES, COVERAGE_LEVEL_CHOICES
 from .serializers import PolicySerializer
 from clients.models import Client
@@ -423,3 +435,61 @@ def view_policy_document(request, pk):
         "insured_persons": insured_persons,
         "user": request.user,
     })
+
+
+@login_required
+def view_policy_pdf(request, pk):
+    # Get the policy and insured persons
+    policy = get_object_or_404(Policy, pk=pk)
+    insured_persons = policy.insured_persons.all()
+
+    # Render HTML
+    html_string = render_to_string("policies/policy_pdf.html", {
+        "policy": policy,
+        "insured_persons": insured_persons,
+    })
+
+    # Convert HTML to PDF
+    pdf_file = HTML(string=html_string).write_pdf()
+
+    # --- Add seal (same logic as download) ---
+    seal_url = "https://res.cloudinary.com/dzflw2ka9/image/upload/v1764246165/casaseal_mrw3dw.png"
+    seal_img = Image.open(io.BytesIO(requests.get(seal_url).content))
+
+    seal_pdf_stream = io.BytesIO()
+    c = canvas.Canvas(seal_pdf_stream, pagesize=letter)
+
+    seal_width = 100
+    seal_height = 100
+    
+
+    page_width, page_height = letter
+    x = (page_width - seal_width) / 2
+    y = 40  # bottom
+
+    c.drawImage(ImageReader(seal_img), x, y, width=seal_width, height=seal_height, mask='auto')
+    c.save()
+    seal_pdf_stream.seek(0)
+
+    reader = PdfReader(io.BytesIO(pdf_file))
+    seal_reader = PdfReader(seal_pdf_stream)
+
+    writer = PdfWriter()
+    seal_page = seal_reader.pages[0]
+
+    total_pages = len(reader.pages)
+
+    for i, page in enumerate(reader.pages):
+        if i == total_pages - 1:
+            page.merge_page(seal_page)
+        writer.add_page(page)
+
+    final_pdf_stream = io.BytesIO()
+    writer.write(final_pdf_stream)
+    final_pdf_stream.seek(0)
+
+    # 👉 IMPORTANT: View inline (no download)
+    response = HttpResponse(final_pdf_stream.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Policy_{policy.policy_number}.pdf"'
+
+    return response

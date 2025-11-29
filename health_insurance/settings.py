@@ -7,6 +7,9 @@ Structured configuration for development and future production readiness.
 from pathlib import Path
 import os
 from datetime import timedelta
+from decouple import config
+
+
 
 # ----------------------------
 # Base directory
@@ -51,6 +54,8 @@ INSTALLED_APPS = [
     "claims",
     "hospitals",
     'django_extensions',
+    'tasks',
+
 ]
 
 # ----------------------------
@@ -184,3 +189,21 @@ FINGERPRINT_SERVICE_URL = "http://127.0.0.1:5000/enroll"
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ----------------------------
+# Email Configuration
+# ----------------------------
+# Use environment variables for production safety
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")  # fallback SMTP host
+EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool, default=True)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)  # optional
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
+
+# ----------------------------
+# Development fallback: console backend
+# ----------------------------
+

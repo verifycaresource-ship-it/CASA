@@ -1,5 +1,7 @@
 {% extends 'dashboard/base.html' %}
 
+{% load widget_tweaks %}
+
 {% block title %}Register Agent | HealthInsure{% endblock %}
 
 {% block content %}
@@ -15,101 +17,101 @@
 
     {% comment %} Username {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.username.id_for_label }}" class="font-semibold">{{ form.username.label }}</label>
-      {{ form.username }}
-      {% if form.username.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.username.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.username.label }}</label>
+      {{ form.username|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.username.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} First Name {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.first_name.id_for_label }}" class="font-semibold">{{ form.first_name.label }}</label>
-      {{ form.first_name }}
-      {% if form.first_name.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.first_name.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.first_name.label }}</label>
+      {{ form.first_name|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.first_name.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Last Name {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.last_name.id_for_label }}" class="font-semibold">{{ form.last_name.label }}</label>
-      {{ form.last_name }}
-      {% if form.last_name.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.last_name.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.last_name.label }}</label>
+      {{ form.last_name|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.last_name.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Phone {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.phone.id_for_label }}" class="font-semibold">{{ form.phone.label }}</label>
-      {{ form.phone }}
-      {% if form.phone.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.phone.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.phone.label }}</label>
+      {{ form.phone|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.phone.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} DOB {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.dob.id_for_label }}" class="font-semibold">{{ form.dob.label }}</label>
-      {{ form.dob }}
-      {% if form.dob.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.dob.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.dob.label }}</label>
+      {{ form.dob|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.dob.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Gender {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.gender.id_for_label }}" class="font-semibold">{{ form.gender.label }}</label>
-      {{ form.gender }}
-      {% if form.gender.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.gender.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.gender.label }}</label>
+      {{ form.gender|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.gender.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Address {% endcomment %}
     <div class="flex flex-col sm:col-span-2">
-      <label for="{{ form.address.id_for_label }}" class="font-semibold">{{ form.address.label }}</label>
-      {{ form.address }}
-      {% if form.address.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.address.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.address.label }}</label>
+      {{ form.address|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.address.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Damiin {% endcomment %}
     <div class="flex flex-col sm:col-span-2">
-      <label for="{{ form.daamiin.id_for_label }}" class="font-semibold">{{ form.daamiin.label }}</label>
-      {{ form.daamiin }}
-      {% if form.daamiin.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.daamiin.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.daamiin.label }}</label>
+      {{ form.daamiin|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.daamiin.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Profile Picture {% endcomment %}
     <div class="flex flex-col sm:col-span-2">
-      <label for="{{ form.profile_picture.id_for_label }}" class="font-semibold">{{ form.profile_picture.label }}</label>
-      {{ form.profile_picture }}
-      {% if form.profile_picture.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.profile_picture.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.profile_picture.label }}</label>
+      {{ form.profile_picture|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.profile_picture.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Password {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.password1.id_for_label }}" class="font-semibold">{{ form.password1.label }}</label>
-      {{ form.password1 }}
-      {% if form.password1.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.password1.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.password1.label }}</label>
+      {{ form.password1|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.password1.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     {% comment %} Confirm Password {% endcomment %}
     <div class="flex flex-col">
-      <label for="{{ form.password2.id_for_label }}" class="font-semibold">{{ form.password2.label }}</label>
-      {{ form.password2 }}
-      {% if form.password2.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.password2.errors.0 }}</p>
-      {% endif %}
+      <label class="font-semibold">{{ form.password2.label }}</label>
+      {{ form.password2|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
+      {% for error in form.password2.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+      {% endfor %}
     </div>
 
     <!-- Submit Button -->
@@ -123,10 +125,6 @@
 </div>
 
 <style>
-  input, select, textarea {
-    @apply border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 w-full;
-  }
-
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }

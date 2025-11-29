@@ -154,7 +154,7 @@
     <tr><th>Start Date</th><td>{{ policy.start_date|date:"M d, Y" }}</td></tr>
     <tr><th>Expiry Date</th><td>{{ policy.expiry_date|date:"M d, Y" }}</td></tr>
     <tr><th>Status</th><td>{{ policy.status|title }}</td></tr>
-    <tr><th>Maximum Claim Limit</th><td>${{ policy.max_claim_limit|default:"-" }}</td></tr>
+    <tr><th>Total-sum coveredt</th><td>${{ policy.max_claim_limit|default:"-" }}</td></tr>
   </table>
 
   <!-- Section 2: Coverage Conditions -->
@@ -167,7 +167,7 @@
   </ul>
 
   <!-- Section 4: Insured Persons -->
-  <h2>Section 4: spouce and depedant</h2>
+  <h2>Section 4: spouce and depedants</h2>
   {% if insured_persons %}
   <table>
     <thead>

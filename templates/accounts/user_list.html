@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Users | HealthInsure Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+  <h1 class="text-2xl font-bold mb-4">Users</h1>
+  <table class="min-w-full bg-white rounded shadow overflow-hidden">
+    <thead class="bg-blue-500 text-white">
+      <tr>
+        <th class="py-2 px-4">ID</th>
+        <th class="py-2 px-4">Username</th>
+        <th class="py-2 px-4">Email</th>
+        <th class="py-2 px-4">Role</th>
+        <th class="py-2 px-4">Active</th>
+        <th class="py-2 px-4">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr class="border-b">
+        <td class="py-2 px-4">{{ user.id }}</td>
+        <td class="py-2 px-4">{{ user.username }}</td>
+        <td class="py-2 px-4">{{ user.email }}</td>
+        <td class="py-2 px-4">{{ user.get_role_display }}</td>
+        <td class="py-2 px-4">{{ user.is_active }}</td>
+        <td class="py-2 px-4 space-x-2">
+          <a href="{% url 'accounts:toggle_user_status' user.id %}" class="text-yellow-500 hover:underline">Toggle Status</a>
+          <a href="{% url 'accounts:reset_user_password' user.id %}" class="text-blue-500 hover:underline">Reset Password</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
