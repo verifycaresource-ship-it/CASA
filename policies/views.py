@@ -38,6 +38,18 @@ from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
+from django.db.models.functions import TruncMonth
+
+from datetime import date, timedelta, datetime
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q, Count, Sum
+from django.db.models.functions import TruncMonth
+from django.core.paginator import Paginator
+
+from accounts.decorators import roles_required
+from .models import Policy
 
 # -------------------------------------------------------------------
 # DRF API VIEW
@@ -62,92 +74,118 @@ from accounts.decorators import roles_required
 from .models import Policy
 
 
+# -------------------------------------------------------------------
+# POLICY LIST + FILTERS + DASHBOARD ANALYTICS
+# -------------------------------------------------------------------
+
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_list(request):
 
     today = date.today()
 
-    policies = Policy.objects.select_related("client").all().order_by("-start_date")
+    # -------------------------------------------------------
+    # BASE QUERY
+    # -------------------------------------------------------
+    policies = (
+        Policy.objects
+        .select_related("client")
+        .order_by("-start_date")
+    )
 
-    # =============================
+    # -------------------------------------------------------
     # FILTERS
-    # =============================
+    # -------------------------------------------------------
+    search = request.GET.get("search", "").strip()
+    policy_type = request.GET.get("type", "")
+    active = request.GET.get("active", "")
+    month_only = request.GET.get("monthly", "")
+    start_date = request.GET.get("start", "")
+    end_date = request.GET.get("end", "")
 
-    search = request.GET.get("search")
-    policy_type = request.GET.get("type")
-    active = request.GET.get("active")
-    month_only = request.GET.get("monthly")
-    start_date = request.GET.get("start")
-    end_date = request.GET.get("end")
-
+    # ---- SEARCH (Policy No + Client Names) ----
     if search:
         policies = policies.filter(
-            policy_number__icontains=search
-            | models.Q(client__first_name__icontains=search)
-            | models.Q(client__last_name__icontains=search)
+            Q(policy_number__icontains=search) |
+            Q(client__first_name__icontains=search) |
+            Q(client__last_name__icontains=search)
         )
 
+    # ---- POLICY TYPE ----
     if policy_type:
         policies = policies.filter(policy_type=policy_type)
 
+    # ---- ACTIVE FILTER ----
     if active == "true":
         policies = policies.filter(is_active=True)
     elif active == "false":
         policies = policies.filter(is_active=False)
 
-    if start_date:
-        policies = policies.filter(start_date__gte=start_date)
+    # ---- DATE RANGE FILTER ----
+    try:
+        if start_date:
+            policies = policies.filter(
+                start_date__gte=datetime.strptime(start_date, "%Y-%m-%d").date()
+            )
 
-    if end_date:
-        policies = policies.filter(start_date__lte=end_date)
+        if end_date:
+            policies = policies.filter(
+                start_date__lte=datetime.strptime(end_date, "%Y-%m-%d").date()
+            )
+    except ValueError:
+        pass   # ignore invalid date input safely
 
+    # ---- CURRENT MONTH FILTER ----
     if month_only:
         policies = policies.filter(
             start_date__year=today.year,
             start_date__month=today.month
         )
 
-    # =============================
-    # KPI COUNTS
-    # =============================
-
+    # -------------------------------------------------------
+    # KPI METRICS
+    # -------------------------------------------------------
     total_count = Policy.objects.count()
     active_count = Policy.objects.filter(is_active=True).count()
 
     monthly_count = Policy.objects.filter(
-        start_date__month=today.month,
-        start_date__year=today.year
+        start_date__year=today.year,
+        start_date__month=today.month
     ).count()
 
-    total_revenue = Policy.objects.aggregate(
-        total=Sum("premium")
-    )["total"] or 0
+    total_revenue = (
+        Policy.objects.aggregate(total=Sum("premium"))["total"] or 0
+    )
 
-    monthly_revenue = Policy.objects.filter(
-        start_date__month=today.month,
-        start_date__year=today.year
-    ).aggregate(
-        total=Sum("premium")
-    )["total"] or 0
+    monthly_revenue = (
+        Policy.objects.filter(
+            start_date__year=today.year,
+            start_date__month=today.month
+        )
+        .aggregate(total=Sum("premium"))["total"] or 0
+    )
 
-    # =============================
-    # EXPIRY ALERTS
-    # =============================
+    # -------------------------------------------------------
+    # RENEWAL + EXPIRY ALERTS
+    # -------------------------------------------------------
+    renewals = (
+        Policy.objects
+        .filter(
+            expiry_date__gte=today,
+            expiry_date__lte=today + timedelta(days=30)
+        )
+        .order_by("expiry_date")
+    )
 
-    renewals = Policy.objects.filter(
-        expiry_date__gte=today,
-        expiry_date__lte=today + timedelta(days=30)
-    ).order_by("expiry_date")
+    expired_alerts = (
+        Policy.objects
+        .filter(expiry_date__lt=today)
+        .order_by("-expiry_date")[:10]
+    )
 
-    expired_alerts = Policy.objects.filter(
-        expiry_date__lt=today
-    ).order_by("-expiry_date")[:10]
-
-    # =============================
-    # ANALYTICS
-    # =============================
-
+    # -------------------------------------------------------
+    # MONTHLY ANALYTICS (Charts)
+    # -------------------------------------------------------
     monthly_sales = (
         Policy.objects
         .annotate(month=TruncMonth("start_date"))
@@ -159,54 +197,64 @@ def policy_list(request):
         .order_by("month")
     )
 
-    chart_labels = [m["month"].strftime("%b %Y") for m in monthly_sales]
-    chart_counts = [m["count"] for m in monthly_sales]
-    chart_revenue = [float(m["revenue"] or 0) for m in monthly_sales]
+    chart_labels = [
+        record["month"].strftime("%b %Y")
+        for record in monthly_sales
+    ]
 
+    chart_counts = [
+        record["count"]
+        for record in monthly_sales
+    ]
 
-    # =============================
+    chart_revenue = [
+        float(record["revenue"] or 0)
+        for record in monthly_sales
+    ]
+
+    # -------------------------------------------------------
     # PAGINATION
-    # =============================
-
+    # -------------------------------------------------------
     paginator = Paginator(policies, 10)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-
-    # =============================
-    # CONTEXT
-    # =============================
-
+    # -------------------------------------------------------
+    # TEMPLATE CONTEXT
+    # -------------------------------------------------------
     context = {
         "policies": page_obj.object_list,
         "page_obj": page_obj,
 
+        # Search & Filters
         "search": search,
         "policy_type": policy_type,
         "active": active,
         "start": start_date,
         "end": end_date,
 
-        # KPI
+        # KPI Summary
         "total_count": total_count,
         "active_count": active_count,
         "monthly_count": monthly_count,
         "total_revenue": total_revenue,
         "monthly_revenue": monthly_revenue,
 
-        # Renewal alerts
+        # Renewal Alerts
         "renewals": renewals,
         "expired_alerts": expired_alerts,
 
-        # Chart
+        # Charts
         "chart_labels": chart_labels,
         "chart_counts": chart_counts,
         "chart_revenue": chart_revenue,
 
+        # Metadata
         "dashboard_title": "Policy Analytics",
         "role": getattr(request.user, "role", "guest"),
     }
 
     return render(request, "policies/policy_list.html", context)
+
 
 
 

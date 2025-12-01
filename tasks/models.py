@@ -8,6 +8,10 @@ class Task(models.Model):
     STATUS_COMPLETED = 'completed'
     STATUS_OVERDUE = 'overdue'
 
+    PRIORITY_LOW = "low"
+    PRIORITY_MEDIUM = "medium"
+    PRIORITY_HIGH = "high"
+
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
         (STATUS_IN_PROGRESS, 'In Progress'),
@@ -15,8 +19,15 @@ class Task(models.Model):
         (STATUS_OVERDUE, 'Overdue'),
     ]
 
+    PRIORITY_CHOICES = [
+        (PRIORITY_LOW, "Low"),
+        (PRIORITY_MEDIUM, "Medium"),
+        (PRIORITY_HIGH, "High")
+    ]
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -24,9 +35,15 @@ class Task(models.Model):
         blank=True,
         related_name='tasks'
     )
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
+
     due_date = models.DateField(null=True, blank=True)
-    week = models.PositiveIntegerField(default=1, help_text="Week of the project/task")
+    week = models.PositiveIntegerField(default=1)
+
+    completed_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -36,10 +53,23 @@ class Task(models.Model):
         verbose_name_plural = "Tasks"
 
     def __str__(self):
-        return f"{self.title} ({self.get_status_display()})"
+        return self.title
+
+    @property
+    def is_overdue(self):
+        return self.status == self.STATUS_OVERDUE
+
+    def mark_completed(self):
+        self.status = self.STATUS_COMPLETED
+        self.completed_at = timezone.now()
+        self.save()
 
     def save(self, *args, **kwargs):
-        """Automatically mark as overdue if past due date and not completed."""
-        if self.due_date and self.status != self.STATUS_COMPLETED and self.due_date < timezone.now().date():
+        if (
+            self.due_date
+            and self.status != self.STATUS_COMPLETED
+            and self.due_date < timezone.now().date()
+        ):
             self.status = self.STATUS_OVERDUE
+
         super().save(*args, **kwargs)
