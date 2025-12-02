@@ -436,3 +436,5 @@ db.sqlite3
 
 ::contentReference[oaicite:12]{index=12}
  
+git config --global CASA
+git config --global verifycaresource@gmail.com
