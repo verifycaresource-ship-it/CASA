@@ -1,0 +1,14 @@
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg hover:scale-[1.02]">
+  <div class="flex justify-between items-center">
+    <p class="text-sm text-gray-500 dark:text-gray-400">{{ title }}</p>
+    <i data-lucide="{{ icon }}" class="w-7 h-7 text-{{ color }}-500"></i>
+  </div>
+  <h3 class="text-3xl font-bold text-{{ color }}-500">
+    {% if prefix %}{{ prefix }}{% endif %}
+    {% if is_amount %}
+      {{ value|floatformat:2|default:"0.00" }}
+    {% else %}
+      {{ value|default:"0" }}
+    {% endif %}
+  </h3>
+</div>

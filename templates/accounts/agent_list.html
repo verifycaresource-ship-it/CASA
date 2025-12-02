@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Agents | HealthInsure Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+  <h1 class="text-2xl font-bold mb-4">Agents</h1>
+  <table class="min-w-full bg-white rounded shadow overflow-hidden">
+    <thead class="bg-green-500 text-white">
+      <tr>
+        <th class="py-2 px-4">ID</th>
+        <th class="py-2 px-4">Username</th>
+        <th class="py-2 px-4">Email</th>
+        <th class="py-2 px-4">Phone</th>
+        <th class="py-2 px-4">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for agent in agents %}
+      <tr class="border-b">
+        <td class="py-2 px-4">{{ agent.id }}</td>
+        <td class="py-2 px-4">{{ agent.username }}</td>
+        <td class="py-2 px-4">{{ agent.email }}</td>
+        <td class="py-2 px-4">{{ agent.phone }}</td>
+        <td class="py-2 px-4">
+          <a href="#" class="text-blue-500 hover:underline">Edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

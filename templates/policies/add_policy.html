@@ -1,0 +1,95 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ form_title }} | Health Insurance{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">{{ form_title }}</h1>
+    <a href="{% url 'policies:policy_list' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+      ⬅ Back to Policies
+    </a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="POST" class="space-y-6">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label for="policy_number" class="block text-gray-700 font-semibold mb-1">Policy Number</label>
+        <input type="text" id="policy_number" name="policy_number" 
+               value="{{ policy.policy_number|default_if_none:'' }}" 
+               required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+        {% if form_errors.policy_number %}
+          <p class="text-red-600 text-sm mt-1">{{ form_errors.policy_number }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="type" class="block text-gray-700 font-semibold mb-1">Type</label>
+        <input type="text" id="type" name="type" 
+               value="{{ policy.type|default_if_none:'' }}" 
+               required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+        {% if form_errors.type %}
+          <p class="text-red-600 text-sm mt-1">{{ form_errors.type }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="premium" class="block text-gray-700 font-semibold mb-1">Premium</label>
+        <input type="number" id="premium" name="premium" step="0.01" 
+               value="{{ policy.premium|default_if_none:'' }}" 
+               required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+        {% if form_errors.premium %}
+          <p class="text-red-600 text-sm mt-1">{{ form_errors.premium }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="client" class="block text-gray-700 font-semibold mb-1">Client</label>
+        <select id="client" name="client" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+          <option value="">Select Client</option>
+          {% for client in clients %}
+            <option value="{{ client.id }}" {% if policy.client.id == client.id %}selected{% endif %}>
+              {{ client.first_name }} {{ client.last_name }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if form_errors.client %}
+          <p class="text-red-600 text-sm mt-1">{{ form_errors.client }}</p>
+        {% endif %}
+      </div>
+
+      <!-- Active & Shariah Compliance -->
+      <div class="md:col-span-2 flex flex-wrap gap-6 mt-2 items-center">
+        <div class="flex items-center space-x-2">
+          <input type="checkbox" name="active" id="active" class="h-5 w-5 text-green-600" 
+                 {% if policy.active %}checked{% endif %}>
+          <label for="active" class="text-gray-700 font-medium">Active</label>
+        </div>
+        <div class="flex items-center space-x-2">
+          <input type="checkbox" name="shariah_approved" id="shariah_approved" class="h-5 w-5 text-teal-600"
+                 {% if policy.shariah_approved %}checked{% endif %}>
+          <label for="shariah_approved" class="text-gray-700 font-medium">Shariah Compliant</label>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" 
+            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+      {% if policy %}💾 Update Policy{% else %}➕ Add Policy{% endif %}
+    </button>
+  </form>
+
+</div>
+{% endblock %}

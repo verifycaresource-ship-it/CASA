@@ -1,0 +1,142 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Submit Claim | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-xl shadow space-y-6">
+  <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">🧾 Submit Claim</h2>
+
+  <form method="post" enctype="multipart/form-data" class="space-y-4" id="claimForm">
+    {% csrf_token %}
+
+    {% if assignment %}
+      <input type="hidden" name="assignment" value="{{ assignment.id }}">
+    {% endif %}
+
+    <!-- CLIENT -->
+    {% if selected_client %}
+      <div>
+        <label class="block mb-1 font-medium">Client (Policyholder)</label>
+        <input type="text"
+               value="{{ selected_client.first_name }} {{ selected_client.last_name }}"
+               class="w-full border rounded p-2 bg-gray-100"
+               readonly>
+        <input type="hidden" name="client" value="{{ selected_client.id }}">
+      </div>
+    {% else %}
+      <div>
+        <label class="block mb-1 font-medium">Client (Policyholder)</label>
+        <select name="client" class="w-full border rounded p-2" required>
+          <option value="">-- Select Client --</option>
+          {% for c in clients %}
+            <option value="{{ c.id }}" {% if selected_client and selected_client.id == c.id %}selected{% endif %}>
+              {{ c.first_name }} {{ c.last_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    <!-- POLICY -->
+    {% if selected_policy %}
+      <div>
+        <label class="block mb-1 font-medium">Policy</label>
+        <input type="text"
+               value="{{ selected_policy.policy_number }} | {{ selected_policy.policy_type }} | Premium: {{ selected_policy.premium }}"
+               class="w-full border rounded p-2 bg-gray-100"
+               readonly>
+        <input type="hidden" name="policy" value="{{ selected_policy.id }}">
+      </div>
+    {% else %}
+      <div>
+        <label class="block mb-1 font-medium">Policy</label>
+        <select name="policy" class="w-full border rounded p-2" required>
+          <option value="">-- Select Policy --</option>
+          {% for p in policies %}
+            <option value="{{ p.id }}" {% if selected_policy and selected_policy.id == p.id %}selected{% endif %}>
+              {{ p.policy_number }} | {{ p.policy_type }} | Premium: {{ p.premium }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    <!-- CLAIM AMOUNT -->
+    <div>
+      <label class="block mb-1 font-medium">Claim Amount</label>
+      <input type="number" name="amount" step="0.01" class="w-full border rounded p-2" required>
+    </div>
+
+    <!-- NOTES -->
+    <div>
+      <label class="block mb-1 font-medium">Notes (Optional)</label>
+      <textarea name="notes" class="w-full border rounded p-2" rows="3"></textarea>
+    </div>
+
+    <!-- DOCUMENT -->
+    <div>
+      <label class="block mb-1 font-medium">Attach Document (Optional)</label>
+      <input type="file" name="document" class="w-full border rounded p-2">
+    </div>
+
+    <!-- FINGERPRINT VERIFICATION -->
+    <div class="mt-4">
+      <button type="button" id="verifyFingerprintBtn" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
+        🔒 Verify Fingerprint
+      </button>
+      <span id="fingerprintStatus" class="ml-2 text-green-600 font-semibold hidden">✔ Verified</span>
+    </div>
+
+    <div class="flex justify-end mt-4">
+      <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition" disabled>
+        Submit Claim
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Include DigitalPersona SDK -->
+<script src="https://localhost:8080/DPSdk.js"></script>
+
+<script>
+document.getElementById("verifyFingerprintBtn").addEventListener("click", async function() {
+    try {
+        if (!window.DPFP) {
+            alert("Fingerprint SDK not loaded. Make sure the Web SDK Agent is running at https://localhost:8080");
+            return;
+        }
+
+        // Capture fingerprint template
+        let template = await window.DPFP.capture(); 
+        if (!template) {
+            alert("No fingerprint captured. Try again.");
+            return;
+        }
+
+        // Send template to backend for verification
+        let response = await fetch("{% url 'hospitals:verify_fingerprint' selected_client.id %}", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ template })
+        });
+
+        let data = await response.json();
+
+        if (data.verified) {
+            document.getElementById("fingerprintStatus").classList.remove("hidden");
+            document.getElementById("submitBtn").disabled = false;
+            alert("Fingerprint verified successfully!");
+        } else {
+            alert("Fingerprint verification failed. Ensure the client is assigned.");
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("Error accessing fingerprint scanner. Make sure the SDK agent is running and the scanner is connected.");
+    }
+});
+</script>
+{% endblock %}

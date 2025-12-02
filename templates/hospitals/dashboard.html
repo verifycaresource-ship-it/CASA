@@ -1,0 +1,157 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Hospital Dashboard | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="space-y-8 animate-fade-in">
+  
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+    <div>
+      <h1 class="text-3xl font-extrabold mb-1 text-gray-800 dark:text-white">
+        Welcome, {{ user.username|capfirst }}
+      </h1>
+      <p class="text-gray-500 dark:text-gray-400">Here’s an overview of your hospital’s performance.</p>
+    </div>
+    <a href="{% url 'claims:add_claim' %}" 
+       class="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all hover:scale-105">
+      <i data-lucide="plus-circle" class="w-5 h-5 mr-2"></i>
+      Submit New Claim
+    </a>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 mt-6">
+    <!-- Total Claims -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Total Claims</p>
+        <i data-lucide="clipboard-list" class="w-7 h-7 text-blue-600"></i>
+      </div>
+      <h3 class="text-3xl font-bold">{{ total_claims|default:"0" }}</h3>
+    </div>
+
+    <!-- Pending Claims -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Pending Claims</p>
+        <i data-lucide="hourglass" class="w-7 h-7 text-yellow-500"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-yellow-500">{{ pending_claims|default:"0" }}</h3>
+    </div>
+
+    <!-- Approved Claims -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Approved Claims</p>
+        <i data-lucide="check-circle" class="w-7 h-7 text-green-500"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-green-500">{{ approved_claims|default:"0" }}</h3>
+    </div>
+
+    <!-- Rejected Claims -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Rejected Claims</p>
+        <i data-lucide="x-circle" class="w-7 h-7 text-red-500"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-red-500">{{ rejected_claims|default:"0" }}</h3>
+    </div>
+
+    <!-- Revenue Collected -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Revenue Collected</p>
+        <i data-lucide="dollar-sign" class="w-7 h-7 text-teal-500"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-teal-500">
+        ${{ revenue_collected|floatformat:2|default:"0.00" }}
+      </h3>
+    </div>
+
+    <!-- Pending Claim Amount -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500">Pending Amount</p>
+        <i data-lucide="clock" class="w-7 h-7 text-orange-500"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-orange-500">
+        ${{ pending_amount|floatformat:2|default:"0.00" }}
+      </h3>
+    </div>
+  </div>
+
+  <!-- Recent Claims Section -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6 mt-10 transition hover:shadow-lg">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-bold text-gray-800 dark:text-white">Recent Claims</h2>
+      <a href="{% url 'claims:claim_list' %}" 
+         class="text-blue-600 hover:underline text-sm font-medium">View All</a>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border dark:border-gray-700">
+      <table class="min-w-full text-sm text-left">
+        <thead class="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs tracking-wider">
+          <tr>
+            <th class="px-4 py-3">Claim #</th>
+            <th class="px-4 py-3">Policy</th>
+            <th class="px-4 py-3">Amount</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y dark:divide-gray-700">
+          {% for claim in recent_claims %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            <td class="px-4 py-3 font-semibold">{{ claim.claim_number }}</td>
+            <td class="px-4 py-3">{{ claim.policy.policy_number }}</td>
+            <td class="px-4 py-3">${{ claim.amount|floatformat:2 }}</td>
+            <td class="px-4 py-3">
+              {% if claim.status == 'approved' %}
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                  {{ claim.status|capfirst }}
+                </span>
+              {% elif claim.status == 'pending' %}
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+                  {{ claim.status|capfirst }}
+                </span>
+              {% elif claim.status == 'reimbursed' %}
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
+                  {{ claim.status|capfirst }}
+                </span>
+              {% else %}
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                  {{ claim.status|capfirst }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <a href="{% url 'claims:claim_detail' claim.id %}" 
+                 class="text-blue-600 hover:underline font-medium">View</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center py-5 text-gray-500">No recent claims available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Animate icons -->
+<script>
+  lucide.createIcons();
+</script>
+
+<style>
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out;
+  }
+</style>
+{% endblock %}

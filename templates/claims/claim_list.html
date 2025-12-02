@@ -1,0 +1,79 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Claims | Health Insurance{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
+    {% if role == "hospital" %}
+      <a href="{% url 'claims:add_claim' %}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+        ➕ Submit New Claim
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Claims Table -->
+  <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden text-sm">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-4 py-2 border-b">Claim #</th>
+        <th class="px-4 py-2 border-b">Client</th>
+        <th class="px-4 py-2 border-b">Policy #</th>
+        <th class="px-4 py-2 border-b">Hospital</th>
+        <th class="px-4 py-2 border-b">Amount ($)</th>
+        <th class="px-4 py-2 border-b">Status</th>
+        <th class="px-4 py-2 border-b">Created At</th>
+        <th class="px-4 py-2 border-b">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for claim in claims %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-2 border-b">{{ claim.claim_number }}</td>
+        <td class="px-4 py-2 border-b">{{ claim.client.first_name }} {{ claim.client.last_name }}</td>
+        <td class="px-4 py-2 border-b">{{ claim.policy.policy_number }}</td>
+        <td class="px-4 py-2 border-b">{{ claim.hospital.name }}</td>
+        <td class="px-4 py-2 border-b">${{ claim.amount }}</td>
+        <td class="px-4 py-2 border-b">
+          {% if claim.status == "pending" %}
+            <span class="text-yellow-600 font-semibold">Pending</span>
+          {% elif claim.status == "approved" %}
+            <span class="text-green-600 font-semibold">Approved</span>
+          {% elif claim.status == "rejected" %}
+            <span class="text-red-600 font-semibold">Rejected</span>
+          {% elif claim.status == "reimbursed" %}
+            <span class="text-blue-600 font-semibold">Reimbursed</span>
+          {% else %}
+            <span>{{ claim.status }}</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 border-b">{{ claim.created_at|date:"Y-m-d H:i" }}</td>
+        <td class="px-4 py-2 border-b space-x-2">
+          <a href="{% url 'claims:claim_detail' claim.id %}" class="text-blue-600 hover:underline">View</a>
+          {% if role == "admin" or role == "claim_officer" %}
+            <a href="{% url 'claims:edit_claim' claim.id %}" class="text-yellow-600 hover:underline">Edit</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center px-4 py-6 text-gray-500">No claims found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

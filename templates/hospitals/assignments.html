@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow p-4">
+  <h2 class="mb-4">{{ dashboard_title }}</h2>
+
+  {% if assignments %}
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Client</th>
+        <th>Policy</th>
+        <th>Status</th>
+        <th>Assigned At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in assignments %}
+      <tr>
+        <td>{{ a.client.first_name }} {{ a.client.last_name }}</td>
+        <td>{{ a.policy.policy_number }}</td>
+        <td>{{ a.get_status_display }}</td>
+        <td>{{ a.assigned_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          {% if a.status == "pending" %}
+            <a href="{% url 'policies:accept_assignment' a.id %}" class="btn btn-success btn-sm">Accept</a>
+            <a href="{% url 'policies:reject_assignment' a.id %}" class="btn btn-danger btn-sm">Reject</a>
+          {% elif a.status == "accepted" %}
+            <a href="{% url 'policies:submit_claim' a.id %}" class="btn btn-primary btn-sm">Submit Claim</a>
+          {% elif a.status == "completed" %}
+            <span class="badge bg-success">Completed</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ a.get_status_display }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No client assignments yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

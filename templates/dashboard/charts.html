@@ -1,0 +1,44 @@
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 shadow rounded p-4">
+        <h3 class="font-semibold mb-2">Policies by Type</h3>
+        <canvas id="policiesChart"></canvas>
+    </div>
+    <div class="bg-white dark:bg-gray-800 shadow rounded p-4">
+        <h3 class="font-semibold mb-2">Claims Status</h3>
+        <canvas id="claimsChart"></canvas>
+    </div>
+</div>
+
+<script>
+const policiesCtx = document.getElementById('policiesChart').getContext('2d');
+new Chart(policiesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ policies_labels|safe }},
+        datasets: [{
+            data: {{ policies_data|safe }},
+            backgroundColor: ['#34D399','#60A5FA','#FBBF24']
+        }]
+    }
+});
+
+const claimsCtx = document.getElementById('claimsChart').getContext('2d');
+new Chart(claimsCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ claims_labels|safe }},
+        datasets: [{
+            label: 'Claims',
+            data: {{ claims_data|safe }},
+            backgroundColor: '#F87171'
+        }]
+    },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>

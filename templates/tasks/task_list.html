@@ -1,0 +1,249 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Task Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ================= HEADER ================= -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+  <div>
+    <h1 class="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+      🗂 Task Dashboard
+    </h1>
+    <p class="text-gray-500 dark:text-gray-400">
+      Manage tasks, priorities & team performance efficiently.
+    </p>
+  </div>
+
+  <a href="{% url 'tasks:task_create' %}"
+     class="mt-4 md:mt-0 inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all hover:scale-105">
+      ➕ New Task
+  </a>
+</div>
+
+
+<!-- ================= KPI CARDS ================= -->
+<div class="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-10">
+
+  {% for label,value in kpis.items %}
+  <div class="relative overflow-hidden backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-1">
+    
+      <p class="uppercase text-xs tracking-wider text-gray-400">{{ label|title }}</p>
+
+      <h2 class="font-black text-4xl text-gray-900 dark:text-white">
+        {{ value }}
+      </h2>
+
+      <div class="absolute right-0 bottom-0 opacity-10 text-6xl">
+        📊
+      </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+
+<!-- ================= FILTER PANEL ================= -->
+<form method="get"
+      class="mb-8 p-5 grid gap-4 sm:grid-cols-2 md:grid-cols-5 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+
+  <input type="text"
+         name="search"
+         value="{{ filters.search }}"
+         placeholder="🔍 Search tasks, users..."
+         class="form-input rounded-xl">
+
+  <select name="status" class="form-input rounded-xl">
+    <option value="">All Status</option>
+    {% for s,v in statuses %}
+      <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>
+        {{ v }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <select name="priority" class="form-input rounded-xl">
+    <option value="">All Priority</option>
+    {% for s,v in priorities %}
+      <option value="{{ s }}" {% if filters.priority == s %}selected{% endif %}>
+        {{ v }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <input type="number"
+         name="week"
+         value="{{ filters.week }}"
+         placeholder="📅 Week"
+         class="form-input rounded-xl">
+
+  <button class="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 text-white rounded-xl">
+    Apply
+  </button>
+
+</form>
+
+
+<!-- ================= BULK FORM ================= -->
+<form method="post">
+{% csrf_token %}
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-x-auto">
+
+<table class="min-w-full border-collapse">
+
+<thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
+<tr class="text-sm uppercase tracking-wider text-gray-500 dark:text-gray-300">
+
+  <th class="p-4">
+    <input type="checkbox" id="checkAll"
+           class="w-5 h-5 rounded text-blue-600">
+  </th>
+
+  <th>Title</th>
+  <th>User</th>
+  <th>Status</th>
+  <th>Priority</th>
+  <th>Week</th>
+  <th>Due</th>
+  <th class="text-center">Actions</th>
+
+</tr>
+</thead>
+
+
+<tbody>
+
+{% for t in tasks %}
+
+<tr class="border-t hover:bg-blue-50 dark:hover:bg-gray-700 transition">
+
+  <td class="p-4">
+    <input type="checkbox"
+           name="selected_tasks"
+           value="{{ t.id }}"
+           class="taskCheckbox w-5 h-5 rounded">
+  </td>
+
+  <td class="font-semibold text-gray-900 dark:text-white">
+     {{ t.title }}
+  </td>
+
+  <td>
+    <span class="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-600 text-sm">
+      {{ t.assigned_to.username|default:"—" }}
+    </span>
+  </td>
+
+  <td>
+    <span class="px-3 py-1 rounded-full text-xs font-bold 
+      {% if t.status == 'completed' %}
+        bg-green-200 text-green-900
+      {% elif t.status == 'in_progress' %}
+        bg-blue-200 text-blue-900
+      {% elif t.status == 'pending' %}
+        bg-yellow-200 text-yellow-900
+      {% else %}
+        bg-red-200 text-red-900
+      {% endif %}
+    ">
+      {{ t.get_status_display }}
+    </span>
+  </td>
+
+  <td>
+    <span class="px-3 py-1 rounded-full text-xs font-bold
+    {% if t.priority == 'high' %}
+      bg-red-100 text-red-800
+    {% elif t.priority == 'medium' %}
+      bg-yellow-100 text-yellow-800
+    {% else %}
+      bg-green-100 text-green-800
+    {% endif %}
+    ">
+      {{ t.get_priority_display }}
+    </span>
+  </td>
+
+  <td>{{ t.week }}</td>
+
+  <td>
+    {{ t.due_date|default:"—" }}
+  </td>
+
+  <td class="flex justify-center gap-4">
+
+      <a href="{% url 'tasks:task_update' t.id %}"
+         class="text-blue-600 hover:underline">Edit</a>
+
+      <a href="{% url 'tasks:task_delete' t.id %}"
+         class="text-red-600 hover:underline">Delete</a>
+
+  </td>
+
+</tr>
+
+{% empty %}
+<tr>
+  <td colspan="8" class="p-6 text-center text-gray-500">No tasks found.</td>
+</tr>
+{% endfor %}
+
+</tbody>
+</table>
+
+</div>
+
+
+<!-- ================= BULK ACTION BAR ================= -->
+<div class="flex flex-col sm:flex-row gap-3 mt-6 justify-end sticky bottom-4 z-20">
+
+  <button name="complete"
+          class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl shadow-xl transition hover:scale-105">
+    ✅ Complete
+  </button>
+
+  <button name="delete"
+          onclick="return confirm('Delete selected tasks?')"
+          class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl shadow-xl transition hover:scale-105">
+    🗑 Delete
+  </button>
+
+</div>
+
+</form>
+
+
+<!-- ================= PAGINATION ================= -->
+<div class="mt-10 flex justify-center items-center gap-4">
+
+{% if page_obj.has_previous %}
+<a href="?page={{ page_obj.previous_page_number }}"
+   class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">
+← Prev
+</a>
+{% endif %}
+
+<div class="px-6 py-2 bg-white dark:bg-gray-700 shadow rounded-lg">
+  Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+</div>
+
+{% if page_obj.has_next %}
+<a href="?page={{ page_obj.next_page_number }}"
+   class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">
+Next →
+</a>
+{% endif %}
+
+</div>
+
+
+<script>
+/* Select All Feature */
+document.getElementById("checkAll")?.addEventListener("change", function () {
+  document.querySelectorAll(".taskCheckbox").forEach(
+      box => box.checked = this.checked
+  );
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,29 @@
+<div class="bg-white shadow rounded p-4 mb-6">
+    <h3 class="font-semibold mb-2">Claims</h3>
+    <table id="claims-table" class="min-w-full table-auto">
+        <thead>
+            <tr>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Policy</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for claim in claims %}
+            <tr>
+                <td>{{ claim.amount }}</td>
+                <td>{{ claim.status }}</td>
+                <td>{{ claim.notes }}</td>
+                <td>{{ claim.policy.policy_number }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    $('#claims-table').DataTable();
+});
+</script>

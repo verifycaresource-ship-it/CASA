@@ -1,0 +1,84 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Policies | Health Insurance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold">Policies</h1>
+    {% if role in 'admin finance_officer' %}
+    <button @click="open=true" class="bg-green-500 text-white px-4 py-2 rounded">Add Policy</button>
+    {% endif %}
+  </div>
+
+  <!-- Policies Table -->
+  <div class="overflow-x-auto bg-white dark:bg-gray-800 shadow rounded-2xl p-4">
+    <table id="policiesTable" class="min-w-full text-left text-sm">
+      <thead>
+        <tr>
+          <th class="px-4 py-2">Policy #</th>
+          <th class="px-4 py-2">Type</th>
+          <th class="px-4 py-2">Premium</th>
+          <th class="px-4 py-2">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for policy in policies %}
+        <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <td class="px-4 py-2">{{ policy.policy_number }}</td>
+          <td class="px-4 py-2">{{ policy.type }}</td>
+          <td class="px-4 py-2">${{ policy.premium }}</td>
+          <td class="px-4 py-2">
+            {% if policy.active %}
+            <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Active</span>
+            {% else %}
+            <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">Inactive</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Add Policy Modal -->
+<div x-data="{ open: false }">
+  <div x-show="open" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white dark:bg-gray-800 rounded p-6 w-96">
+      <h2 class="text-lg font-bold mb-4">Add Policy</h2>
+      <form method="POST" action="{% url 'add_policy' %}">
+        {% csrf_token %}
+        <input name="policy_number" placeholder="Policy Number" class="w-full mb-2 p-2 border rounded" required/>
+        <input name="type" placeholder="Policy Type" class="w-full mb-2 p-2 border rounded" required/>
+        <input name="premium" placeholder="Premium" type="number" class="w-full mb-2 p-2 border rounded" required/>
+        <select name="active" class="w-full mb-2 p-2 border rounded" required>
+          <option value="True">Active</option>
+          <option value="False">Inactive</option>
+        </select>
+        <div class="flex justify-end mt-4">
+          <button type="button" @click="open=false" class="px-4 py-2 rounded mr-2">Cancel</button>
+          <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- DataTables JS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('#policiesTable').DataTable({
+      paging: true,
+      searching: true,
+      responsive: true
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-8 space-y-6">
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">{{ dashboard_title }}</h1>
+
+  <form method="POST" enctype="multipart/form-data" class="space-y-5">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    {% if not hospital %}
+    <div>
+      <label>Username *</label>
+      <input type="text" name="username" required class="w-full border px-3 py-2 rounded">
+    </div>
+    <div>
+      <label>Password *</label>
+      <input type="password" name="password" required class="w-full border px-3 py-2 rounded">
+    </div>
+    {% endif %}
+
+    <div class="flex justify-end space-x-3">
+      <a href="{% url 'hospitals:hospital_list' %}" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</a>
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Hospital</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

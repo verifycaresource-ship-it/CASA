@@ -1,0 +1,40 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Submit Claim | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
+  <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">🧾 Submit Claim</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    <div>
+      <label>Client</label>
+      <select name="client" class="w-full border rounded p-2">
+        <option value="">-- Select Client --</option>
+        {% for client in clients %}
+          <option value="{{ client.id }}">{{ client.first_name }} {{ client.last_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>Policy</label>
+      <select name="policy" class="w-full border rounded p-2">
+        <option value="">-- Select Policy --</option>
+        {% for policy in policies %}
+          <option value="{{ policy.id }}">{{ policy.policy_number }} ({{ policy.type }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>Amount</label>
+      <input type="number" name="amount" step="0.01" class="w-full border rounded p-2" placeholder="Enter claim amount">
+    </div>
+
+    <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      Submit Claim
+    </button>
+  </form>
+</div>
+{% endblock %}

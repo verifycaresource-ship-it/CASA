@@ -1,0 +1,121 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50 dark:bg-gray-900">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}{{ dashboard_title|default:"Dashboard" }} | HealthInsure{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Inter Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Inter', sans-serif; transition: background-color .3s, color .3s; }
+    .sidebar-link.active { background: linear-gradient(90deg, #2563eb, #3b82f6); color: white; box-shadow: 0 0 10px rgba(37,99,235,.4); }
+    .sidebar-scroll { overflow-y: auto; flex: 1; }
+    .hover-scale:hover { transform: scale(1.03); transition: transform .2s; }
+    .animate-fade-in { animation: fade-in .5s ease-out; }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .glass { background: rgba(255,255,255,.7); backdrop-filter: blur(12px); }
+    .dark .glass { background: rgba(31,41,55,.7); }
+    .transition-all { transition: all .3s ease; }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="flex h-full text-gray-900 dark:text-gray-100">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed md:flex hidden flex-col w-64 h-screen glass shadow-xl z-30">
+    <!-- Logo -->
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h2 class="text-2xl font-bold text-blue-600 tracking-tight">
+        Health<span class="text-gray-800 dark:text-gray-100">Insure</span>
+      </h2>
+      <button id="closeSidebar" class="md:hidden text-gray-600 dark:text-gray-300">✕</button>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sidebar-scroll p-4 space-y-2 text-sm font-medium">
+      {% if user.is_superuser or user.role == 'admin' %}
+        <a href="{% url 'accounts:dashboard' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">🏠 Dashboard</a>
+        <a href="{% url 'clients:client_list' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.path|slice:'0:9' == '/clients/' %}active{% endif %}">👥 Clients</a>
+        <a href="{% url 'policies:policy_list' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.path|slice:'0:10' == '/policies/' %}active{% endif %}">📄 Policies</a>
+        <a href="{% url 'claims:claim_list' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.path|slice:'0:8' == '/claims/' %}active{% endif %}">💰 Claims</a>
+        <a href="{% url 'hospitals:hospital_list' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.path|slice:'0:11' == '/hospitals/' %}active{% endif %}">🏥 Hospitals</a>
+        <a href="{% url 'accounts:user_list' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.path|slice:'0:14' == '/accounts/users/' %}active{% endif %}">👤 Users</a>
+        <a href="{% url 'hospitals:assign_policyholder' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/hospitals/assign-policyholder/' in request.path %}bg-gray-200{% endif %}">📝 Assign Policyholder</a>
+      {% endif %}
+
+      {% if user.role == 'agent' %}
+        <a href="{% url 'clients:client_list' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if '/clients/' in request.path %}active{% endif %}">👥 Clients</a>
+        <a href="{% url 'clients:add_client' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 hover-scale">➕ Register Client</a>
+      {% endif %}
+
+      {% if user.role == 'hospital' %}
+        <a href="{% url 'hospitals:dashboard' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.resolver_match.url_name == 'hospital_dashboard' %}active{% endif %}">🏥 Dashboard</a>
+        <a href="{% url 'hospitals:assigned_clients' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.resolver_match.url_name == 'assigned_clients' %}active{% endif %}">📋 Assigned Clients</a>
+        <a href="{% url 'claims:hospital_claim_dashboard' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg hover-scale {% if request.resolver_match.url_name == 'hospital_claim_dashboard' %}active{% endif %}">💰 My Claims</a>
+        <a href="{% url 'hospitals:submit_claim' %}" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 hover-scale">➕ Submit Claim</a>
+      {% endif %}
+    </nav>
+
+    <!-- Logout -->
+    <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+      <a href="{% url 'accounts:logout' %}" class="block text-center bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition hover-scale">Logout</a>
+    </div>
+  </aside>
+
+  <!-- Mobile Sidebar Button -->
+  <button id="openSidebar" class="md:hidden fixed top-4 left-4 bg-blue-600 text-white p-2 rounded-lg shadow-lg z-40">☰</button>
+
+  <!-- Main Content -->
+  <div class="flex-1 md:ml-64 min-h-screen flex flex-col animate-fade-in">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 glass shadow-md p-5 flex justify-between items-center sticky top-0 z-20">
+      <h1 class="text-2xl font-bold tracking-tight">{% block header_title %}{{ dashboard_title|default:"Dashboard" }}{% endblock %}</h1>
+      <div class="flex items-center gap-4">
+        <span class="text-gray-700 dark:text-gray-300 text-sm">
+          👋 Hello, <strong>{{ user.username|title }}</strong> ({{ user.role|capfirst }})
+        </span>
+        <button id="darkToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 transition">🌙</button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="p-8 space-y-6 flex-1 overflow-y-auto">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script>
+    // Dark mode toggle
+    const toggle = document.getElementById('darkToggle');
+    toggle.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+      toggle.textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+    });
+    if (localStorage.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      toggle.textContent = '☀️';
+    }
+
+    // Mobile Sidebar
+    const sidebar = document.getElementById('sidebar');
+    const openBtn = document.getElementById('openSidebar');
+    const closeBtn = document.getElementById('closeSidebar');
+    openBtn?.addEventListener('click', () => sidebar.classList.remove('hidden'));
+    closeBtn?.addEventListener('click', () => sidebar.classList.add('hidden'));
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

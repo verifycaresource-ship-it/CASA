@@ -1,0 +1,177 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Clients Dashboard | CareSource Africa{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
+      👥 Clients Dashboard
+    </h1>
+    <a href="{% url 'clients:add_client' %}" 
+       class="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl shadow hover:from-blue-700 hover:to-blue-600 transition">
+      ➕ Add Client
+    </a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
+    <div class="bg-white rounded-2xl shadow p-6 flex flex-col items-center justify-center hover:shadow-xl transition">
+      <h3 class="text-gray-500 font-semibold">Total Clients</h3>
+      <p class="text-3xl font-bold text-blue-700">{{ total_clients }}</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-6 flex flex-col items-center justify-center hover:shadow-xl transition">
+      <h3 class="text-gray-500 font-semibold">Verified</h3>
+      <p class="text-3xl font-bold text-green-600">{{ verified_clients }}</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-6 flex flex-col items-center justify-center hover:shadow-xl transition">
+      <h3 class="text-gray-500 font-semibold">Pending</h3>
+      <p class="text-3xl font-bold text-yellow-600">{{ pending_clients }}</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-6 flex flex-col items-center justify-center hover:shadow-xl transition">
+      <h3 class="text-gray-500 font-semibold">Failed</h3>
+      <p class="text-3xl font-bold text-red-600">{{ failed_clients }}</p>
+    </div>
+  </div>
+
+  <!-- Filters (Admin Only) -->
+  {% if agents %}
+  <div class="bg-white p-4 rounded-xl shadow flex flex-wrap gap-4 items-center">
+    <form method="get" class="flex gap-2 flex-wrap items-center">
+      <input type="text" name="search" placeholder="Search clients..." value="{{ search_query }}" class="px-3 py-2 border rounded-md text-sm">
+      <select name="gender" class="px-3 py-2 border rounded-md text-sm">
+        <option value="">All Genders</option>
+        <option value="male" {% if gender_filter == 'male' %}selected{% endif %}>Male</option>
+        <option value="female" {% if gender_filter == 'female' %}selected{% endif %}>Female</option>
+        <option value="other" {% if gender_filter == 'other' %}selected{% endif %}>Other</option>
+      </select>
+      <select name="agent" class="px-3 py-2 border rounded-md text-sm">
+        <option value="">All Agents</option>
+        {% for agent in agents %}
+          <option value="{{ agent.id }}" {% if agent_filter|default:'' == agent.id|stringformat:"s" %}selected{% endif %}>{{ agent.username }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition">Filter</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Gender Chart -->
+    <div class="bg-white rounded-2xl shadow p-4 flex flex-col items-center">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Clients by Gender</h3>
+      <div class="w-full h-64">
+        <canvas id="genderChart" class="w-full h-full"></canvas>
+      </div>
+    </div>
+
+    <!-- Registration Month Chart -->
+    <div class="bg-white rounded-2xl shadow p-4 flex flex-col items-center">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Clients by Registration Month</h3>
+      <div class="w-full h-64">
+        <canvas id="monthlyChart" class="w-full h-full"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clients Table -->
+  <div class="overflow-x-auto bg-white rounded-2xl shadow-md border border-gray-100">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50 sticky top-0">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Photo</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Full Name</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Phone</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+          <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-100">
+        {% for client in clients %}
+        <tr class="hover:bg-blue-50 transition">
+          <td class="px-4 py-3 text-sm text-gray-500">{{ forloop.counter }}</td>
+          <td class="px-4 py-3">
+            {% if client.photo %}
+              <img src="{{ client.photo.url }}" alt="{{ client.first_name }}" class="h-10 w-10 rounded-full object-cover border border-gray-200">
+            {% else %}
+              <div class="h-10 w-10 flex items-center justify-center bg-gray-100 text-gray-400 text-xs rounded-full border">N/A</div>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 font-semibold text-gray-800">{{ client.first_name }} {{ client.last_name }}</td>
+          <td class="px-4 py-3 text-sm text-gray-600">{{ client.email }}</td>
+          <td class="px-4 py-3 text-sm text-gray-600">{{ client.phone }}</td>
+          <td class="px-4 py-3 text-center">
+            {% if client.status == 'verified' %}
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">✅ Verified</span>
+            {% elif client.status == 'pending' %}
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">⏳ Pending</span>
+            {% else %}
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">❌ Failed</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            <div class="flex justify-center gap-2">
+              <a href="{% url 'clients:edit_client' client.id %}" class="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs font-medium">✏ Edit</a>
+              <a href="{% url 'clients:client_detail' client.id %}" class="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-medium">👁 View</a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-10 text-center text-gray-500 text-sm">
+            😕 No clients found.
+            <a href="{% url 'clients:add_client' %}" class="text-blue-600 font-semibold hover:underline">Add one now</a>.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="flex justify-center mt-6 items-center gap-2">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">← Prev</a>
+    {% endif %}
+    <span class="px-3 py-1 font-semibold text-gray-700">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Gender Chart
+  new Chart(document.getElementById('genderChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Male','Female','Other'],
+      datasets: [{
+        data: [{{ male_clients }}, {{ female_clients }}, {{ other_clients }}],
+        backgroundColor: ['#3B82F6','#EC4899','#FBBF24']
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  // Monthly Chart
+  new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: { labels: {{ months|safe }}, datasets: [{ label: 'New Clients', data: {{ month_data|safe }}, backgroundColor: '#10B981' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Admin Reports | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Page Header -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+    <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white">
+      📊 Admin Reports
+    </h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Filter and export data for clients, policies, and claims</p>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="flex flex-wrap gap-4 items-end bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
+    <div>
+      <label class="block text-sm font-medium">Start Date</label>
+      <input type="date" name="start_date" value="{{ start_date }}" class="border rounded px-2 py-1">
+    </div>
+    <div>
+      <label class="block text-sm font-medium">End Date</label>
+      <input type="date" name="end_date" value="{{ end_date }}" class="border rounded px-2 py-1">
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Status</label>
+      <select name="status" class="border rounded px-2 py-1">
+        <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+        <option value="verified" {% if status_filter|default:"" == "verified" %}selected{% endif %}>Verified</option>
+        <option value="pending"  {% if status_filter|default:"" == "pending" %}selected{% endif %}>Pending</option>
+        <option value="failed"   {% if status_filter|default:"" == "failed" %}selected{% endif %}>Failed</option>
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow">Filter</button>
+    </div>
+  </form>
+
+  <!-- Export Buttons -->
+  <div class="flex flex-wrap gap-3">
+    <a href="{% url 'accounts:export_report' 'xls' %}?start_date={{ start_date }}&end_date={{ end_date }}&status={{ status_filter }}" 
+       class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded shadow flex items-center gap-2">📄 XLS</a>
+    <a href="{% url 'accounts:export_report' 'csv' %}?start_date={{ start_date }}&end_date={{ end_date }}&status={{ status_filter }}" 
+       class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded shadow flex items-center gap-2">📑 CSV</a>
+    <a href="{% url 'accounts:export_report' 'pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}&status={{ status_filter }}" 
+       class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded shadow flex items-center gap-2">🖨️ PDF</a>
+  </div>
+
+  <!-- Clients Table -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Clients</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">ID</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Name</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Email</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Status</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Created At</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for client in clients %}
+          <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
+            <td class="px-4 py-2">{{ client.id }}</td>
+            <td class="px-4 py-2">{{ client.first_name}}</td>
+            <td class="px-4 py-2">{{ client.email }}</td>
+            <td class="px-4 py-2 capitalize">{{ client.status }}</td>
+            <td class="px-4 py-2">{{ client.created_at|date:"Y-m-d" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-4 py-2 text-center text-gray-500">No clients found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Policies Table -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Policies</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">ID</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Client</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Policy Type</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Status</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Created At</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for policy in policies %}
+          <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
+            <td class="px-4 py-2">{{ policy.id }}</td>
+            <td class="px-4 py-2">{{ policy.client.name|default:policy.client.email }}</td>
+            <td class="px-4 py-2">{{ policy.policy_type }}</td>
+            <td class="px-4 py-2 capitalize">{{ policy.status }}</td>
+            <td class="px-4 py-2">{{ policy.created_at|date:"Y-m-d" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-4 py-2 text-center text-gray-500">No policies found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Claims Table -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Claims</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">ID</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Client</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Policy</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Amount</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Status</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Created At</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for claim in claims %}
+          <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
+            <td class="px-4 py-2">{{ claim.id }}</td>
+            <td class="px-4 py-2">{{ claim.policy.client.name|default:claim.policy.client.email }}</td>
+            <td class="px-4 py-2">{{ claim.policy.policy_type }}</td>
+            <td class="px-4 py-2">${{ claim.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 capitalize">{{ claim.status }}</td>
+            <td class="px-4 py-2">{{ claim.created_at|date:"Y-m-d" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="px-4 py-2 text-center text-gray-500">No claims found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+gr 

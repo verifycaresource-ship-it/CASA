@@ -1,0 +1,37 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Assigned Policyholders (Admin) | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto p-6 bg-white rounded-xl shadow mt-8">
+  <h2 class="text-2xl font-semibold">All Assignments</h2>
+
+  <table class="min-w-full mt-4">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-4 py-2">Policyholder</th>
+        <th class="px-4 py-2">Policy</th>
+        <th class="px-4 py-2">Hospital</th>
+        <th class="px-4 py-2">Status</th>
+        <th class="px-4 py-2">Assigned By</th>
+        <th class="px-4 py-2">Assigned At</th>
+        <th class="px-4 py-2">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in assignments %}
+      <tr>
+        <td class="px-4 py-2">{{ a.client.first_name }} {{ a.client.last_name }}</td>
+        <td class="px-4 py-2">{{ a.policy.policy_number }}</td>
+        <td class="px-4 py-2">{{ a.hospital.name }}</td>
+        <td class="px-4 py-2">{{ a.status }}</td>
+        <td class="px-4 py-2">{% if a.assigned_by %}{{ a.assigned_by.username }}{% else %}System{% endif %}</td>
+        <td class="px-4 py-2">{{ a.assigned_at|date:"M d, Y H:i" }}</td>
+        <td class="px-4 py-2">
+          <a href="{% url 'policies:policy_detail' a.policy.id %}">View Policy</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

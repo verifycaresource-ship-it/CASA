@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ dashboard_title }}</h2>
+
+<form method="POST" enctype="multipart/form-data">
+  {% csrf_token %}
+  <p>Upload fingerprint file (optional):</p>
+  <input type="file" name="fingerprint_file" accept="image/*,application/octet-stream">
+  <br><br>
+  <p>Or paste Base64 data:</p>
+  <textarea name="fingerprint_base64" rows="6" cols="60"></textarea>
+  <br><br>
+  <button type="submit" class="btn btn-primary">Enroll Fingerprint</button>
+</form>
+{% endblock %}

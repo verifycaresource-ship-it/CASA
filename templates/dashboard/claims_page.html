@@ -1,0 +1,91 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Claims | Health Insurance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold">Claims</h1>
+    {% if role in 'admin claim_officer' %}
+    <button @click="open=true" class="bg-yellow-500 text-white px-4 py-2 rounded">Add Claim</button>
+    {% endif %}
+  </div>
+
+  <!-- Claims Table -->
+  <div class="overflow-x-auto bg-white dark:bg-gray-800 shadow rounded-2xl p-4">
+    <table id="claimsTable" class="min-w-full text-left text-sm">
+      <thead>
+        <tr>
+          <th class="px-4 py-2">Claim #</th>
+          <th class="px-4 py-2">Client</th>
+          <th class="px-4 py-2">Status</th>
+          <th class="px-4 py-2">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for claim in claims %}
+        <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <td class="px-4 py-2">{{ claim.claim_number }}</td>
+          <td class="px-4 py-2">{{ claim.client.name }}</td>
+          <td class="px-4 py-2">
+            {% if claim.status == 'approved' %}
+            <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Approved</span>
+            {% elif claim.status == 'pending' %}
+            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">Pending</span>
+            {% else %}
+            <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">Rejected</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2">${{ claim.amount }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Add Claim Modal -->
+<div x-data="{ open: false }">
+  <div x-show="open" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white dark:bg-gray-800 rounded p-6 w-96">
+      <h2 class="text-lg font-bold mb-4">Add Claim</h2>
+      <form method="POST" action="{% url 'add_claim' %}">
+        {% csrf_token %}
+        <input name="claim_number" placeholder="Claim Number" class="w-full mb-2 p-2 border rounded" required/>
+        <select name="client" class="w-full mb-2 p-2 border rounded" required>
+          {% for client in clients %}
+          <option value="{{ client.id }}">{{ client.name }}</option>
+          {% endfor %}
+        </select>
+        <select name="status" class="w-full mb-2 p-2 border rounded" required>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <input name="amount" placeholder="Amount" type="number" class="w-full mb-2 p-2 border rounded" required/>
+        <div class="flex justify-end mt-4">
+          <button type="button" @click="open=false" class="px-4 py-2 rounded mr-2">Cancel</button>
+          <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- DataTables JS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('#claimsTable').DataTable({
+      paging: true,
+      searching: true,
+      responsive: true
+    });
+  });
+</script>
+{% endblock %}

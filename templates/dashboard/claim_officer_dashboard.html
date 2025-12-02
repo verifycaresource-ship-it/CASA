@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Claim Officer Dashboard</h2>
+<ul>
+  <li>Pending Claims: {{ pending_claims }}</li>
+  <li>Approved Claims: {{ approved_claims }}</li>
+  <li>Rejected Claims: {{ rejected_claims }}</li>
+</ul>
+<a href="/claims/">Manage Claims</a>
+{% endblock %}

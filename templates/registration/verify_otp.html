@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ dashboard_title }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+  <div class="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">{{ dashboard_title }}</h1>
+    
+    {% if messages %}
+      {% for message in messages %}
+        <div class="mb-4 p-2 rounded 
+          {% if message.tags == 'success' %}
+            bg-green-500 text-white
+          {% elif message.tags == 'error' %}
+            bg-red-500 text-white
+          {% else %}
+            bg-gray-200 text-gray-800
+          {% endif %}
+        ">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <p class="text-sm text-gray-600 mb-6 text-center">
+      Enter the OTP sent to your registered email and set a new password.
+    </p>
+
+    <form method="POST" class="space-y-4">
+      {% csrf_token %}
+
+      <!-- OTP Input -->
+      <div>
+        <label for="otp" class="block text-gray-700 font-medium mb-1">OTP Code</label>
+        <input 
+          type="text" 
+          name="otp" 
+          id="otp"
+          placeholder="Enter 6-digit OTP" 
+          maxlength="6"
+          required
+          class="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+      </div>
+
+      <!-- New Password Input -->
+      <div>
+        <label for="password" class="block text-gray-700 font-medium mb-1">New Password</label>
+        <input 
+          type="password" 
+          name="password" 
+          id="password"
+          placeholder="Enter new password" 
+          required
+          class="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+      </div>
+
+      <!-- Submit Button -->
+      <button 
+        type="submit" 
+        class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-semibold transition-colors duration-200"
+      >
+        Reset Password
+      </button>
+    </form>
+
+    <div class="mt-6 text-center">
+      <a href="{% url 'accounts:login' %}" class="text-blue-500 hover:underline text-sm">
+        Back to Login
+      </a>
+    </div>
+  </div>
+
+</body>
+</html>

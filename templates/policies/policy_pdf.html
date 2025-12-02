@@ -1,0 +1,254 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Policy Agreement - {{ policy.policy_number }}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      border-left: 8px solid #16a34a; /* green left margin */
+      border-right: 8px solid #16a34a; /* green right margin */
+      padding-left: 20px;
+      padding-right: 20px;
+      background-color: #fdfdfd;
+    }
+    .container {
+      width: 90%;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      color: #1D4ED8; /* navy blue */
+      margin-bottom: 10px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      margin-bottom: 15px;
+    }
+    h2 {
+      font-size: 16px;
+      margin-top: 20px;
+      border-bottom: 2px solid #1D4ED8; /* navy underline */
+      padding-bottom: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #dbeafe; /* light blue */
+      color: #1D4ED8;
+    }
+    ul {
+      margin: 5px 0 10px 20px;
+      padding: 0;
+    }
+    .signature-box {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature-box div {
+      width: 45%;
+      text-align: center;
+      font-size: 12px;
+    }
+    .photo {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    p.justify {
+      text-align: justify;
+      font-size: 12px;
+    }
+    .logo img {
+      max-width: 150px;
+      display: block;
+      margin: 0 auto 15px auto;
+    }
+.casa-seal {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  opacity: 0.9;
+}
+@page:last {
+  @bottom-center {
+    content: url("https://res.cloudinary.com/dzflw2ka9/image/upload/v1764246165/casaseal_mrw3dw.png");
+  }
+}
+
+@page:last @bottom-center {
+  opacity: 0.9;
+  width: 130px;
+}
+
+  </style>
+</head>
+<body>
+<div class="container">
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+  <tr>
+
+    <!-- LEFT SIDE -->
+    <td style="width: 30%; vertical-align: top; font-size: 12px; line-height: 18px;">
+       <div class="logo">
+        <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1764158147/casa_sqopru.jpg"
+             alt="Company Logo"
+             style="height: 65px; margin-bottom: 6px;">
+      </div>
+
+    <!-- CENTER TITLE -->
+    <td style="width: 40%; text-align: center; vertical-align: middle;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: bold;">
+        CASA Insurance Policy Agreement
+      </h2>
+    </td>
+
+    <!-- RIGHT SIDE WITH LOGO + CONTACT -->
+    <td style="width: 30%; text-align: right; vertical-align: top; font-size: 12px; line-height: 18px;">
+      <strong>Email:</strong>nfo@caresourceafrica
+      <strong>Contact:</strong> 0798883849
+    </td>
+
+  </tr>
+</table>
+
+  <!-- Header -->
+  <h1 style="color:#1E3A8A;">CASA Insurance Policy Agreement</h1>
+  <p style="text-align:center; font-weight:bold; padding-left:45%">Policy Number: {{ policy.policy_number }}</p>
+  <p style="text-align:right; font-weight:bold;">Date: ___/_____/_______</p>
+
+
+  <!-- Section 1: Policy Details -->
+  <h2>Section 1: Policy Details</h2>
+  <table>
+    <tr><th>Policy Type</th><td>{{ policy.get_policy_type_display }}</td></tr>
+    <tr><th>Name of Proposer</th><td>{{ policy.client.first_name }} {{ policy.client.last_name }}</td></tr>
+    <tr><th>Contact</th><td>{{ policy.client.phone }}</td></tr>
+    <tr><th>Address</th><td>{{ policy.client.address }}</td></tr>
+
+    <tr><th>Coverage</th><td>{{ policy.coverage_details }}</td></tr>
+    <tr><th>Premium</th><td>${{ policy.premium }} {{ policy.client.currency|default:"USD" }}</td></tr>
+    <tr><th>Payment Mode</th><td>{{ policy.payment_mode|default:"-" }}</td></tr>
+    <tr><th>Coverage Level</th><td>{{ policy.coverage_level|default:"-" }}</td></tr>
+    <tr><th>NRIC / Passport</th><td>{{ policy.nric_or_passport|default:"-" }}</td></tr>
+    <tr><th>Start Date</th><td>{{ policy.start_date|date:"M d, Y" }}</td></tr>
+    <tr><th>Expiry Date</th><td>{{ policy.expiry_date|date:"M d, Y" }}</td></tr>
+    <tr><th>Status</th><td>{{ policy.status|title }}</td></tr>
+    <tr><th>Total-sum coveredt</th><td>${{ policy.max_claim_limit|default:"-" }}</td></tr>
+  </table>
+
+  <!-- Section 2: Coverage Conditions -->
+  <h2>Section 2: Coverage Conditions</h2>
+  <ul>
+    <li>The policy shall commence only after the premium has been received and cleared.</li>
+    <li>Coverage is subject to underwriting approval, policy terms, exclusions, and waiting periods.</li>
+    <li>The insurer reserves the right to request medical reports or additional documents before acceptance.</li>
+    <li>Upon acceptance and payment, this proposal becomes part of the insurance contract.</li>
+  </ul>
+
+  <!-- Section 4: Insured Persons -->
+  <h2>Section 4: spouce and depedants</h2>
+  {% if insured_persons %}
+  <table>
+    <thead>
+      <tr>
+        <th>Full Name</th>
+        <th>Relationship</th>
+        <th>DOB</th>
+        <th>Gender</th>
+        <th>Photo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for person in insured_persons %}
+      <tr>
+        <td>{{ person.full_name }}</td>
+        <td>{{ person.relationship }}</td>
+        <td>{{ person.dob|date:"M d, Y" }}</td>
+        <td>{{ person.gender|title }}</td>
+        <td>{% if person.photo %}<img src="{{ person.photo.url }}" class="photo">{% else %}-{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No insured persons added yet.</p>
+  {% endif %}
+
+  <!-- Section 5: Shariah Declaration -->
+  <h2>Section 5: Shariah Principal and Declaration</h2>
+  <p class="justify">
+    I/We agree to participate in this general takaful scheme based on the principle of takaful and to pay the contribution based on tabarru' (donation) for the purpose of helping each other's participants. I/We are entitled to takaful cover as per the terms and conditions, and contributions will be credited to the General Takaful Fund (CASA) under Shariah principles.
+  </p>
+  <p class="justify">
+    At the end of each financial year, the Fund calculates surplus/deficit. 30% of the surplus is retained for the Fund’s viability, and 70% is distributed among participants, or credited to charity if below US$10.
+  </p>
+
+  <!-- Shariah Declaration & BAYAAN -->
+  <h2>Section 5: Shariah Principal and BAYAAN</h2>
+  <p class="justify">
+    MABAADI'DA SHARCIGA ISLAAMKA (SHARIAH) IYO BAYAANKA
+  </p>
+  <p class="justify">
+    Aniga/Annagu waxaan aqbalaynaa ka-qaybgalka nidaamkan Takaful-ka Guud ee ku dhisan mabda'a Takafulka, waxaana oggol nahay inaan bixino tabarru' (deeq) si aan u kaalmeyno ka-qaybgallayaasha kale ee la kulma dhibaato caymisku aqbali karto. Iyadoo ku salaysan tabarru', aniga/annagu waxaan xaq u yeelaneynaa cayminta takafulka sida ku cad shuruudaha iyo xeerarka ku lifaaqan heshiiska takafulka.
+  </p>
+  <p class="justify">
+    Waxaan sidoo kale aqbalaynaa in tabarru' lagu shubo Sanduuqa Takafulka Guud (Takaful Fund), isla markaana aan kula heshiiney wakiilashada Caresourceafrica Company (CASA) maamuleysa maalglinta nidaamka Mudarabaha ee Sanduuqa iyadoo raaceysa mabaadi'da Shariah-da.
+  </p>
+  <p class="justify">
+    Waxaan u fasaxaynaa Caresourceafrica Company (CASA) inay ka bixiso si wakil ah magdhowga iyo dheeriga, si ku saleysan siyaasadaha shirkadda Caresourceafrica (CASA), isla markaana ay ku mudato qidmadda dhan 30%.
+  </p>
+  <p class="justify">
+    Haddii dhammaadka sannadka maaliyadeed uu jiro faa'idada maalgelinta ee ka dhasha dakhliga, waxaan aqbalaynaa in Caresourceafrica (CASA) ay qaadato 40% oo ah saamiga horey loo cayimay ee wadaagga faa'iidada (Mudarabah Investment), halka 60% kalena lagu qoondeeyo qaybinta ka-qaybgalayaasha iyadoo ku xiran shuruudaha qandaraaska.
+  </p>
+  <p class="justify">
+    Waxaan sidoo kale aqbalaynaa in haddii haraaga sannadku ka hooseeyo US$10, lacagtaasi lagu shubo Sanduuqa Samafalka oo loo adeegsan doono camal-jariyah oo lagu samaynayo magaca ka-qaybgalayaasha.
+  </p>
+  <p class="justify">
+    Dhammaadka sannad kasta, Sanduuqu wuxuu xisaabiyaa inta u dhaxeysa tabarru’ga, dakhliga kale, Wakalah Fee-ga, lacagaha magdhowga, Retakaful-ka, iyo kaydka la dhisayo, isagoo raacaya hagidda hay’adaha awoodda leh. Haddii natiijadu noqoto haraag (surplus) oo aysan ahayn khasaare, 30% haraaga la xisaabiyey waxaa lagu haynayaa Sanduuqa si loo ilaaliyo joogteyntiisa muddada fog, halka 70% kalena loo tixgeliyo haraag la qaybin karo.
+  </p>
+  <p class="justify">
+    BAYAAN: Aniga/Annagu waxaan caddeyneynaa in dhammaan xogta iyo bayaannada aan bixinnay ay sax yihiin oo dhammeystiran yihiin, ayna ku jiraan dhammaan xogta aan ognahay ee khuseysa halista la cayminta. Sidoo kale, waxaan aqbalaynaa in bayaanka qoran ee aniga/annaga ama aniga/annaga wakiilkeena ku qoray ujeeddada caymiska uu noqonayo saldhigga heshiiska, laguna dari doono heshiiska u dhexeeya aniga/annaga iyo Caresourceafrica (CASA), isla markaana uu waajib noqonayo.
+  </p>
+  <p class="justify">
+    Waxaa intaa dheer in haddii codsigan uu buuxiyo wakiilka/brooker-ka caymiska, wakiilkaas loo tixgelin doono inuu ku shaqeynayo magaca caymiska ee buuxinta codsiga.
+  </p>
+
+  <!-- Section 6: Declaration & Signatures -->
+  <h2>Section 6: Declaration & Signatures</h2>
+  <div class="signature-box">
+    <div>
+      <p>Date: ______________________</p>
+      <p>Signature of Insured / Broker: ______________________</p>
+    </div>
+    <div>
+      <p>Approved: ______  Rejected: ______  Date: ______/______/_______</p>
+      <p>Signature (Office Use Only): ______________________</p>
+    </div>
+  </div>
+<!-- CASA Official Seal -->
+
+
+</div>
+</body>
+</html>

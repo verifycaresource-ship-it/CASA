@@ -1,0 +1,165 @@
+{% extends "dashboard/base.html" %}
+{% block title %}User Management | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="p-6 bg-white dark:bg-gray-800 rounded-xl shadow space-y-6">
+
+  <!-- Header and Add User Button -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 space-y-3 md:space-y-0">
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">👥 User Management</h1>
+    <button id="openAddUserModal" 
+            class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition">
+      + Add New User
+    </button>
+  </div>
+
+  <!-- Users Table -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full border divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+        <tr>
+          <th class="px-4 py-3 text-left">#</th>
+          <th class="px-4 py-3 text-left">Username</th>
+          <th class="px-4 py-3 text-left">Email</th>
+          <th class="px-4 py-3 text-left">Role</th>
+          <th class="px-4 py-3 text-center">Status</th>
+          <th class="px-4 py-3 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for user in users %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+          <td class="px-4 py-3">{{ forloop.counter }}</td>
+          <td class="px-4 py-3 font-medium text-gray-700 dark:text-gray-100">{{ user.username }}</td>
+          <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ user.email }}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-1 text-xs font-semibold rounded-full
+              {% if user.role == 'admin' %}bg-purple-100 text-purple-700
+              {% elif user.role == 'agent' %}bg-blue-100 text-blue-700
+              {% elif user.role == 'policyholder' %}bg-green-100 text-green-700
+              {% elif user.role == 'claim_officer' %}bg-yellow-100 text-yellow-700
+              {% elif user.role == 'finance_officer' %}bg-teal-100 text-teal-700
+              {% elif user.role == 'report_officer' %}bg-pink-100 text-pink-700
+              {% elif user.role == 'hospital' %}bg-red-100 text-red-700
+              {% else %}bg-gray-100 text-gray-700{% endif %}">
+              {{ user.get_role_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-center">
+            {% if user.is_active %}
+              <span class="px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full">Active</span>
+            {% else %}
+              <span class="px-2 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded-full">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-center flex justify-center space-x-2">
+
+            <!-- Toggle Status Form -->
+            <form method="post" action="{% url 'accounts:toggle_user_status' user.id %}" class="inline">
+              {% csrf_token %}
+              <button type="submit"
+                      onclick="return confirm('Are you sure you want to {% if user.is_active %}deactivate{% else %}activate{% endif %} {{ user.username }}?');"
+                      class="px-3 py-1 {% if user.is_active %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %} text-white rounded-lg text-sm transition">
+                {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+              </button>
+            </form>
+
+            <!-- Reset Password Form -->
+            <form method="get" action="{% url 'accounts:reset_user_password' user.id %}" class="inline">
+              <button type="submit"
+                      onclick="return confirm('Are you sure you want to reset the password for {{ user.username }}?');"
+                      class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm transition">
+                Reset Password
+              </button>
+            </form>
+
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-6 text-gray-500 dark:text-gray-400">No users found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================= Add User Modal ================= -->
+<div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-md p-6">
+    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Add New User</h2>
+
+    <form method="post" action="{% url 'accounts:add_user' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="block mb-1 text-gray-700 dark:text-gray-200" for="username">Username</label>
+        <input type="text" name="username" id="username" required
+               class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100"/>
+      </div>
+
+      <div class="mb-3">
+        <label class="block mb-1 text-gray-700 dark:text-gray-200" for="email">Email</label>
+        <input type="email" name="email" id="email" required
+               class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100"/>
+      </div>
+
+      <div class="mb-3">
+        <label class="block mb-1 text-gray-700 dark:text-gray-200" for="password">Password</label>
+        <input type="password" name="password" id="password" required
+               class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100"/>
+      </div>
+
+      <div class="mb-3">
+        <label class="block mb-1 text-gray-700 dark:text-gray-200" for="role">Role</label>
+        <select name="role" id="role" required
+                class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100">
+          <option value="">Select Role</option>
+          <option value="admin">Administrator</option>
+          <option value="agent">Agent</option>
+          <option value="policyholder">Policyholder</option>
+          <option value="claim_officer">Claim Officer</option>
+          <option value="finance_officer">Finance Officer</option>
+          <option value="report_officer">Report Officer</option>
+          <option value="hospital">Hospital</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end space-x-2 mt-4">
+        <button type="button" id="closeAddUserModal"
+                class="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg text-sm transition">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition">
+          Create User
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= Modal JS ================= -->
+<script>
+  const openModalBtn = document.getElementById('openAddUserModal');
+  const closeModalBtn = document.getElementById('closeAddUserModal');
+  const modal = document.getElementById('addUserModal');
+
+  openModalBtn.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  });
+
+  closeModalBtn.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  });
+
+  window.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  });
+</script>
+{% endblock %}

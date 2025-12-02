@@ -1,0 +1,35 @@
+<div class="bg-white shadow rounded p-4 mb-6">
+    <h3 class="font-semibold mb-2">Policies</h3>
+    <table id="policies-table" class="min-w-full table-auto">
+        <thead>
+            <tr>
+                <th>Policy Number</th>
+                <th>Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Premium</th>
+                <th>Active</th>
+                <th>Client</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for policy in policies %}
+            <tr>
+                <td>{{ policy.policy_number }}</td>
+                <td>{{ policy.type }}</td>
+                <td>{{ policy.start_date }}</td>
+                <td>{{ policy.end_date }}</td>
+                <td>{{ policy.premium }}</td>
+                <td>{{ policy.active }}</td>
+                <td>{{ policy.client.first_name }} {{ policy.client.last_name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    $('#policies-table').DataTable();
+});
+</script>

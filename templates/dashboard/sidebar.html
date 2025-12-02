@@ -1,0 +1,92 @@
+{% load static %}
+
+<!-- Sidebar -->
+<aside class="w-64 bg-white dark:bg-gray-800 h-screen shadow-lg flex flex-col fixed">
+  <!-- Logo -->
+  <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+    <h2 class="text-2xl font-bold text-blue-600">
+      Health<span class="text-gray-800 dark:text-gray-100">Insure</span>
+    </h2>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 p-4 space-y-2 sidebar-scroll">
+
+    {% if user.role == 'hospital' %}
+      <!-- Dashboard -->
+      <a href="{% url 'hospitals:dashboard' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'dashboard' %}bg-gray-200{% endif %}">
+        🏥 Dashboard
+      </a>
+
+      <!-- Assigned Clients -->
+      <a href="{% url 'hospitals:assigned_clients' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'assigned_clients' %}bg-gray-200{% endif %}">
+        📋 Assigned Clients
+      </a>
+
+      <!-- My Claims -->
+      <a href="{% url 'claims:hospital_claim_dashboard' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'hospital_claim_dashboard' %}bg-gray-200{% endif %}">
+        💰 My Claims
+      </a>
+
+      <!-- Submit Claim -->
+      <a href="{% url 'hospitals:submit_claim' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition">
+        ➕ Submit Claim
+      </a>
+
+    {% elif user.role == 'agent' %}
+      <!-- Agent Dashboard -->
+      <a href="{% url 'accounts:agent_dashboard' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'agent_dashboard' %}bg-gray-200{% endif %}">
+        👤 Dashboard
+      </a>
+      <a href="{% url 'clients:client_list' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/clients/' in request.path %}bg-gray-200{% endif %}">
+        👥 Clients
+      </a>
+      <a href="{% url 'clients:add_client' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition">
+        ➕ Register Client
+      </a>
+
+    {% else %}
+      <!-- Admin / Superuser -->
+      <a href="{% url 'accounts:dashboard' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if request.resolver_match.url_name == 'dashboard' %}bg-gray-200{% endif %}">
+        🏠 Dashboard
+      </a>
+      <a href="{% url 'clients:client_list' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/clients/' in request.path %}bg-gray-200{% endif %}">
+        👥 Clients
+      </a>
+      <a href="{% url 'policies:policy_list' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/policies/' in request.path %}bg-gray-200{% endif %}">
+        📄 Policies
+      </a>
+      <a href="{% url 'claims:claim_list' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/claims/' in request.path %}bg-gray-200{% endif %}">
+        💰 Claims
+      </a>
+      <a href="{% url 'hospitals:hospital_list' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/hospitals/' in request.path %}bg-gray-200{% endif %}">
+        🏥 Hospitals
+      </a>
+      <a href="{% url 'accounts:user_list' %}" 
+         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 {% if '/accounts/users/' in request.path %}bg-gray-200{% endif %}">
+        👤 Users
+      </a>
+    {% endif %}
+
+  </nav>
+
+  <!-- Logout -->
+  <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+    <a href="{% url 'accounts:logout' %}" 
+       class="block text-center bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition">
+      Logout
+    </a>
+  </div>
+</aside>

@@ -1,0 +1,80 @@
+{% extends "dashboard/base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}
+  {% if form.instance.pk %}Edit Task{% else %}Create Task{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-3xl mx-auto bg-white dark:bg-gray-800
+            rounded-2xl shadow-xl p-8 animate-fade-in">
+
+  <!-- Title -->
+  <h1 class="text-2xl font-bold mb-6 flex items-center gap-2">
+    {% if form.instance.pk %}
+      ✏️ Edit Task
+    {% else %}
+      ➕ Create Task
+    {% endif %}
+  </h1>
+
+  <!-- Form -->
+  <form method="post" class="grid md:grid-cols-2 gap-6">
+    {% csrf_token %}
+
+    <!-- Keep redirect destination -->
+    <input type="hidden" name="next" value="{{ next }}">
+
+    {% for field in form %}
+
+      <div class="flex flex-col">
+
+        <label for="{{ field.id_for_label }}"
+               class="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+          {{ field.label }}
+        </label>
+
+        {{ field|add_class:"rounded-lg px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white" }}
+
+        {% if field.help_text %}
+          <small class="text-xs text-gray-400 mt-1">
+            {{ field.help_text }}
+          </small>
+        {% endif %}
+
+        {% if field.errors %}
+          <p class="mt-1 text-sm text-red-500">
+            {{ field.errors|striptags }}
+          </p>
+        {% endif %}
+
+      </div>
+
+    {% endfor %}
+
+    <!-- Actions -->
+    <div class="md:col-span-2 flex justify-between items-center pt-4 mt-4 border-t dark:border-gray-700">
+
+        <a href="{{ next|default_if_none:request.META.HTTP_REFERER }}"
+           class="inline-flex items-center gap-1 text-gray-600
+                  hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition">
+
+           ← Cancel
+        </a>
+
+        <button type="submit"
+                class="px-6 py-2 bg-blue-600 hover:bg-blue-700
+                       text-white rounded-lg shadow transition
+                       focus:ring-2 focus:ring-offset-2
+                       focus:ring-blue-500">
+            💾 Save Task
+        </button>
+
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock %}

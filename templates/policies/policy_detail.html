@@ -1,0 +1,180 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Policy Details{% endblock %}
+{% block header_title %}Policy Details{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 space-y-6">
+
+    <!-- View HTML -->
+
+
+    <!-- View PDF -->
+    <a href="{% url 'policies:view_policy_pdf' policy.id %}"
+       class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-block">
+        📑 View PDF
+    </a>
+
+    <!-- Download PDF (already working) -->
+    <a href="{% url 'policies:download_policy_pdf' policy.id %}"
+       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-block">
+        📄 Download PDF
+    </a>
+
+</div>
+
+
+  <!-- Policy Title -->
+  <h2 class="text-3xl font-bold text-blue-600 mb-6">{{ policy.policy_number }}</h2>
+
+  <!-- Policy Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+    <p><strong>Policy Type:</strong> {{ policy.get_policy_type_display }}</p>
+    <p><strong>Coverage:</strong> {{ policy.coverage_details|truncatechars:50 }}</p>
+    <p><strong>Premium:</strong> ${{ policy.premium }} {{ policy.client.currency|default:"USD" }}</p>
+    <p><strong>Start Date:</strong> {{ policy.start_date|date:"M d, Y" }}</p>
+    <p><strong>Expiry Date:</strong> {{ policy.expiry_date|date:"M d, Y" }}</p>
+    <p><strong>Days Left:</strong>
+      {% if policy.days_left >= 0 %}
+        <span class="text-green-600 font-semibold">{{ policy.days_left }} days left</span>
+      {% else %}
+        <span class="text-red-600 font-semibold">Expired {{ policy.expired_days }} days ago</span>
+      {% endif %}
+    </p>
+    <p><strong>Status:</strong>
+      <span class="px-2 py-1 rounded-lg text-white
+        {% if policy.status == 'active' %}bg-green-500
+        {% elif policy.status == 'expired' %}bg-red-500
+        {% else %}bg-yellow-500{% endif %}">
+        {{ policy.status|title }}
+      </span>
+    </p>
+
+    <!-- New Fields -->
+    <p><strong>Payment Mode:</strong> {{ policy.payment_mode|default:"-" }}</p>
+    <p><strong>Coverage Level:</strong> {{ policy.coverage_level|default:"-" }}</p>
+    <p><strong>NRIC / Passport:</strong> {{ policy.nric_or_passport|default:"-" }}</p>
+  </div>
+
+  <!-- Insured Persons -->
+  <div class="mt-8">
+    <h3 class="text-xl font-semibold mb-3">Insured Persons</h3>
+    {% if insured_persons %}
+    <div class="space-y-4">
+      {% for person in insured_persons %}
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-center border p-3 rounded-lg bg-gray-50 relative">
+        {% if person.photo %}
+          <img src="{{ person.photo.url }}" class="w-12 h-12 object-cover rounded-full" alt="Photo">
+        {% else %}
+          <img src="{% static 'images/default-user.png' %}" class="w-12 h-12 object-cover rounded-full" alt="No Photo">
+        {% endif %}
+
+        <p class="font-medium">{{ person.full_name }}</p>
+        <p>{{ person.relationship }}</p>
+        <p>{{ person.dob|date:"M d, Y" }}</p>
+        <p>{{ person.gender|title }}</p>
+
+        <div class="flex space-x-2">
+          <a href="{% url 'policies:edit_insured_person' person.id %}"
+             class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm transition">
+            ✏️ Edit
+          </a>
+          <form method="POST" action="{% url 'policies:delete_insured_person' person.id %}" onsubmit="return confirm('Are you sure?');">
+            {% csrf_token %}
+            <button type="submit"
+              class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm transition">
+              🗑 Delete
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="text-gray-500 italic">No insured persons added yet.</p>
+    {% endif %}
+
+    <div class="mt-3">
+      <a href="{% url 'policies:add_insured_person' policy.id %}"
+         class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+        ➕ Add Insured Person
+      </a>
+    </div>
+  </div>
+
+  <!-- Assigned Clients -->
+  {% if assigned_clients %}
+  <div class="mt-8">
+    <h3 class="text-xl font-semibold mb-3">Assigned Clients</h3>
+    <table class="min-w-full border divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+      <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+        <tr>
+          <th class="px-4 py-2 text-left">Photo</th>
+          <th class="px-4 py-2 text-left">Client Name</th>
+          <th class="px-4 py-2 text-left">Email</th>
+          <th class="px-4 py-2 text-left">Phone</th>
+          <th class="px-4 py-2 text-left">Hospital</th>
+          <th class="px-4 py-2 text-left">Assignment Status</th>
+          <th class="px-4 py-2 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+        {% for assignment in assigned_clients %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+          <td class="px-4 py-2">
+            {% if assignment.client.photo %}
+              <img src="{{ assignment.client.photo.url }}" alt="Client Photo" class="w-12 h-12 rounded-full object-cover border">
+            {% else %}
+              <img src="{% static 'images/default-user.png' %}" alt="No Photo" class="w-12 h-12 rounded-full object-cover border">
+            {% endif %}
+          </td>
+          <td class="px-4 py-2">{{ assignment.client.first_name }} {{ assignment.client.last_name }}</td>
+          <td class="px-4 py-2">{{ assignment.client.email|default:"-" }}</td>
+          <td class="px-4 py-2">{{ assignment.client.phone|default:"-" }}</td>
+          <td class="px-4 py-2">{{ assignment.hospital.name }}</td>
+          <td class="px-4 py-2">
+            <span class="px-2 py-1 rounded-lg text-white
+              {% if assignment.status == 'accepted' %}bg-green-500
+              {% elif assignment.status == 'pending' %}bg-yellow-500
+              {% elif assignment.status == 'completed' %}bg-blue-500
+              {% else %}bg-red-500{% endif %}">
+              {{ assignment.status|title }}
+            </span>
+          </td>
+          <td class="px-4 py-2 space-x-2">
+            {% if user.role == 'hospital' and assignment.status == 'accepted' %}
+              <a href="{% url 'claims:add_claim' %}?client_id={{ assignment.client.id }}&policy_id={{ policy.id }}"
+                 class="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition">
+                 ➕ Submit Claim
+              </a>
+            {% elif user.is_superuser or user.role == 'admin' %}
+              <a href="{% url 'hospitals:assign_policyholder' %}"
+                 class="text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition">
+                 🏥 Assign Hospital
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-gray-500 py-4">No assigned clients yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="text-gray-500 italic mt-4">No clients assigned to this policy yet.</p>
+  {% endif %}
+
+  <!-- Back Button -->
+  <div class="mt-6">
+    <a href="{% url 'policies:policy_list' %}"
+       class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-lg">
+       ← Back to Policies
+    </a>
+  </div>
+
+</div>
+{% endblock %}

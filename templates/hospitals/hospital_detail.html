@@ -1,0 +1,32 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Hospital: {{ hospital.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+  <h1 class="text-2xl font-bold mb-4">{{ dashboard_title }}</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div><strong>Name:</strong> {{ hospital.name }}</div>
+    <div><strong>Owner:</strong> {{ hospital.owner_first_name }} {{ hospital.owner_last_name }}</div>
+    <div><strong>Email:</strong> {{ hospital.email }}</div>
+    <div><strong>Mobile:</strong> {{ hospital.mobile }}</div>
+    <div><strong>Phone:</strong> {{ hospital.phone }}</div>
+    <div><strong>City:</strong> {{ hospital.city }}</div>
+    <div><strong>Country:</strong> {{ hospital.country }}</div>
+    <div><strong>Language:</strong> {{ hospital.language }}</div>
+    <div><strong>Currency:</strong> {{ hospital.currency }}</div>
+    <div><strong>Verified:</strong> {{ hospital.verified|yesno:"Yes,No" }}</div>
+    <div class="md:col-span-2"><strong>Address:</strong> {{ hospital.address }}</div>
+    <div class="md:col-span-2">
+      {% if hospital.image %}
+        <img src="{{ hospital.image.url }}" class="h-32 w-32 rounded-lg object-cover mt-2">
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-4 flex space-x-2">
+<a href="{% url 'hospitals:hospital_edit' hospital.id %}" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Edit</a>
+    <a href="{% url 'hospitals:hospital_list' %}" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Back</a>
+  </div>
+</div>
+{% endblock %}

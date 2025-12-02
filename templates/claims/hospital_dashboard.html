@@ -1,0 +1,115 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Hospital Dashboard | HealthInsure{% endblock %}
+{% block header_title %}{{ dashboard_title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl p-5 flex items-center justify-between hover:shadow-lg transition">
+      <div>
+        <p class="text-gray-500 dark:text-gray-300 font-semibold text-sm">Total Claims</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ total_claims }}</p>
+      </div>
+      <div class="text-blue-500 text-4xl">📄</div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl p-5 flex items-center justify-between hover:shadow-lg transition">
+      <div>
+        <p class="text-gray-500 dark:text-gray-300 font-semibold text-sm">Pending Claims</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ pending_claims }}</p>
+      </div>
+      <div class="text-yellow-500 text-4xl">⏳</div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl p-5 flex items-center justify-between hover:shadow-lg transition">
+      <div>
+        <p class="text-gray-500 dark:text-gray-300 font-semibold text-sm">Approved Claims</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ approved_claims }}</p>
+      </div>
+      <div class="text-green-500 text-4xl">✅</div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl p-5 flex items-center justify-between hover:shadow-lg transition">
+      <div>
+        <p class="text-gray-500 dark:text-gray-300 font-semibold text-sm">Rejected Claims</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ rejected_claims }}</p>
+      </div>
+      <div class="text-red-500 text-4xl">❌</div>
+    </div>
+  </div>
+
+  <!-- Revenue Overview -->
+  <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 hover:shadow-lg transition">
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Revenue Overview</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+        <p class="text-gray-600 dark:text-gray-300 font-medium">Total Revenue Collected</p>
+        <p class="text-2xl font-bold text-green-600">${{ revenue_collected|floatformat:2 }}</p>
+      </div>
+      <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+        <p class="text-gray-600 dark:text-gray-300 font-medium">Pending Claim Amount</p>
+        <p class="text-2xl font-bold text-yellow-500">${{ pending_amount|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Claims Table -->
+  <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 hover:shadow-lg transition">
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Recent Claims</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Claim #</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Client</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Policy #</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Amount</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Status</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Created At</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-200">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {% for claim in recent_claims %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+            <td class="px-4 py-2 text-gray-800 dark:text-gray-100 font-medium">{{ claim.claim_number }}</td>
+            <td class="px-4 py-2 text-gray-800 dark:text-gray-100">{{ claim.client.first_name }} {{ claim.client.last_name }}</td>
+            <td class="px-4 py-2 text-gray-800 dark:text-gray-100">{{ claim.policy.policy_number }}</td>
+            <td class="px-4 py-2 text-gray-800 dark:text-gray-100">${{ claim.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2">
+              {% if claim.status == "pending" %}
+                <span class="text-yellow-500 font-semibold">Pending</span>
+              {% elif claim.status == "approved" %}
+                <span class="text-green-600 font-semibold">Approved</span>
+              {% elif claim.status == "rejected" %}
+                <span class="text-red-600 font-semibold">Rejected</span>
+              {% elif claim.status == "reimbursed" %}
+                <span class="text-blue-600 font-semibold">Reimbursed</span>
+              {% else %}
+                <span>{{ claim.status }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-300">{{ claim.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="px-4 py-2 space-x-2">
+              <a href="{% url 'claims:claim_detail' claim.id %}" class="text-blue-600 hover:underline font-medium">View</a>
+              {% if user.role == "hospital" %}
+                <a href="{% url 'claims:edit_claim' claim.id %}" class="text-yellow-600 hover:underline font-medium">Edit</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-gray-500 dark:text-gray-400 py-4">No recent claims found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

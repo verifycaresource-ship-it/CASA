@@ -1,0 +1,13 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; line-height:1.4;">
+    <h3>CareSource Africa — Password Reset</h3>
+    <p>Hello {{ user.get_full_name|default:user.username }},</p>
+    <p>Your password reset code is:</p>
+    <h1 style="letter-spacing:2px;">{{ otp }}</h1>
+    <p>This code will expire in {{ expires }}.</p>
+    <p>If you did not request this, please ignore this message.</p>
+    <hr>
+    <small>CareSource Africa</small>
+  </body>
+</html>

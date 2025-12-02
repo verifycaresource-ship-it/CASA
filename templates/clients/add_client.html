@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+  <h2 class="mb-4">{{ dashboard_title|default:"Register New Client" }}</h2>
+
+  <form method="POST" enctype="multipart/form-data" class="card p-4 shadow-sm rounded-3">
+    {% csrf_token %}
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">First Name</label>
+        {{ form.first_name }}
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Last Name</label>
+        {{ form.last_name }}
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Email</label>
+        {{ form.email }}
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Phone</label>
+        {{ form.phone }}
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Date of Birth</label>
+        {{ form.dob }}
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Gender</label>
+        {{ form.gender }}
+      </div>
+
+      <div class="col-12 mb-3">
+        <label class="form-label">Address</label>
+        {{ form.address }}
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Client Photo</label><br>
+        {{ form.photo }}
+      </div>
+
+      <!-- 🔹 Fingerprint Upload -->
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Fingerprint (File Upload)</label><br>
+        <input type="file" name="fingerprint_file" accept="image/*,application/octet-stream" class="form-control">
+        <small class="text-muted">You can upload a fingerprint file or scan below.</small>
+      </div>
+
+      <!-- 🔹 Base64 Fingerprint Field (optional) -->
+      <div class="col-12 mb-3">
+        <label class="form-label">Or Paste Fingerprint Base64 Data</label>
+        <textarea name="fingerprint_base64" rows="5" class="form-control" placeholder="Paste Base64 fingerprint string here"></textarea>
+      </div>
+
+      <!-- 🔹 (Optional) Live Scan Button Placeholder -->
+      <div class="col-12 mb-3">
+        <button type="button" class="btn btn-outline-primary" id="scanFingerprintBtn">
+          <i class="bi bi-fingerprint"></i> Scan Fingerprint (Future Integration)
+        </button>
+        <small class="text-muted d-block mt-1">This button will be used for live scanning in the future.</small>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <button type="submit" class="btn btn-success px-4">Save Client</button>
+      <a href="{% url 'clients:client_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<!-- Optional JavaScript for fingerprint scanning (future integration) -->
+<script>
+  document.getElementById("scanFingerprintBtn").addEventListener("click", async () => {
+    alert("Live fingerprint scanning is not yet implemented. You can upload or paste Base64 for now.");
+    // In future: call WebAuthn, fprintd bridge, or custom scanner API
+  });
+</script>
+
+{% endblock %}

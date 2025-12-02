@@ -1,0 +1,81 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ dashboard_title }} | Health Insurance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- PAGE HEADER -->
+  <div class="flex justify-between items-center">
+    <h1 class="text-2xl md:text-3xl font-bold">{{ dashboard_title }}</h1>
+    <a href="{% url 'add_client' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
+      + Add Client
+    </a>
+  </div>
+
+  <!-- SEARCH & FILTER -->
+  <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+    <input type="text" id="searchClient" placeholder="Search clients..." class="px-4 py-2 border rounded w-full sm:w-1/3">
+    <select id="filterClient" class="px-4 py-2 border rounded w-full sm:w-1/6">
+      <option value="">All Status</option>
+      <option value="verified">Verified</option>
+      <option value="unverified">Unverified</option>
+    </select>
+  </div>
+
+  <!-- CLIENTS TABLE -->
+  <div class="overflow-x-auto bg-white dark:bg-gray-800 shadow rounded-2xl mt-4">
+    <table class="min-w-full text-left text-sm">
+      <thead class="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+        <tr>
+          <th class="px-6 py-3 font-semibold">Name</th>
+          <th class="px-6 py-3 font-semibold">Email</th>
+          <th class="px-6 py-3 font-semibold">Phone</th>
+          <th class="px-6 py-3 font-semibold">Status</th>
+          <th class="px-6 py-3 font-semibold">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="clientsTable">
+        {% for client in clients %}
+        <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <td class="px-6 py-3">{{ client.first_name }} {{ client.last_name }}</td>
+          <td class="px-6 py-3">{{ client.email }}</td>
+          <td class="px-6 py-3">{{ client.phone }}</td>
+          <td class="px-6 py-3">
+            {% if client.verified %}
+            <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Verified</span>
+            {% else %}
+            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">Unverified</span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-3 flex gap-2">
+            <a href="#" class="text-blue-600 hover:underline">Edit</a>
+            <a href="#" class="text-red-600 hover:underline">Delete</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="px-6 py-3 text-center text-gray-500">No clients found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- OPTIONAL: JS for search/filter -->
+<script>
+  const searchInput = document.getElementById('searchClient');
+  const tableRows = document.querySelectorAll('#clientsTable tr');
+
+  searchInput.addEventListener('input', (e) => {
+    const value = e.target.value.toLowerCase();
+    tableRows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      row.style.display = text.includes(value) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

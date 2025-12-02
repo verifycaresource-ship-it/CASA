@@ -1,0 +1,213 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Admin Dashboard | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+  <!-- Welcome Section -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+    <div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white">
+        👋 Welcome back, <span class="text-blue-500">{{ user.username|title }}</span>
+      </h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1">Role: {{ user.role|title }}</p>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+    {% for card in cards %}
+    <div class="relative rounded-2xl shadow-lg p-5 overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-tr
+        {% if card.color == 'blue' %}from-blue-100 via-blue-200 to-blue-400{% endif %}
+        {% if card.color == 'green' %}from-green-100 via-green-200 to-green-400{% endif %}
+        {% if card.color == 'yellow' %}from-yellow-100 via-yellow-200 to-yellow-400{% endif %}
+        {% if card.color == 'red' %}from-red-100 via-red-200 to-red-400{% endif %}
+        {% if card.color == 'teal' %}from-teal-100 via-teal-200 to-teal-400{% endif %}
+        {% if card.color == 'purple' %}from-purple-100 via-purple-200 to-purple-400{% endif %}
+        blur-3xl transform -translate-x-6 -translate-y-6 opacity-60"></div>
+      <p class="relative text-sm font-medium text-gray-700 dark:text-gray-200">{{ card.label }}</p>
+      <h2 class="relative text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ card.value }}</h2>
+      {% if card.trend %}
+      <canvas id="sparkline-{{ forloop.counter }}" style="width:100%; height:50px;"></canvas>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Quick Actions -->
+  {% if shortcuts %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+    <h2 class="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">⚡ Quick Actions</h2>
+    <div class="flex flex-wrap gap-3">
+      {% for shortcut in shortcuts %}
+      <a href="{{ shortcut.url }}" class="relative inline-flex items-center px-5 py-2 rounded-full font-medium text-white shadow-lg
+          {% if shortcut.color == 'blue' %}bg-gradient-to-tr from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700{% endif %}
+          {% if shortcut.color == 'green' %}bg-gradient-to-tr from-green-400 to-green-600 hover:from-green-500 hover:to-green-700{% endif %}
+          {% if shortcut.color == 'yellow' %}bg-gradient-to-tr from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700{% endif %}
+          {% if shortcut.color == 'red' %}bg-gradient-to-tr from-red-400 to-red-600 hover:from-red-500 hover:to-red-700{% endif %}
+          {% if shortcut.color == 'purple' %}bg-gradient-to-tr from-purple-400 to-purple-600 hover:from-purple-500 hover:to-purple-700{% endif %}
+          {% if shortcut.color == 'teal' %}bg-gradient-to-tr from-teal-400 to-teal-600 hover:from-teal-500 hover:to-teal-700{% endif %} 
+          transition transform hover:scale-105">
+        {{ shortcut.name }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Policy Distribution -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+      <h3 class="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">📋 Policy Distribution</h3>
+      <canvas id="policiesChart" style="width:300px; height:300px;"></canvas>
+    </div>
+
+    <!-- Claims Overview -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+      <h3 class="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">💰 Claims Overview</h3>
+      <canvas id="claimsChart" style="width:400px; height:250px;"></canvas>
+    </div>
+
+    <!-- Hospital Verification -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+      <h3 class="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">🏥 Hospital Verification</h3>
+      <canvas id="hospitalsChart" style="width:300px; height:300px;"></canvas>
+    </div>
+
+  </div>
+
+
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Function to get text color based on theme
+  const getTextColor = () => document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151';
+
+  // ---------- Sparkline Trend Charts ----------
+  {% for card in cards %}
+    {% if card.trend %}
+      const ctxSparkline{{ forloop.counter }} = document.getElementById('sparkline-{{ forloop.counter }}');
+      new Chart(ctxSparkline{{ forloop.counter }}, {
+        type: 'line',
+        data: {
+          labels: {{ last_7_days|safe }},
+          datasets: [{
+            data: {{ card.trend|safe }},
+            borderColor: '#{{ card.color }}500',
+            backgroundColor: 'rgba(0,0,0,0)',
+            tension: 0.3,
+            pointRadius: 0,
+          }]
+        },
+        options: {
+          responsive: false, // fixed size
+          maintainAspectRatio: false,
+          width: 200,
+          height: 50,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { display: false },
+            y: { display: false }
+          },
+          elements: {
+            line: { borderWidth: 2 }
+          }
+        }
+      });
+    {% endif %}
+  {% endfor %}
+
+  // ---------- Policies Chart (Doughnut) ----------
+  const ctxPolicies = document.getElementById('policiesChart');
+  const policiesChart = new Chart(ctxPolicies, {
+    type: 'doughnut',
+    data: {
+      labels: {{ policies_labels|safe }},
+      datasets: [{
+        data: {{ policies_data|safe }},
+        backgroundColor: ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      width: 300,
+      height: 300,
+      cutout: '60%',
+      plugins: {
+        legend: { labels: { color: getTextColor() } }
+      }
+    }
+  });
+
+  // ---------- Claims Chart (Bar) ----------
+  const ctxClaims = document.getElementById('claimsChart');
+  const claimsChart = new Chart(ctxClaims, {
+    type: 'bar',
+    data: {
+      labels: ['Approved', 'Pending', 'Rejected'],
+      datasets: [{
+        label: 'Claims Count',
+        data: [
+          {{ claims_approved_count }},
+          {{ claims_pending_count }},
+          {{ claims_rejected_count }}
+        ],
+        backgroundColor: ['#10B981', '#FBBF24', '#EF4444'],
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      width: 400,
+      height: 250,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          ticks: { color: getTextColor() },
+          beginAtZero: true,
+          grid: { color: '#e5e7eb' }
+        },
+        x: {
+          ticks: { color: getTextColor() },
+          grid: { color: '#e5e7eb' }
+        }
+      }
+    }
+  });
+
+  // ---------- Hospitals Chart (Pie) ----------
+  const ctxHospitals = document.getElementById('hospitalsChart');
+  const hospitalsChart = new Chart(ctxHospitals, {
+    type: 'pie',
+    data: {
+      labels: {{ hospitals_labels|safe }},
+      datasets: [{
+        data: {{ hospitals_data|safe }},
+        backgroundColor: ['#10B981','#EF4444'],
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      width: 300,
+      height: 300,
+      plugins: {
+        legend: { labels: { color: getTextColor() } }
+      }
+    }
+  });
+</script>
+{% endblock %}

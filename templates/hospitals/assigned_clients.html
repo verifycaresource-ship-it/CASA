@@ -1,0 +1,111 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% block title %}Assigned Policyholders | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow mt-8">
+  <h2 class="text-2xl font-semibold mb-4">📋 Assigned Policyholders</h2>
+
+  <!-- Flash messages -->
+  {% if messages %}
+    <div class="space-y-2 mb-4">
+      {% for message in messages %}
+        <div class="p-3 rounded {{ message.tags }} bg-opacity-20">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if assignments %}
+  <div class="overflow-x-auto mt-4">
+    <table class="min-w-full text-sm border divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-700">
+        <tr>
+          <th class="px-4 py-2 text-left font-medium">Policyholder & Policy</th>
+          <th class="px-4 py-2 text-left font-medium">Hospital</th>
+          <th class="px-4 py-2 text-left font-medium">Assignment Status</th>
+          <th class="px-4 py-2 text-left font-medium">Claim Status</th>
+          <th class="px-4 py-2 text-left font-medium">Assigned By</th>
+          <th class="px-4 py-2 text-left font-medium">Assigned At</th>
+          <th class="px-4 py-2 text-left font-medium">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+        {% for a in assignments %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+          <td class="px-4 py-2">
+            <div class="font-semibold">{{ a.client.first_name }} {{ a.client.last_name }}</div>
+            <div class="text-gray-500 text-xs">
+              Policy: {{ a.policy.policy_number }} | Premium: {{ a.policy.premium }} |
+              Start: {{ a.policy.start_date|date:"M d, Y" }} | Expiry: {{ a.policy.expiry_date|date:"M d, Y" }}
+            </div>
+          </td>
+
+          <td class="px-4 py-2">{{ a.hospital.name }}</td>
+
+          <!-- Assignment Status -->
+          <td class="px-4 py-2">
+            {% if a.status == "pending" %}
+              <span class="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">Pending</span>
+            {% elif a.status == "accepted" %}
+              <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold">Accepted</span>
+            {% elif a.status == "claimed" %}
+              <span class="px-2 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">Claimed</span>
+            {% elif a.status == "completed" %}
+              <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Completed</span>
+            {% elif a.status == "rejected" %}
+              <span class="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs font-semibold">Rejected</span>
+            {% else %}
+              <span class="px-2 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-semibold">{{ a.status|capfirst }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Claim Status -->
+          <td class="px-4 py-2">
+            {% if a.claim %}
+              {% if a.claim.status == "pending" %}
+                <span class="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">Pending</span>
+              {% elif a.claim.status == "approved" %}
+                <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Approved</span>
+              {% elif a.claim.status == "rejected" %}
+                <span class="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs font-semibold">Rejected</span>
+              {% elif a.claim.status == "reimbursed" %}
+                <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold">Reimbursed</span>
+              {% endif %}
+            {% else %}
+              <span class="text-gray-400 text-xs italic">No Claim</span>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-2">{% if a.assigned_by %}{{ a.assigned_by.username }}{% else %}System{% endif %}</td>
+          <td class="px-4 py-2">{{ a.assigned_at|date:"M d, Y H:i" }}</td>
+
+          <!-- Actions -->
+          <td class="px-4 py-2 flex flex-wrap gap-2">
+            {% if a.status == "pending" %}
+              <a href="{% url 'hospitals:approve_assignment' a.id %}" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs">Approve</a>
+              <a href="{% url 'hospitals:reject_assignment' a.id %}" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs">Reject</a>
+
+            {% elif a.status == "accepted" %}
+              {% if not a.claim %}
+                <a href="{% url 'hospitals:submit_claim_for_assignment' a.id %}" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs">Submit Claim</a>
+              {% else %}
+                <a href="{% url 'claims:claim_detail' a.claim.id %}" class="px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-xs">View Claim</a>
+              {% endif %}
+
+            {% elif a.status == "claimed" and a.claim %}
+              <a href="{% url 'claims:claim_detail' a.claim.id %}" class="px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-xs">View Claim</a>
+            {% endif %}
+
+            <!-- Always show View Details -->
+            <a href="{% url 'hospitals:assignment_detail' a.id %}" class="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs">View Details</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="text-gray-500 mt-4">No policyholders assigned yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

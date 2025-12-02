@@ -1,0 +1,81 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
+        <a href="{% url 'hospitals:hospital_add' %}" 
+           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+           Add New Hospital
+        </a>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="py-2 px-4 text-left">#</th>
+                    <th scope="col" class="py-2 px-4 text-left">Name</th>
+                    <th scope="col" class="py-2 px-4 text-left">Owner</th>
+                    <th scope="col" class="py-2 px-4 text-left">Email</th>
+                    <th scope="col" class="py-2 px-4 text-left">Phone</th>
+                    <th scope="col" class="py-2 px-4 text-left">Verified</th>
+                    <th scope="col" class="py-2 px-4 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for hospital in hospitals %}
+                <tr class="hover:bg-gray-50">
+                    <td class="py-2 px-4">{{ forloop.counter }}</td>
+                    <td class="py-2 px-4 break-words">{{ hospital.name }}</td>
+                    <td class="py-2 px-4 break-words">{{ hospital.owner_first_name }} {{ hospital.owner_last_name }}</td>
+                    <td class="py-2 px-4 break-words">{{ hospital.email }}</td>
+                    <td class="py-2 px-4 break-words">{{ hospital.phone|default_if_none:hospital.mobile }}</td>
+                    <td class="py-2 px-4">
+                        {% if hospital.verified %}
+                            <span class="text-green-600 font-semibold">Yes</span>
+                        {% else %}
+                            <span class="text-red-600 font-semibold">No</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 px-4 flex flex-wrap gap-2">
+                        <!-- Edit hospital -->
+                        <a href="{% url 'hospitals:hospital_edit' hospital.id %}" 
+                           class="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                           aria-label="Edit {{ hospital.name }}">
+                           Edit
+                        </a>
+
+                        <!-- View hospital -->
+                        <a href="{% url 'hospitals:hospital_detail' hospital.id %}" 
+                           class="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                           aria-label="View {{ hospital.name }}">
+                           View
+                        </a>
+
+                        <!-- Delete hospital -->
+                        {% if user.is_superuser or role in "admin finance_officer" %}
+                        <form method="POST" action="{% url 'hospitals:hospital_delete' hospital.id %}" 
+                              onsubmit="return confirm('Are you sure you want to delete {{ hospital.name }}?');">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
+                                    aria-label="Delete {{ hospital.name }}">
+                                Delete
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="py-4 text-center text-gray-500">No hospitals found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

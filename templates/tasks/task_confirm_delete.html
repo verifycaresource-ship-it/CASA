@@ -1,0 +1,14 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Delete Task | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow p-6 text-center">
+    <h1 class="text-2xl font-bold mb-4">Delete Task</h1>
+    <p class="mb-6">Are you sure you want to delete the task: <strong>{{ task.title }}</strong>?</p>
+    <form method="post" class="flex justify-center gap-4">
+        {% csrf_token %}
+        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow">Delete</button>
+        <a href="{% url 'tasks:task_list' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg">Cancel</a>
+    </form>
+</div>
+{% endblock %}
