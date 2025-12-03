@@ -207,21 +207,63 @@ def toggle_user_status(request, user_id):
     return redirect("accounts:user_list")
 
 
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse
+from .decorators import roles_required
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+from .forms import AdminPasswordResetForm
+
 @login_required(login_url="accounts:login")
 @roles_required("admin")
 def reset_user_password(request, user_id):
     user = get_object_or_404(User, id=user_id)
+
     if request.method == "POST":
         form = AdminPasswordResetForm(request.POST, instance=user)
         if form.is_valid():
             new_password = form.cleaned_data["new_password"]
             user.set_password(new_password)
             user.save()
+
+            # If AJAX request, return JSON instead of redirect
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({
+                    "success": True,
+                    "message": f"Password for '{user.username}' has been reset successfully.",
+                    "new_password": new_password,
+                })
+
             messages.success(request, f"Password for '{user.username}' has been reset successfully.")
             return redirect("accounts:user_list")
-        messages.error(request, "Please correct the errors below.")
+        else:
+            # AJAX errors
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                # Render form HTML with errors
+                html = render(request, "accounts/partials/reset_form.html", {
+                    "form": form,
+                    "user_obj": user,
+                }).content.decode("utf-8")
+                return JsonResponse({"success": False, "form_html": html})
+
+            messages.error(request, "Please correct the errors below.")
     else:
         form = AdminPasswordResetForm(instance=user)
+
+    # GET request (AJAX or normal)
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        html = render(request, "accounts/partials/reset_form.html", {
+            "form": form,
+            "user_obj": user,
+        }).content.decode("utf-8")
+        return JsonResponse({"form_html": html})
+
+    # Normal page render (fallback)
     return render(request, "registration/reset_user_password.html", {
         "form": form,
         "user_obj": user,
