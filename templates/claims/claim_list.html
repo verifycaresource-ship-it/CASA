@@ -2,78 +2,116 @@
 {% load static %}
 
 {% block title %}Claims | Health Insurance{% endblock %}
+{% block header_title %}Claims{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+<div class="max-w-7xl mx-auto p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-lg mt-8 font-sans text-gray-900 dark:text-gray-100">
 
   <!-- Header -->
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{{ dashboard_title }}</h1>
     {% if role == "hospital" %}
-      <a href="{% url 'claims:add_claim' %}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-        ➕ Submit New Claim
+      <a href="{% url 'claims:add_claim' %}" 
+         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition">
+         ➕ Submit New Claim
       </a>
     {% endif %}
   </div>
 
   <!-- Messages -->
   {% if messages %}
-    {% for message in messages %}
-      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
-        {{ message }}
-      </div>
-    {% endfor %}
+    <div class="space-y-2 mb-6">
+      {% for message in messages %}
+        <div class="px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-gray-100' }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
   {% endif %}
 
   <!-- Claims Table -->
-  <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden text-sm">
-    <thead class="bg-gray-50">
-      <tr>
-        <th class="px-4 py-2 border-b">Claim #</th>
-        <th class="px-4 py-2 border-b">Client</th>
-        <th class="px-4 py-2 border-b">Policy #</th>
-        <th class="px-4 py-2 border-b">Hospital</th>
-        <th class="px-4 py-2 border-b">Amount ($)</th>
-        <th class="px-4 py-2 border-b">Status</th>
-        <th class="px-4 py-2 border-b">Created At</th>
-        <th class="px-4 py-2 border-b">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for claim in claims %}
-      <tr class="hover:bg-gray-50">
-        <td class="px-4 py-2 border-b">{{ claim.claim_number }}</td>
-        <td class="px-4 py-2 border-b">{{ claim.client.first_name }} {{ claim.client.last_name }}</td>
-        <td class="px-4 py-2 border-b">{{ claim.policy.policy_number }}</td>
-        <td class="px-4 py-2 border-b">{{ claim.hospital.name }}</td>
-        <td class="px-4 py-2 border-b">${{ claim.amount }}</td>
-        <td class="px-4 py-2 border-b">
-          {% if claim.status == "pending" %}
-            <span class="text-yellow-600 font-semibold">Pending</span>
-          {% elif claim.status == "approved" %}
-            <span class="text-green-600 font-semibold">Approved</span>
-          {% elif claim.status == "rejected" %}
-            <span class="text-red-600 font-semibold">Rejected</span>
-          {% elif claim.status == "reimbursed" %}
-            <span class="text-blue-600 font-semibold">Reimbursed</span>
-          {% else %}
-            <span>{{ claim.status }}</span>
-          {% endif %}
-        </td>
-        <td class="px-4 py-2 border-b">{{ claim.created_at|date:"Y-m-d H:i" }}</td>
-        <td class="px-4 py-2 border-b space-x-2">
-          <a href="{% url 'claims:claim_detail' claim.id %}" class="text-blue-600 hover:underline">View</a>
-          {% if role == "admin" or role == "claim_officer" %}
-            <a href="{% url 'claims:edit_claim' claim.id %}" class="text-yellow-600 hover:underline">Edit</a>
-          {% endif %}
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="8" class="text-center px-4 py-6 text-gray-500">No claims found.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="overflow-x-auto">
+    <table class="min-w-full border border-gray-200 dark:border-zinc-700 rounded-lg text-sm">
+      <thead class="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-gray-200">
+        <tr>
+          <th class="px-4 py-3 text-left">Claim #</th>
+          <th class="px-4 py-3 text-left">Client</th>
+          <th class="px-4 py-3 text-left">Policy #</th>
+          <th class="px-4 py-3 text-left">Hospital</th>
+          <th class="px-4 py-3 text-left">Amount ($)</th>
+          <th class="px-4 py-3 text-left">Status</th>
+          <th class="px-4 py-3 text-left">Created At</th>
+          <th class="px-4 py-3 text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-zinc-700">
+        {% for claim in claims %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800 transition">
+          <td class="px-4 py-2">{{ claim.claim_number }}</td>
+          <td class="px-4 py-2">{{ claim.client.first_name }} {{ claim.client.last_name }}</td>
+          <td class="px-4 py-2">{{ claim.policy.policy_number }}</td>
+          <td class="px-4 py-2">{{ claim.hospital.name }}</td>
+          <td class="px-4 py-2">${{ claim.amount }}</td>
+          <td class="px-4 py-2">
+            {% if claim.status == "pending" %}
+              <span class="px-2 py-1 rounded-lg bg-yellow-500 text-white font-semibold">Pending</span>
+            {% elif claim.status == "approved" %}
+              <span class="px-2 py-1 rounded-lg bg-green-500 text-white font-semibold">Approved</span>
+            {% elif claim.status == "rejected" %}
+              <span class="px-2 py-1 rounded-lg bg-red-500 text-white font-semibold">Rejected</span>
+            {% elif claim.status == "reimbursed" %}
+              <span class="px-2 py-1 rounded-lg bg-blue-500 text-white font-semibold">Reimbursed</span>
+            {% else %}
+              <span class="px-2 py-1 rounded-lg bg-gray-400 text-white font-semibold">{{ claim.status|title }}</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2">{{ claim.created_at|date:"Y-m-d H:i" }}</td>
+          <td class="px-4 py-2 space-x-2">
+            <a href="{% url 'claims:claim_detail' claim.id %}" 
+               class="text-blue-600 hover:underline font-semibold">View</a>
+            {% if role == "admin" or role == "claim_officer" %}
+              <a href="{% url 'claims:edit_claim' claim.id %}" 
+                 class="text-yellow-600 hover:underline font-semibold">Edit</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-6 text-gray-500 dark:text-gray-400">
+            No claims found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Back Button -->
+  <div class="mt-6">
+    <a href="{% url 'policies:policy_list' %}"
+       class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-lg transition">
+       ← Back to Policies
+    </a>
+  </div>
+
 </div>
+
+<style>
+  /* Modern Focus */
+  table th, table td {
+    white-space: nowrap;
+  }
+  table td span {
+    display: inline-block;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    table th, table td {
+      padding: 0.5rem;
+    }
+    .max-w-7xl { padding: 1rem; }
+  }
+</style>
 {% endblock %}

@@ -1,89 +1,150 @@
 {% extends 'dashboard/base.html' %}
 {% load widget_tweaks %}
 
-{% block title %}Register Agent | HealthInsure{% endblock %}
+{% block title %}Register Agent | Somalia Health Insurance{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-lg p-8 mt-6 animate-fade-in">
+<div class="max-w-6xl mx-auto p-6 space-y-10">
 
-  <!-- Header -->
-  <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">
-    ➕ Register New Agent
-  </h2>
+  <!-- ================= PAGE HEADER ================= -->
+  <div class="text-center mb-10">
+    <div class="mx-auto w-16 h-16 bg-blue-600/20 text-blue-600 rounded-full flex items-center justify-center mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M5.121 17.804A7.974 7.974 0 0012 20a7.974 7.974 0 006.879-2.196M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </div>
 
-  <!-- Registration Form -->
-  <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-    {% csrf_token %}
-    {% for field in form %}
-      <div class="flex flex-col {% if field.name in 'address daamiin profile_picture' %}sm:col-span-2{% endif %}">
-        <label class="font-semibold">{{ field.label }}</label>
-        {{ field|add_class:"border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-500" }}
-        {% for error in field.errors %}
+    <h1 class="text-4xl md:text-5xl font-bold text-slate-900 dark:text-slate-100">
+      Register New Agent
+    </h1>
+    <p class="mt-3 text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+      Fill out the form below to add a new insurance agent. Fields marked with 
+      <span class="text-red-500">*</span> are mandatory.
+    </p>
+  </div>
+
+  <!-- ================= FORM CARD ================= -->
+  <section class="glass bg-white dark:bg-slate-900/80 border border-white/10 rounded-3xl shadow-xl p-8 md:p-12 space-y-8 transition-all">
+
+    <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
+      Agent Information
+    </h2>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+      {% csrf_token %}
+
+      <!-- Username -->
+      <div class="flex flex-col">
+        <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Username <span class="text-red-500">*</span></label>
+        {{ form.username|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+        {% for error in form.username.errors %}
           <p class="text-red-500 text-sm mt-1">{{ error }}</p>
         {% endfor %}
       </div>
-    {% endfor %}
 
-    <div class="sm:col-span-2 flex justify-end">
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition">
-        Register Agent
-      </button>
-    </div>
-  </form>
+      <!-- Name Fields -->
+      <div class="flex flex-col md:flex-row gap-6">
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">First Name <span class="text-red-500">*</span></label>
+          {{ form.first_name|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.first_name.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
 
-  <!-- Existing Agents Table -->
-  <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Existing Agents</h3>
-  {% if agents %}
-  <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200 bg-white shadow rounded-lg">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">#</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Username</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Email</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Phone</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-200">
-        {% for agent in agents %}
-        <tr>
-          <td class="px-6 py-4 text-sm text-gray-700">{{ forloop.counter }}</td>
-          <td class="px-6 py-4 text-sm text-gray-700">{{ agent.username }}</td>
-          <td class="px-6 py-4 text-sm text-gray-700">{{ agent.email }}</td>
-          <td class="px-6 py-4 text-sm text-gray-700">{{ agent.phone|default:"-" }}</td>
-          <td class="px-6 py-4 text-sm">
-            {% if agent.is_active %}
-              <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Active</span>
-            {% else %}
-              <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Inactive</span>
-            {% endif %}
-          </td>
-          <td class="px-6 py-4 text-sm space-x-2">
-            <a href="{% url 'accounts:toggle_agent_status' agent.id %}" class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs">Toggle Status</a>
-            <a href="{% url 'accounts:reset_agent_password' agent.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs">Reset Password</a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="6" class="px-6 py-4 text-center text-gray-500">No agents found.</td>
-        </tr>
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Last Name <span class="text-red-500">*</span></label>
+          {{ form.last_name|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.last_name.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Profile Picture -->
+      <div class="flex flex-col">
+        <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Profile Picture</label>
+        {{ form.profile_picture|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+        {% for error in form.profile_picture.errors %}
+          <p class="text-red-500 text-sm mt-1">{{ error }}</p>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-    <p class="text-gray-500">No agents registered yet.</p>
-  {% endif %}
+      </div>
 
+      <!-- Contact Info -->
+      <div class="flex flex-col md:flex-row gap-6">
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Phone <span class="text-red-500">*</span></label>
+          {{ form.phone|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.phone.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Date of Birth <span class="text-red-500">*</span></label>
+          {{ form.dob|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.dob.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Gender + Address -->
+      <div class="flex flex-col md:flex-row gap-6">
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Gender <span class="text-red-500">*</span></label>
+          {{ form.gender|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.gender.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Address <span class="text-red-500">*</span></label>
+          {{ form.address|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.address.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Daamiin -->
+      <div class="flex flex-col">
+        <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Daamiin <span class="text-red-500">*</span></label>
+        {{ form.daamiin|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+        {% for error in form.daamiin.errors %}
+          <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+        {% endfor %}
+      </div>
+
+      <!-- Password -->
+      <div class="flex flex-col md:flex-row gap-6">
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Password <span class="text-red-500">*</span></label>
+          {{ form.password1|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.password1.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="flex-1 flex flex-col">
+          <label class="font-medium text-lg text-slate-700 dark:text-slate-200 mb-1">Confirm Password <span class="text-red-500">*</span></label>
+          {{ form.password2|add_class:"w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 px-4 py-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition-all duration-200" }}
+          {% for error in form.password2.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="pt-6 text-center">
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-lg px-8 py-3 rounded-xl transition-all duration-200">
+          Register Agent
+        </button>
+      </div>
+
+    </form>
+  </section>
 </div>
-
-<style>
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fade-in { animation: fade-in 0.5s ease-out; }
-</style>
 {% endblock %}

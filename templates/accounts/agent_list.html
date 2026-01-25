@@ -1,36 +1,113 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
 <head>
   <meta charset="UTF-8">
   <title>Agents | HealthInsure Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="p-8 bg-gray-100">
-  <h1 class="text-2xl font-bold mb-4">Agents</h1>
-  <table class="min-w-full bg-white rounded shadow overflow-hidden">
-    <thead class="bg-green-500 text-white">
-      <tr>
-        <th class="py-2 px-4">ID</th>
-        <th class="py-2 px-4">Username</th>
-        <th class="py-2 px-4">Email</th>
-        <th class="py-2 px-4">Phone</th>
-        <th class="py-2 px-4">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for agent in agents %}
-      <tr class="border-b">
-        <td class="py-2 px-4">{{ agent.id }}</td>
-        <td class="py-2 px-4">{{ agent.username }}</td>
-        <td class="py-2 px-4">{{ agent.email }}</td>
-        <td class="py-2 px-4">{{ agent.phone }}</td>
-        <td class="py-2 px-4">
-          <a href="#" class="text-blue-500 hover:underline">Edit</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<body class="p-6 md:p-10">
+
+  <!-- Page Header -->
+  <div class="mb-8 text-center">
+    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100">
+      Registered Agents
+    </h1>
+    <p class="mt-2 text-gray-600 dark:text-gray-400">
+      Manage your insurance agents below. Use search or sort to find agents quickly.
+    </p>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="mb-6 flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
+    <input
+      type="text"
+      id="agentSearch"
+      placeholder="Search by username, email, or phone..."
+      class="w-full md:w-80 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600 transition"
+    >
+  </div>
+
+  <!-- Agents Table Container -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden">
+      <thead class="bg-green-600 text-white dark:bg-green-500">
+        <tr>
+          <th class="py-3 px-4 text-left text-sm md:text-base cursor-pointer" onclick="sortTable(0)">ID</th>
+          <th class="py-3 px-4 text-left text-sm md:text-base cursor-pointer" onclick="sortTable(1)">Username</th>
+          <th class="py-3 px-4 text-left text-sm md:text-base cursor-pointer" onclick="sortTable(2)">Email</th>
+          <th class="py-3 px-4 text-left text-sm md:text-base cursor-pointer" onclick="sortTable(3)">Phone</th>
+          <th class="py-3 px-4 text-left text-sm md:text-base cursor-pointer" onclick="sortTable(4)">Status</th>
+          <th class="py-3 px-4 text-center text-sm md:text-base">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="agentsTable" class="divide-y divide-gray-200 dark:divide-gray-700">
+        {% for agent in agents %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+          <td class="py-3 px-4 text-sm md:text-base text-gray-700 dark:text-gray-300">{{ agent.id }}</td>
+          <td class="py-3 px-4 text-sm md:text-base font-medium">{{ agent.username }}</td>
+          <td class="py-3 px-4 text-sm md:text-base text-gray-600 dark:text-gray-400">{{ agent.email }}</td>
+          <td class="py-3 px-4 text-sm md:text-base text-gray-600 dark:text-gray-400">{{ agent.phone|default:"—" }}</td>
+          <td class="py-3 px-4 text-sm md:text-base">
+            {% if agent.is_active %}
+              <span class="inline-block px-2 py-1 text-xs md:text-sm bg-green-500/20 text-green-600 rounded-full">
+                Active
+              </span>
+            {% else %}
+              <span class="inline-block px-2 py-1 text-xs md:text-sm bg-red-500/20 text-red-600 rounded-full">
+                Inactive
+              </span>
+            {% endif %}
+          </td>
+          <td class="py-3 px-4 text-center text-sm md:text-base">
+            <a href="{% url 'accounts:edit_agent' agent.id %}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition text-xs md:text-sm">
+              Edit
+            </a>
+            <a href="{% url 'accounts:toggle_agent_status' agent.id %}" onclick="return confirm('Toggle agent status?')" class="inline-block bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-lg transition text-xs md:text-sm ml-2">
+              Toggle
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-4 text-center text-gray-500 dark:text-gray-400">
+            No agents found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ================== SEARCH & SORT SCRIPT ================== -->
+  <script>
+    // Search Function
+    const searchInput = document.getElementById('agentSearch');
+    const tableRows = document.querySelectorAll('#agentsTable tr');
+
+    searchInput.addEventListener('input', () => {
+      const value = searchInput.value.toLowerCase();
+      tableRows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(value) ? '' : 'none';
+      });
+    });
+
+    // Simple table sorting by column
+    function sortTable(columnIndex) {
+      const table = document.getElementById('agentsTable');
+      const rows = Array.from(table.rows);
+      const asc = table.getAttribute('data-sort') !== 'asc';
+      table.setAttribute('data-sort', asc ? 'asc' : 'desc');
+
+      rows.sort((a, b) => {
+        const aText = a.cells[columnIndex]?.textContent.trim() || '';
+        const bText = b.cells[columnIndex]?.textContent.trim() || '';
+        return asc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+      });
+
+      rows.forEach(row => table.appendChild(row));
+    }
+  </script>
+
 </body>
 </html>

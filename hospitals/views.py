@@ -11,10 +11,8 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 import json
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-import base64
+import requests
+from datetime import timedelta
 
 from .models import Hospital, HospitalAssignment
 from .serializers import HospitalSerializer
@@ -25,18 +23,6 @@ from accounts.utils import roles_required
 from .forms import HospitalForm
 
 User = get_user_model()
-
-
-@login_required
-@roles_required("hospital")
-def assignment_detail(request, pk):
-    hospital = getattr(request.user, "hospital_profile", None)
-    assignment = get_object_or_404(HospitalAssignment, pk=pk, hospital=hospital)
-    return render(request, "hospitals/assignment_detail.html", {
-        "assignment": assignment,
-        "dashboard_title": f"Assignment Details: {assignment.client.first_name} {assignment.client.last_name}",
-        "hospital": hospital,
-    })
 
 # =========================
 # 🏥 HOSPITAL CRUD
@@ -157,7 +143,7 @@ def hospital_dashboard(request):
 
 
 # =========================
-# 🌐 API VIEWSET
+# 🌐 DRF HOSPITAL VIEWSET
 # =========================
 class HospitalViewSet(viewsets.ModelViewSet):
     queryset = Hospital.objects.all().order_by('-created_at')
@@ -207,40 +193,111 @@ def admin_dashboard(request):
 # =========================
 # 🧾 ASSIGN POLICYHOLDER
 # =========================
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.utils import timezone
+from accounts.utils import roles_required
+from policies.models import Policy
+from .models import Hospital, HospitalAssignment
+
 @login_required
 @roles_required("admin", "finance_officer")
 def assign_policyholder(request):
+    """
+    Assign a policyholder to a hospital
+    """
     hospitals = Hospital.objects.filter(verified=True)
-    policies = Policy.objects.filter(is_active=True)
+
     if request.method == "POST":
         policy_id = request.POST.get("policy")
         hospital_id = request.POST.get("hospital")
-        if policy_id and hospital_id:
-            policy = Policy.objects.get(pk=policy_id)
-            hospital = Hospital.objects.get(pk=hospital_id)
-            client = policy.client
-            assignment, created = HospitalAssignment.objects.get_or_create(
-                client=client,
-                policy=policy,
-                hospital=hospital,
-                defaults={"assigned_by": request.user}
-            )
-            if created:
-                messages.success(request, f"{client} assigned to {hospital} successfully.")
-            else:
-                messages.warning(request, f"{client} is already assigned to {hospital} for this policy.")
-            return redirect("hospitals:assign_policyholder")
-        else:
+
+        if not policy_id or not hospital_id:
             messages.error(request, "All fields are required.")
+            return redirect("hospitals:assign_policyholder")
+
+        policy = get_object_or_404(Policy.objects.select_related("client"), pk=policy_id)
+        hospital = get_object_or_404(Hospital, pk=hospital_id)
+        client = policy.client
+
+        assignment, created = HospitalAssignment.objects.get_or_create(
+            client=client,
+            policy=policy,
+            hospital=hospital,
+            defaults={"assigned_by": request.user}
+        )
+
+        if created:
+            messages.success(request, f"{client} assigned to {hospital} successfully.")
+        else:
+            messages.warning(request, f"{client} is already assigned to {hospital} for this policy.")
+
+        return redirect("hospitals:assign_policyholder")
+
     return render(request, "hospitals/assign_policyholder.html", {
         "hospitals": hospitals,
-        "policies": policies,
         "dashboard_title": "Assign Policyholder",
     })
 
 
+from django.http import JsonResponse
+from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from policies.models import Policy
+import logging
+
+logger = logging.getLogger(__name__)
+
+@login_required
+@roles_required("admin", "finance_officer")
+def verify_policy(request):
+    number = request.GET.get("number", "").strip()
+
+    if not number:
+        return JsonResponse({"error": "Policy number is required."}, status=400)
+
+    try:
+        policy = Policy.objects.select_related("client").get(
+            policy_number=number,
+            is_active=True
+        )
+
+        client = policy.client
+        today = timezone.now().date()
+        days_left = (policy.expiry_date - today).days if policy.expiry_date else 0
+
+        return JsonResponse({
+            "id": policy.id,
+            "client_name": (
+                f"{client.first_name} {client.last_name} (#{client.id})"
+                if client else "No client linked"
+            ),
+            "policy_number": policy.policy_number,
+            "policy_type": policy.policy_type,
+            "coverage_level": policy.coverage_level,
+            "coverage": policy.coverage_details or "",
+            "nric_passport": client.nric_or_passport or "",
+            "premium": f"{policy.premium:.2f}",
+            "payment_mode": policy.payment_mode,
+            "start_date": policy.start_date.strftime("%b %d, %Y") if policy.start_date else "",
+            "expiry_date": policy.expiry_date.strftime("%b %d, %Y") if policy.expiry_date else "",
+            "status": "Active" if policy.is_active else "Inactive",
+            "days_left": f"{days_left} days left",
+            "client_url": f"/clients/{client.id}/" if client else "",
+        })
+
+    except Policy.DoesNotExist:
+        return JsonResponse({"error": "Policy not found or inactive."}, status=404)
+
+    except Exception as e:
+        logger.exception("verify_policy failed")
+        return JsonResponse({"error": "Server error while verifying policy."}, status=500)
+
+
 # =========================
-# 📋 ASSIGNED CLIENTS (Hospital Side)
+# 📋 ASSIGNED CLIENTS (Hospital)
 # =========================
 @login_required
 @roles_required("hospital")
@@ -249,7 +306,7 @@ def assigned_clients(request):
     if not hospital:
         messages.error(request, "Hospital profile missing.")
         return redirect("accounts:dashboard")
-    assignments = HospitalAssignment.objects.filter(hospital=hospital).select_related("client", "policy")
+    assignments = HospitalAssignment.objects.filter(hospital=hospital).select_related("client", "policy").order_by("-assigned_at")
     return render(request, "hospitals/assigned_clients.html", {
         "assignments": assignments,
         "dashboard_title": "Assigned Policyholders",
@@ -262,18 +319,8 @@ def assigned_clients(request):
 # =========================
 @login_required
 @roles_required("hospital")
-def accept_assignment(request, pk):
-    assignment = get_object_or_404(HospitalAssignment, pk=pk, hospital=request.user.hospital_profile)
-    assignment.status = "accepted"
-    assignment.save()
-    messages.success(request, f"Assignment accepted for {assignment.client}.")
-    return redirect("hospitals:assigned_clients")
-
-
-@login_required
-@roles_required("hospital")
 def approve_assignment(request, pk):
-    assignment = get_object_or_404(HospitalAssignment, id=pk, hospital=request.user.hospital_profile)
+    assignment = get_object_or_404(HospitalAssignment, pk=pk, hospital=request.user.hospital_profile)
     if assignment.status == "pending":
         assignment.status = "accepted"
         assignment.save()
@@ -284,7 +331,7 @@ def approve_assignment(request, pk):
 @login_required
 @roles_required("hospital")
 def reject_assignment(request, pk):
-    assignment = get_object_or_404(HospitalAssignment, id=pk, hospital=request.user.hospital_profile)
+    assignment = get_object_or_404(HospitalAssignment, pk=pk, hospital=request.user.hospital_profile)
     assignment.status = "rejected"
     assignment.save()
     messages.warning(request, f"Assignment for {assignment.client} rejected.")
@@ -292,7 +339,7 @@ def reject_assignment(request, pk):
 
 
 # =========================
-# 🧾 SUBMIT CLAIM WITH FINGERPRINT
+# 🧾 CLAIMS WITH FINGERPRINT
 # =========================
 @login_required
 @roles_required("hospital")
@@ -375,24 +422,9 @@ def submit_claim_for_assignment(request, assignment_id):
 # =========================
 # 🛡 FINGERPRINT VERIFICATION API
 # =========================
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework import permissions
-from django.shortcuts import get_object_or_404
-from clients.models import Client
-from hospitals.models import HospitalAssignment
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework import permissions
-from rest_framework.response import Response
-import requests
-
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def verify_fingerprint(request, client_id):
-    """
-    Receive fingerprint template from frontend and verify via Flask service.
-    """
     hospital = getattr(request.user, "hospital_profile", None)
     if not hospital:
         return Response({"verified": False, "error": "Hospital profile missing."})
@@ -402,7 +434,6 @@ def verify_fingerprint(request, client_id):
         return Response({"verified": False, "error": "No fingerprint template provided."})
 
     try:
-        # Call Flask service
         resp = requests.post("http://127.0.0.1:5000/verify", json={"template": template}, timeout=10)
         data = resp.json()
         verified = data.get("success", False)
@@ -411,9 +442,19 @@ def verify_fingerprint(request, client_id):
         return Response({"verified": False, "error": str(e)})
 
 
-
-
-# Example placeholder comparison function
+# =========================
+# Fingerprint placeholder function
+# =========================
 def compare_fingerprints(template1, template2):
-    # TODO: Replace with actual SDK comparison logic
     return template1 == template2
+
+@login_required
+@roles_required("hospital")
+def assignment_detail(request, pk):
+    hospital = getattr(request.user, "hospital_profile", None)
+    assignment = get_object_or_404(HospitalAssignment, pk=pk, hospital=hospital)
+    return render(request, "hospitals/assignment_detail.html", {
+        "assignment": assignment,
+        "dashboard_title": f"Assignment Details: {assignment.client.first_name} {assignment.client.last_name}",
+        "hospital": hospital,
+    })

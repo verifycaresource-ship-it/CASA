@@ -3,109 +3,163 @@
 {% block title %}Assign Policyholder | HealthInsure{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto mt-10 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg transition hover:shadow-xl animate-fade-in">
-  
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
-    <div>
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-        <i data-lucide="users" class="w-6 h-6 text-blue-600"></i>
-        Assign Policyholder
-      </h2>
-      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
-        Link a policyholder’s insurance plan to a hospital for claim processing.
-      </p>
-    </div>
-  </div>
+<div class="max-w-5xl mx-auto mt-12 space-y-8 animate-fade-in">
+  <div class="glass p-8 md:p-10 rounded-2xl shadow-2xl border border-white/10">
+    <h2 class="text-2xl font-bold text-cyan-400 flex items-center gap-2 tracking-tight">
+      <i data-lucide="users" class="w-6 h-6 text-cyan-300"></i>
+      Assign Policyholder
+    </h2>
+    <p class="text-gray-400 text-sm mt-1">
+      Search by Policy Number, verify, then assign to a hospital
+    </p>
 
-  <!-- ✅ Flash Messages -->
-  {% if messages %}
-    <div class="space-y-3 mb-6">
-      {% for message in messages %}
-        <div class="p-3 rounded-lg border text-sm font-medium
-          {% if message.tags == 'success' %}
-            bg-green-50 border-green-200 text-green-800
-          {% elif message.tags == 'error' %}
-            bg-red-50 border-red-200 text-red-800
-          {% elif message.tags == 'warning' %}
-            bg-yellow-50 border-yellow-200 text-yellow-800
-          {% else %}
-            bg-blue-50 border-blue-200 text-blue-800
-          {% endif %}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-
-  <!-- Form -->
-  <form method="post" class="space-y-6">
-    {% csrf_token %}
-
-    <!-- Policyholder & Policy -->
-    <div>
-      <label class="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-        Policyholder & Policy
-      </label>
-      <div class="relative">
-        <i data-lucide="file-text" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
-        <select name="policy"
-                required
-                class="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 
-                       dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-          <option value="">-- Select Policyholder --</option>
-          {% for policy in policies %}
-            <option value="{{ policy.id }}">
-              {{ policy.client.first_name }} {{ policy.client.last_name }} — 
-              {{ policy.policy_number }} | Premium: {{ policy.premium }} | 
-              {{ policy.start_date|date:"M d, Y" }} → {{ policy.expiry_date|date:"M d, Y" }}
-            </option>
-          {% endfor %}
-        </select>
+    {% if messages %}
+      <div class="space-y-3 my-4">
+        {% for message in messages %}
+          <div class="p-4 rounded-xl border text-sm font-medium
+            {% if message.tags == 'success' %}bg-green-500/10 border-green-500/30 text-green-300
+            {% elif message.tags == 'error' %}bg-red-500/10 border-red-500/30 text-red-300
+            {% elif message.tags == 'warning' %}bg-yellow-500/10 border-yellow-500/30 text-yellow-300
+            {% else %}bg-blue-500/10 border-blue-500/30 text-blue-300{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
       </div>
-    </div>
+    {% endif %}
 
-    <!-- Hospital -->
-    <div>
-      <label class="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-        Hospital
-      </label>
-      <div class="relative">
-        <i data-lucide="building-2" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
-        <select name="hospital"
-                required
-                class="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 
-                       dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+    <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {% csrf_token %}
+
+      <!-- Policy Number -->
+      <div class="md:col-span-2">
+        <label class="block mb-2 text-sm font-semibold text-gray-300">Policy Number</label>
+        <div class="flex gap-3">
+          <input type="text" id="policyNumber" placeholder="Enter Policy Number"
+                 class="flex-1 pl-4 pr-4 py-3 rounded-xl bg-gray-900/80 border border-gray-700 text-white
+                        focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all">
+          <button type="button" id="searchPolicy"
+                  class="neon-blue px-6 py-3 rounded-xl font-semibold text-white hover-scale transition-all shadow-lg">
+            🔍 Verify
+          </button>
+        </div>
+        <input type="hidden" name="policy" id="policyId">
+      </div>
+
+      <!-- Policy Preview -->
+      <div id="policyPreview" class="md:col-span-2 bg-gray-900/70 border border-gray-700 rounded-xl p-5 mt-2 hidden">
+        <h4 class="text-cyan-300 font-semibold mb-3 flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Policy Verified
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-300">
+          <p><span class="text-gray-400">Client:</span> <span id="pvClient"></span></p>
+          <p><span class="text-gray-400">Policy #:</span> <span id="pvNumber"></span></p>
+          <p><span class="text-gray-400">Policy Type:</span> <span id="pvType"></span></p>
+          <p><span class="text-gray-400">Coverage:</span> <span id="pvCoverage"></span></p>
+          <p><span class="text-gray-400">NRIC / Passport:</span> <span id="pvId"></span></p>
+          <p><span class="text-gray-400">Premium:</span> <span id="pvPremium"></span></p>
+          <p><span class="text-gray-400">Payment Mode:</span> <span id="pvPayment"></span></p>
+          <p><span class="text-gray-400">Valid:</span> <span id="pvDates"></span></p>
+          <p><span class="text-gray-400">Status:</span> <span id="pvStatus"></span></p>
+          <p><span class="text-gray-400">Days Left:</span> <span id="pvDays"></span></p>
+        </div>
+        <a id="viewClientBtn" href="#" target="_blank"
+           class="mt-4 inline-block px-4 py-2 bg-cyan-500 text-white rounded-xl font-semibold hover:bg-cyan-600 hidden">
+          View Client
+        </a>
+      </div>
+
+      <!-- Hospital Selection -->
+      <div class="md:col-span-2 mt-4">
+        <label class="block mb-2 text-sm font-semibold text-gray-300">Hospital</label>
+        <select name="hospital" required
+                class="w-full pl-4 pr-4 py-3 rounded-xl bg-gray-900/80 border border-gray-700 text-white
+                       focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all">
           <option value="">-- Select Hospital --</option>
           {% for hospital in hospitals %}
             <option value="{{ hospital.id }}">{{ hospital.name }}</option>
           {% endfor %}
         </select>
       </div>
-    </div>
 
-    <!-- Submit Button -->
-    <div class="pt-2">
-      <button type="submit"
-              class="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md
-                     hover:bg-blue-700 hover:shadow-lg active:scale-[0.98] transition-all">
-        <i data-lucide="check-circle" class="inline w-4 h-4 mr-2"></i>
-        Assign Policyholder
-      </button>
-    </div>
-  </form>
+      <!-- Submit -->
+      <div class="md:col-span-2 pt-4">
+        <button type="submit"
+                class="neon-green px-8 py-3 rounded-xl font-semibold text-white hover:brightness-110 hover-scale transition-all shadow-lg w-full sm:w-auto">
+          <i data-lucide="check-circle" class="inline w-4 h-4 mr-2"></i> Assign Policyholder
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<!-- Lucide Icons -->
-<script> lucide.createIcons(); </script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.259.0/dist/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+</script>
+
+<script>
+document.getElementById("searchPolicy").addEventListener("click", async () => {
+  const number = document.getElementById("policyNumber").value.trim();
+  if (!number) {
+    alert("Please enter a policy number");
+    return;
+  }
+
+  try {
+    const url = "{% url 'hospitals:verify_policy' %}?number=" + encodeURIComponent(number);
+
+    const res = await fetch(url, {
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Server response:", text);
+      alert("Server error: " + res.status);
+      return;
+    }
+
+    const data = await res.json();
+
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+
+    document.getElementById("policyId").value = data.id;
+    document.getElementById("pvClient").textContent = data.client_name;
+    document.getElementById("pvNumber").textContent = data.policy_number;
+    document.getElementById("pvType").textContent = data.policy_type;
+    document.getElementById("pvCoverage").textContent =
+      data.coverage_level + ", " + data.coverage;
+      document.getElementById("pvId").textContent = data.nric_passport || "Not provided";
+    document.getElementById("pvPremium").textContent = data.premium;
+    document.getElementById("pvPayment").textContent = data.payment_mode;
+    document.getElementById("pvDates").textContent =
+      data.start_date + " → " + data.expiry_date;
+    document.getElementById("pvStatus").textContent = data.status;
+    document.getElementById("pvDays").textContent = data.days_left;
+
+    const viewBtn = document.getElementById("viewClientBtn");
+    viewBtn.href = data.client_url;
+    viewBtn.classList.remove("hidden");
+
+    document.getElementById("policyPreview").classList.remove("hidden");
+
+  } catch (err) {
+    console.error("Fetch failed:", err);
+    alert("Network error. Check console.");
+  }
+});
+</script>
 
 <style>
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fade-in {
-    animation: fade-in 0.5s ease-out;
-  }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.5s ease-out; }
 </style>
 {% endblock %}

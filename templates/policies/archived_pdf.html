@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Archived Policies PDF</title>
+<style>
+    body { font-family: sans-serif; margin: 20px; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #333; padding: 8px; font-size: 12px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    .small { font-size: 10px; color: #555; }
+</style>
+</head>
+<body>
+
+<h1>Archived Policies</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Policy Number</th>
+            <th>Client Name</th>
+            <th>Policy Type</th>
+            <th>Coverage Level</th>
+            <th>Premium</th>
+            <th>Start Date</th>
+            <th>Expiry Date</th>
+            <th>Archived At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for policy in policies %}
+        <tr>
+            <td>{{ policy.policy_number }}</td>
+            <td>{{ policy.client.first_name }} {{ policy.client.last_name }}</td>
+            <td>{{ policy.policy_type }}</td>
+            <td>{{ policy.coverage_level }}</td>
+            <td>{{ policy.premium }}</td>
+            <td>{{ policy.start_date|date:"Y-m-d" }}</td>
+            <td>{{ policy.expiry_date|date:"Y-m-d" }}</td>
+            <td class="small">{{ policy.updated_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8" style="text-align:center;">No archived policies found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

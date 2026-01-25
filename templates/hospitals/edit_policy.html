@@ -1,0 +1,47 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Edit Policy | HealthInsure{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto mt-10 p-6 bg-gray-100 dark:bg-zinc-900 rounded-2xl shadow-lg space-y-6">
+  <h2 class="text-2xl font-bold text-cyan-500">Edit Policy: {{ policy.policy_number }}</h2>
+  <p class="text-gray-400 text-sm">Update policy details below. Original data is preserved automatically.</p>
+
+  {% if messages %}
+    <div class="space-y-2">
+      {% for message in messages %}
+        <div class="p-3 rounded-lg border text-sm font-medium
+          {% if message.tags == 'success' %}bg-green-500/10 border-green-500/30 text-green-300
+          {% elif message.tags == 'error' %}bg-red-500/10 border-red-500/30 text-red-300
+          {% else %}bg-blue-500/10 border-blue-500/30 text-blue-300{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="flex flex-col">
+        {{ field.label_tag(attrs={'class':'text-gray-300 font-semibold mb-1'}) }}
+        {{ field }}
+        {% if field.help_text %}
+          <span class="text-gray-400 text-xs mt-1">{{ field.help_text }}</span>
+        {% endif %}
+        {% if field.errors %}
+          <span class="text-red-500 text-sm mt-1">{{ field.errors|striptags }}</span>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div class="md:col-span-2 pt-4">
+      <button type="submit"
+        class="w-full sm:w-auto neon-green px-6 py-3 rounded-xl font-semibold text-white hover:brightness-110 hover-scale transition shadow-lg">
+        💾 Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

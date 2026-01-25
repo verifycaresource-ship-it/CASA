@@ -1,54 +1,169 @@
 {% extends "base.html" %}
+
+{% block title %}Assign Hospital | HealthInsure{% endblock %}
+{% block header_title %}Assign Hospital{% endblock %}
+
 {% block content %}
-<div class="card shadow p-4">
-  <h2 class="mb-4">{{ dashboard_title }}</h2>
 
-  <form method="POST">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label for="hospital" class="form-label">Select Hospital</label>
-      <select name="hospital" id="hospital" class="form-select" required>
-        <option value="">-- Select Hospital --</option>
-        {% for hospital in hospitals %}
-          <option value="{{ hospital.id }}">{{ hospital.name }} ({{ hospital.city }}, {{ hospital.country }})</option>
-        {% endfor %}
-      </select>
+<div class="max-w-6xl mx-auto space-y-10">
+
+  <!-- ASSIGNMENT FORM CARD -->
+  <div class="glass p-8 md:p-10 shadow-xl rounded-2xl animate-fade-in">
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+      <div>
+        <h2 class="text-2xl font-bold text-cyan-400">
+          🏥 Assign Hospital to Policy
+        </h2>
+        <p class="text-gray-400 text-sm mt-1">
+          Select a hospital and optionally leave special instructions
+        </p>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label for="notes" class="form-label">Notes (optional)</label>
-      <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
-    </div>
+    <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {% csrf_token %}
 
-    <button type="submit" class="btn btn-primary">Assign Hospital</button>
-    <a href="{% url 'policies:policy_detail' policy.id %}" class="btn btn-secondary">Back</a>
-  </form>
+      <!-- Hospital Select -->
+      <div class="md:col-span-1">
+        <label class="block text-sm font-semibold mb-2 text-gray-200">
+          Hospital
+        </label>
+        <select
+          name="hospital"
+          required
+          class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+        >
+          <option value="">-- Select Hospital --</option>
+          {% for hospital in hospitals %}
+            <option value="{{ hospital.id }}">
+              {{ hospital.name }} — {{ hospital.city }}, {{ hospital.country }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
 
+      <!-- Notes -->
+      <div class="md:col-span-1">
+        <label class="block text-sm font-semibold mb-2 text-gray-200">
+          Notes (Optional)
+        </label>
+        <textarea
+          name="notes"
+          rows="3"
+          placeholder="Special treatment instructions, contacts, or restrictions..."
+          class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all resize-none"
+        ></textarea>
+      </div>
+
+      <!-- Buttons -->
+      <div class="md:col-span-2 flex flex-col sm:flex-row gap-4 pt-4">
+        <button
+          type="submit"
+          class="neon-green px-8 py-3 rounded-xl font-semibold text-white hover-scale transition-all w-full sm:w-auto"
+        >
+          ✅ Assign Hospital
+        </button>
+
+        <a
+          href="{% url 'policies:policy_detail' policy.id %}"
+          class="bg-gray-700 px-8 py-3 rounded-xl font-semibold text-white hover:bg-gray-600 hover-scale transition-all text-center w-full sm:w-auto"
+        >
+          ⬅ Back to Policy
+        </a>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- ASSIGNMENTS SECTION -->
   {% if assignments %}
-    <hr class="my-4">
-    <h4>Existing Assignments</h4>
-    <table class="table table-bordered mt-2">
-      <thead>
-        <tr>
-          <th>Hospital</th>
-          <th>Status</th>
-          <th>Assigned By</th>
-          <th>Assigned At</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for a in assignments %}
-        <tr>
-          <td>{{ a.hospital.name }}</td>
-          <td>{{ a.get_status_display }}</td>
-          <td>{{ a.assigned_by }}</td>
-          <td>{{ a.assigned_at|date:"Y-m-d H:i" }}</td>
-          <td>{{ a.notes|default:"-" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="glass p-8 md:p-10 shadow-xl rounded-2xl animate-fade-in">
+
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-xl font-bold text-purple-400">
+        📋 Assigned Hospitals
+      </h3>
+      <span class="text-sm text-gray-400">
+        Total: {{ assignments|length }}
+      </span>
+    </div>
+
+    <!-- DESKTOP TABLE -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="text-left text-gray-200 border-b border-gray-700">
+            <th class="py-3 px-3">Hospital</th>
+            <th class="py-3 px-3">Status</th>
+            <th class="py-3 px-3">Assigned By</th>
+            <th class="py-3 px-3">Assigned At</th>
+            <th class="py-3 px-3">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in assignments %}
+          <tr class="border-b border-gray-800 hover:bg-white/10 transition">
+
+            <td class="py-4 px-3 font-semibold text-cyan-300">
+              {{ a.hospital.name }}
+            </td>
+
+            <td class="py-4 px-3">
+              <span class="px-3 py-1 rounded-full text-xs font-semibold neon-blue text-white">
+                {{ a.get_status_display }}
+              </span>
+            </td>
+
+            <td class="py-4 px-3 text-gray-100">
+              {{ a.assigned_by }}
+            </td>
+
+            <td class="py-4 px-3 text-gray-300">
+              {{ a.assigned_at|date:"Y-m-d H:i" }}
+            </td>
+
+            <td class="py-4 px-3 text-gray-200 max-w-xs truncate">
+              {{ a.notes|default:"—" }}
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MOBILE CARDS -->
+    <div class="md:hidden space-y-4">
+      {% for a in assignments %}
+      <div class="bg-gray-800/70 border border-gray-700 rounded-xl p-5 space-y-2">
+
+        <div class="flex justify-between items-center">
+          <h4 class="font-bold text-cyan-300">
+            {{ a.hospital.name }}
+          </h4>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold neon-blue text-white">
+            {{ a.get_status_display }}
+          </span>
+        </div>
+
+        <div class="text-sm text-gray-300">
+          <p><span class="text-gray-400">Assigned By:</span> {{ a.assigned_by }}</p>
+          <p><span class="text-gray-400">Date:</span> {{ a.assigned_at|date:"Y-m-d H:i" }}</p>
+        </div>
+
+        <div class="text-sm text-gray-200">
+          <span class="text-gray-400">Notes:</span>
+          {{ a.notes|default:"—" }}
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
   {% endif %}
+
 </div>
+
 {% endblock %}

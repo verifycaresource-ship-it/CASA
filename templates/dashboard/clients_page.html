@@ -4,20 +4,22 @@
 {% block title %}{{ dashboard_title }} | Health Insurance{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6 relative z-10">
 
   <!-- PAGE HEADER -->
-  <div class="flex justify-between items-center">
-    <h1 class="text-2xl md:text-3xl font-bold">{{ dashboard_title }}</h1>
-    <a href="{% url 'add_client' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
+  <div class="flex justify-between items-center glass p-4 rounded-2xl shadow-xl">
+    <h1 class="text-2xl md:text-3xl font-bold text-white">{{ dashboard_title }}</h1>
+    <a href="{% url 'add_client' %}" class="bg-cyan-400 hover:bg-cyan-500 text-white px-4 py-2 rounded-full shadow hover-scale transition-all">
       + Add Client
     </a>
+    <!-- Neon blob behind header -->
+    <div class="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-tr from-purple-500 to-pink-500 opacity-30 rounded-full blur-3xl animate-blob"></div>
   </div>
 
   <!-- SEARCH & FILTER -->
   <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-    <input type="text" id="searchClient" placeholder="Search clients..." class="px-4 py-2 border rounded w-full sm:w-1/3">
-    <select id="filterClient" class="px-4 py-2 border rounded w-full sm:w-1/6">
+    <input type="text" id="searchClient" placeholder="Search clients..." class="px-4 py-2 rounded-full glass text-white placeholder-white w-full sm:w-1/3 focus:ring-2 focus:ring-cyan-400 transition">
+    <select id="filterClient" class="px-4 py-2 rounded-full glass text-white w-full sm:w-1/6 focus:ring-2 focus:ring-cyan-400 transition">
       <option value="">All Status</option>
       <option value="verified">Verified</option>
       <option value="unverified">Unverified</option>
@@ -25,9 +27,9 @@
   </div>
 
   <!-- CLIENTS TABLE -->
-  <div class="overflow-x-auto bg-white dark:bg-gray-800 shadow rounded-2xl mt-4">
-    <table class="min-w-full text-left text-sm">
-      <thead class="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+  <div class="overflow-x-auto glass rounded-2xl shadow-xl relative mt-4 p-4">
+    <table class="min-w-full text-left text-white">
+      <thead class="backdrop-blur-md bg-cyan-500/30 rounded-t-lg">
         <tr>
           <th class="px-6 py-3 font-semibold">Name</th>
           <th class="px-6 py-3 font-semibold">Email</th>
@@ -36,36 +38,39 @@
           <th class="px-6 py-3 font-semibold">Actions</th>
         </tr>
       </thead>
-      <tbody id="clientsTable">
+      <tbody id="clientsTable" class="divide-y divide-white/10">
         {% for client in clients %}
-        <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+        <tr class="hover:bg-cyan-500/20 transition-colors">
           <td class="px-6 py-3">{{ client.first_name }} {{ client.last_name }}</td>
           <td class="px-6 py-3">{{ client.email }}</td>
           <td class="px-6 py-3">{{ client.phone }}</td>
           <td class="px-6 py-3">
             {% if client.verified %}
-            <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Verified</span>
+            <span class="bg-green-400/30 text-green-200 px-2 py-1 rounded-full text-xs">Verified</span>
             {% else %}
-            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">Unverified</span>
+            <span class="bg-yellow-400/30 text-yellow-200 px-2 py-1 rounded-full text-xs">Unverified</span>
             {% endif %}
           </td>
           <td class="px-6 py-3 flex gap-2">
-            <a href="#" class="text-blue-600 hover:underline">Edit</a>
-            <a href="#" class="text-red-600 hover:underline">Delete</a>
+            <a href="#" class="text-cyan-400 hover:underline">Edit</a>
+            <a href="#" class="text-pink-400 hover:underline">Delete</a>
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="px-6 py-3 text-center text-gray-500">No clients found.</td>
+          <td colspan="5" class="px-6 py-3 text-center text-gray-400">No clients found.</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+
+    <!-- Neon blob background for table -->
+    <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-purple-500 to-pink-500 opacity-20 rounded-full blur-3xl animate-blob"></div>
   </div>
 
 </div>
 
-<!-- OPTIONAL: JS for search/filter -->
+<!-- SEARCH & FILTER FUNCTIONALITY -->
 <script>
   const searchInput = document.getElementById('searchClient');
   const tableRows = document.querySelectorAll('#clientsTable tr');
@@ -75,6 +80,19 @@
     tableRows.forEach(row => {
       const text = row.innerText.toLowerCase();
       row.style.display = text.includes(value) ? '' : 'none';
+    });
+  });
+
+  const filterSelect = document.getElementById('filterClient');
+  filterSelect.addEventListener('change', (e) => {
+    const status = e.target.value;
+    tableRows.forEach(row => {
+      if(!status) {
+        row.style.display = '';
+      } else {
+        const verifiedText = row.querySelector('td:nth-child(4)').innerText.toLowerCase();
+        row.style.display = verifiedText.includes(status) ? '' : 'none';
+      }
     });
   });
 </script>

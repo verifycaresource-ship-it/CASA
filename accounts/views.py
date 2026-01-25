@@ -32,6 +32,8 @@ from hospitals.models import Hospital
 from tasks.models import Task
 
 
+
+
 # -------------------------
 # OTP Helper Functions
 # -------------------------
@@ -131,7 +133,7 @@ def dashboard(request):
         {"label": "Active Policies", "value": active_policies, "color": "green"},
         {"label": "Claims", "value": total_claims, "color": "yellow"},
         {"label": "Hospitals", "value": total_hospitals, "color": "red"},
-        {"label": "Revenue Collected", "value": f"${total_revenue:,.2f}", "color": "teal"},
+        {"label": "paid claims", "value": f"${total_revenue:,.2f}", "color": "teal"},
         {"label": "Tasks", "value": total_tasks, "color": "purple"},
     ]
 

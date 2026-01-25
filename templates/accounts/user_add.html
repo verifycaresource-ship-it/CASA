@@ -1,61 +1,245 @@
-{% extends 'dashboard/base.html' %}
+{% extends "dashboard/base.html" %}
 {% block title %}Add User{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-  <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Create New User</h2>
-  <form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="max-w-4xl mx-auto px-4 py-6">
 
-      <div>
-        <label class="block text-gray-600 dark:text-gray-300">Username</label>
-        <input type="text" name="username" class="w-full mt-1 p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg
+              border border-gray-200 dark:border-gray-800 p-8">
+
+    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-8">
+      Create New User
+    </h1>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Username -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Username
+          </label>
+          <input type="text" name="username" placeholder="john_doe"
+            class="form-input">
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Email
+          </label>
+          <input type="email" name="email" placeholder="user@example.com"
+            class="form-input">
+        </div>
+
+        <!-- Role -->
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            User Role
+          </label>
+
+          <select id="roleSelect" name="role" class="form-select">
+            <option value="" class="text-gray-400">Select role</option>
+            <option value="admin">Admin</option>
+            <option value="agent">Agent</option>
+            <option value="claim_officer">Claim Officer</option>
+            <option value="finance_officer">Finance Officer</option>
+            <option value="report_officer">Report Officer</option>
+            <option value="hospital">Hospital</option>
+            <option value="policyholder">Policyholder</option>
+          </select>
+
+          <p id="roleHint" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></p>
+        </div>
+
+        <!-- Password with Eye -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Password
+          </label>
+
+          <div class="relative">
+            <input id="passwordInput" type="password" name="password"
+              placeholder="••••••••"
+              class="form-input pr-12">
+
+            <button type="button" id="togglePassword"
+              class="absolute inset-y-0 right-3 flex items-center
+                     text-gray-500 hover:text-blue-600 transition">
+              👁
+            </button>
+          </div>
+        </div>
+
+        <!-- Phone -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Phone
+          </label>
+          <input type="text" name="phone" placeholder="+254 7xx xxx xxx"
+            class="form-input">
+        </div>
+
+        <!-- Address -->
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Address
+          </label>
+          <textarea name="address" rows="3" placeholder="Street, City, Country"
+            class="form-textarea"></textarea>
+        </div>
+
+        <!-- Agent -->
+        <div id="agentFields" class="hidden md:col-span-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Agent Code
+          </label>
+          <input type="text" name="agent_code" placeholder="AGT-001"
+            class="form-input">
+        </div>
+
+        <!-- Hospital -->
+        <div id="hospitalFields" class="hidden md:col-span-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Hospital Name
+          </label>
+          <input type="text" name="hospital_name" placeholder="Nairobi Hospital"
+            class="form-input">
+        </div>
+
+        <!-- Profile Picture -->
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            Profile Picture
+          </label>
+          <input type="file" name="profile_picture"
+            class="block w-full text-sm text-gray-700 dark:text-gray-300
+                   file:mr-4 file:py-2 file:px-4
+                   file:rounded-lg file:border-0
+                   file:bg-blue-600 file:text-white
+                   hover:file:bg-blue-700 transition">
+        </div>
+
       </div>
 
-      <div>
-        <label class="block text-gray-600 dark:text-gray-300">Email</label>
-        <input type="email" name="email" class="w-full mt-1 p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+      <div class="flex justify-end pt-6">
+        <button type="submit"
+          class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700
+                 text-white font-semibold shadow-md hover:shadow-lg transition">
+          Create User
+        </button>
       </div>
 
-      <div>
-        <label class="block text-gray-600 dark:text-gray-300">Role</label>
-        <select name="role" class="w-full mt-1 p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-          <option value="admin">Admin</option>
-          <option value="agent">Agent</option>
-          <option value="claim_officer">Claim Officer</option>
-          <option value="finance_officer">Finance Officer</option>
-          <option value="report_officer">Report Officer</option>
-          <option value="hospital">Hospital</option>
-          <option value="policyholder">Policyholder</option>
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-gray-600 dark:text-gray-300">Password</label>
-        <input type="password" name="password" class="w-full mt-1 p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-      </div>
-
-      <div>
-        <label class="block text-gray-600 dark:text-gray-300">Phone</label>
-        <input type="text" name="phone" class="w-full mt-1 p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-      </div>
-
-      <div class="md:col-span-2">
-        <label class="block text-gray-600 dark:text-gray-300">Address</label>
-        <textarea name="address" class="w-full mt-1 p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
-      </div>
-
-      <div class="md:col-span-2">
-        <label class="block text-gray-600 dark:text-gray-300">Profile Picture</label>
-        <input type="file" name="profile_picture" class="mt-1">
-      </div>
-
-    </div>
-
-    <div class="mt-6 flex justify-end">
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow">Create User</button>
-    </div>
-  </form>
+    </form>
+  </div>
 </div>
+
+<!-- GLOBAL INPUT STYLES -->
+<style>
+  .form-input {
+    width: 100%;
+    height: 2.75rem;
+    padding: 0 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #111827;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .dark .form-input {
+    background: #111827;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+  }
+
+  .form-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #111827;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .dark .form-textarea {
+    background: #111827;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .form-select {
+    width: 100%;
+    height: 2.75rem;
+    padding: 0 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #111827;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .dark .form-select {
+    background: #111827;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  select option {
+    font-weight: 600;
+  }
+</style>
+
+<!-- ROLE + PASSWORD LOGIC -->
+<script>
+  // Role logic
+  const roleSelect = document.getElementById("roleSelect");
+  const roleHint = document.getElementById("roleHint");
+  const agentFields = document.getElementById("agentFields");
+  const hospitalFields = document.getElementById("hospitalFields");
+
+  const roleDescriptions = {
+    admin: "Full system access including users, policies, claims, and reports.",
+    agent: "Registers clients and manages policies.",
+    claim_officer: "Processes and verifies claims.",
+    finance_officer: "Manages payments and revenue.",
+    report_officer: "Access to reports and analytics.",
+    hospital: "Medical provider submitting claims.",
+    policyholder: "Client with policy access."
+  };
+
+  roleSelect.addEventListener("change", () => {
+    agentFields.classList.add("hidden");
+    hospitalFields.classList.add("hidden");
+    roleHint.textContent = roleDescriptions[roleSelect.value] || "";
+
+    if (roleSelect.value === "agent") agentFields.classList.remove("hidden");
+    if (roleSelect.value === "hospital") hospitalFields.classList.remove("hidden");
+  });
+
+  // Password toggle
+  const passwordInput = document.getElementById("passwordInput");
+  const togglePassword = document.getElementById("togglePassword");
+
+  togglePassword.addEventListener("click", () => {
+    const isPassword = passwordInput.type === "password";
+    passwordInput.type = isPassword ? "text" : "password";
+    togglePassword.textContent = isPassword ? "🙈" : "👁";
+  });
+</script>
 {% endblock %}

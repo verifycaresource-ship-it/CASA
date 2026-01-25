@@ -1,130 +1,128 @@
 {% extends 'dashboard/base.html' %}
 {% load static %}
+{% load qr_code %}
 
 {% block title %}Health ID Card | CareSource Africa{% endblock %}
 
 {% block content %}
-<div class="flex flex-col justify-center items-center min-h-screen bg-gray-100 py-10 px-4 space-y-10">
+<div class="flex flex-col items-center min-h-screen py-12 bg-slate-100 space-y-14">
 
-  <!-- ================= Front of Card ================= -->
-  <div class="print-card relative w-[600px] h-[380px] rounded-3xl shadow-2xl overflow-hidden border border-blue-300 
-              bg-gradient-to-b from-blue-100 via-blue-50 to-white">
+<!-- FRONT CARD -->
+<div class="print-card w-[620px] h-[390px] rounded-3xl bg-white shadow-2xl border border-blue-200 overflow-hidden">
 
-    <!-- Header -->
-    <div class="relative flex justify-between items-center px-6 pt-5 pb-3 
-                bg-gradient-to-r from-blue-900 via-blue-700 to-blue-500 border-b border-blue-300">
-      <div class="flex items-center gap-3">
-        <img src="https://caresourceafrica.com/images/logo.jpeg" 
-             alt="CareSource Africa Logo" 
-             class="h-12 w-12 rounded-full border border-blue-200 shadow-md">
-        <div>
-          <h1 class="text-white text-2xl font-bold tracking-wide drop-shadow-sm">CareSource Africa</h1>
-          <p class="text-blue-200 text-xs uppercase tracking-widest">Health Insurance Card</p>
-        </div>
-      </div>
-      <div class="text-right text-sm text-blue-100">
-        <p>ID: <span class="text-yellow-300 font-semibold">#{{ client.id }}</span></p>
-        <p>Issued: {{ client.created_at|date:"M d, Y" }}</p>
+  <!-- Header -->
+  <div class="flex justify-between items-center px-6 py-4 bg-gradient-to-r from-blue-900 via-blue-700 to-blue-600 text-white">
+    <div class="flex items-center gap-3">
+      <img src="https://caresourceafrica.com/images/logo.jpeg"
+           class="h-12 w-12 rounded-full border border-white shadow">
+      <div>
+        <h1 class="text-xl font-bold">CareSource Africa</h1>
+        <p class="text-xs tracking-widest text-blue-200 uppercase">Health Insurance Card</p>
       </div>
     </div>
+    <div class="text-xs text-right">
+      <p>ID: <span class="text-yellow-300 font-semibold">#{{ client.id }}</span></p>
+      <p>Issued: {{ client.created_at|date:"M d, Y" }}</p>
+    </div>
+  </div>
 
-    <!-- Card Body -->
-    <div class="relative flex justify-between items-center h-[250px] px-8 py-6 bg-gradient-to-b from-white via-blue-50 to-blue-100">
-      <!-- Photo -->
-      <div class="flex flex-col items-center w-[45%]">
-        {% if client.photo %}
-          <img src="{{ client.photo.url }}" 
-               alt="{{ client.first_name }}" 
-               class="w-40 h-40 object-cover rounded-2xl border-4 border-yellow-400 shadow-lg">
+  <!-- Body -->
+  <div class="flex px-8 py-6 h-[255px]">
+
+    <!-- Photo -->
+    <div class="w-2/5 flex flex-col items-center justify-center">
+      {% if client.photo %}
+        <img src="{{ client.photo.url }}" class="w-36 h-36 rounded-2xl object-cover border-4 border-yellow-400 shadow-lg">
+      {% else %}
+        <img src="{% static 'images/default-user.png' %}" class="w-36 h-36 rounded-2xl object-cover border-4 border-yellow-400 shadow-lg">
+      {% endif %}
+      <h2 class="mt-3 text-lg font-semibold text-blue-900">{{ client.full_name }}</h2>
+      <p class="text-xs text-gray-500">Member since {{ client.created_at|date:"Y" }}</p>
+      {% if active_policy %}
+      <p class="mt-1 text-sm font-semibold text-blue-700">Policy No: {{ active_policy.policy_number }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Details -->
+    <div class="w-3/5 pl-6 text-sm space-y-2 text-gray-800">
+      <p><strong class="text-blue-900">Gender:</strong> {{ client.gender|title }}</p>
+      <p><strong class="text-blue-900">DOB:</strong> {{ client.dob|date:"M d, Y" }}</p>
+      <p><strong class="text-blue-900">Phone:</strong> {{ client.phone|default:"—" }}</p>
+      <p><strong class="text-blue-900">Registered By:</strong> {{ client.registered_by }}</p>
+      <p><strong class="text-blue-900">Fingerprint:</strong>
+        {% if client.fingerprint_verified %}
+          <span class="text-green-600 font-semibold">Verified</span>
         {% else %}
-          <img src="https://cdn.pixabay.com/photo/2020/02/18/10/07/african-man-4857311_1280.jpg"
-               alt="Default Photo"
-               class="w-40 h-40 object-cover rounded-2xl border-4 border-yellow-400 shadow-lg">
+          <span class="text-red-600 font-semibold">Not Verified</span>
         {% endif %}
-        <div class="text-center mt-3">
-          <h2 class="text-lg font-semibold text-blue-900 drop-shadow-sm">
-            {{ client.first_name }} {{ client.last_name }}
-          </h2>
-          <p class="text-gray-600 text-xs tracking-wider">Member Since {{ client.created_at|date:"Y" }}</p>
-        </div>
+      </p>
+
+      {% if active_policy %}
+      <div class="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+        <p class="text-xs uppercase font-semibold text-blue-900">Active Coverage</p>
+        <p class="text-sm">{{ active_policy.get_policy_type_display }}</p>
+        <p class="text-xs text-gray-600">Expires {{ active_policy.expiry_date|date:"M d, Y" }}</p>
       </div>
-   <!-- 🌟 Embedded Gold Chip -->
-<div class="absolute right-10 bottom-[48%] w-20 h-14 rounded-md overflow-hidden z-50
-            border border-yellow-400 bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600
-            shadow-[inset_0_2px_4px_rgba(0,0,0,0.3),0_0_18px_rgba(255,215,0,0.7),0_0_35px_rgba(255,215,0,0.4)]
-            transition-transform duration-300 hover:scale-105">
-  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVv8MGSqD-2aNCeI1qZ4wRQySYByDUcnOpqg&s"
-       alt="Gold Chip"
-       class="w-full h-full object-cover rounded-md brightness-110 contrast-125 opacity-95 mix-blend-multiply">
+      {% else %}
+      <div class="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700">No active policy</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="flex justify-between items-center px-6 py-3 bg-blue-900 text-xs text-white">
+    <p>© {{ now|date:"Y" }} CareSource Africa</p>
+    <div class="flex gap-2 print:hidden">
+      <a href="{% url 'clients:client_list' %}" class="px-3 py-1 bg-gray-700 rounded">Back</a>
+      <button onclick="window.print()" class="px-3 py-1 bg-yellow-500 rounded">Print</button>
+    </div>
+  </div>
 </div>
 
-      <!-- Info -->
-      <div class="w-[55%] text-gray-800 space-y-1.5">
-        <p><span class="font-semibold text-blue-900">Gender:</span> {{ client.gender|title|default:"Not specified" }}</p>
-        <p><span class="font-semibold text-blue-900">DOB:</span> {{ client.dob|date:"M d, Y" }}</p>
-        <p><span class="font-semibold text-blue-900">Address:</span> {{ client.address|default:"Not provided" }}</p>
-        <p><span class="font-semibold text-blue-900">Phone:</span> {{ client.phone|default:"Not provided" }}</p>
-        <p><span class="font-semibold text-blue-900">Agent:</span> {{ client.agent|default:"Unassigned" }}</p>
-        <p><span class="font-semibold text-blue-900">Registered By:</span> {{ client.registered_by|default:"System" }}</p>
-        <p>
-          <span class="font-semibold text-blue-900">Fingerprint Verified:</span>
-          {% if client.fingerprint_verified %}
-            <span class="text-green-700 font-semibold">✅ Yes</span>
-          {% else %}
-            <span class="text-red-700 font-semibold">❌ No</span>
-          {% endif %}
-        </p>
-        <p>
-          <span class="font-semibold text-blue-900">Status:</span>
-          {% if client.status == 'verified' %}
-            <span class="text-green-700 font-semibold">Verified</span>
-          {% elif client.status == 'pending' %}
-            <span class="text-yellow-600 font-semibold">Pending</span>
-          {% else %}
-            <span class="text-red-700 font-semibold">Failed</span>
-          {% endif %}
-        </p>
-      </div>
-    </div>
+<!-- BACK CARD -->
+<div class="print-card w-[620px] h-[390px] rounded-3xl bg-white shadow-2xl border border-blue-200 overflow-hidden">
 
-    <!-- Footer -->
-    <div class="absolute bottom-0 w-full flex justify-between items-center px-6 py-3 
-                bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 border-t border-blue-300">
-      <p class="text-xs text-blue-100">© {{ now|date:"Y" }} CareSource Africa • All rights reserved</p>
-      <div class="flex space-x-2 print:hidden">
-        <a href="{% url 'clients:client_list' %}" 
-           class="px-3 py-1 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition">⬅ Back</a>
-        <a href="{% url 'clients:edit_client' client.id %}" 
-           class="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition">✏ Edit</a>
-        <button onclick="window.print()" 
-                class="px-3 py-1 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition">🖨 Print</button>
-      </div>
-    </div>
+  <div class="px-6 py-4 bg-blue-900 text-white">
+    <h2 class="text-lg font-bold">Member Verification</h2>
+    <p class="text-xs text-blue-200 uppercase tracking-widest">Scan to verify eligibility</p>
   </div>
 
-  <!-- ================= Back of Card ================= -->
-  <div class="print-card relative w-[600px] h-[380px] rounded-3xl shadow-2xl overflow-hidden border border-blue-300 
-              bg-gradient-to-b from-blue-50 via-white to-blue-100">
+  <div class="flex h-[260px] px-8 py-6">
 
-    <div class="flex flex-col justify-center items-center h-full p-6 text-center">
-      <h2 class="text-xl font-bold text-blue-900 mb-4">Lost or Found Card?</h2>
-      <p class="text-gray-800 text-sm mb-2">If this card is lost or found, please contact:</p>
-      <p class="text-gray-800 text-sm font-semibold">CareSource Africa Support</p>
-      <p class="text-gray-800 text-sm">Phone: +123-456-7890</p>
-      <p class="text-gray-800 text-sm">Email: support@caresourceafrica.com</p>
-      <p class="text-gray-800 text-sm mt-4">Please report lost cards immediately to protect your account.</p>
+    <!-- Instructions -->
+    <div class="w-1/2 text-sm text-gray-700">
+      <p class="font-semibold text-blue-900 mb-2">Hospital Use</p>
+      <ul class="list-disc list-inside space-y-1">
+        <li>Verify client identity</li>
+        <li>Confirm active policy</li>
+        <li>Prevent insurance fraud</li>
+      </ul>
     </div>
+
+    <!-- QR CODE -->
+    <div class="w-1/3 flex flex-col items-center justify-center">
+      <div class="bg-white p-4 rounded-xl border border-gray-300 shadow-md">
+        {% qr_from_text client.get_secure_url size="160" image_format="png" error_correction="L" %}
+      </div>
+      <p class="mt-3 text-xs font-bold tracking-widest text-blue-900">SCAN TO VERIFY</p>
+    </div>
+
   </div>
+
+  <div class="px-6 py-3 bg-blue-900 text-xs text-blue-100 flex justify-between">
+    <p>Support: +123-456-7890</p>
+    <p>support@caresourceafrica.com</p>
+  </div>
+</div>
 
 </div>
 
-<!-- ================= Print Styles ================= -->
 <style>
-  @media print {
-    body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    .print-card { page-break-after: always; }
-    button, a { display: none !important; }
-  }
+@media print {
+  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-card { page-break-after: always; }
+  a, button { display: none !important; }
+}
 </style>
-
 {% endblock %}

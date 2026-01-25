@@ -1,27 +1,132 @@
 {% extends 'dashboard/base.html' %}
-{% block content %}
-<div class="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-8 space-y-6">
-  <h1 class="text-2xl font-bold text-gray-800 mb-6">{{ dashboard_title }}</h1>
+{% load static %}
+{% load widget_tweaks %}
 
+{% block title %}
+{{ hospital.name|default:"Add Hospital" }} | CareSource Africa
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white dark:bg-gray-900 shadow-lg rounded-2xl p-8 space-y-6">
+
+  <!-- Header -->
+  <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+    {{ dashboard_title }}
+  </h1>
+
+  <!-- Hospital Form -->
   <form method="POST" enctype="multipart/form-data" class="space-y-5">
     {% csrf_token %}
-    {{ form.as_p }}
 
-    {% if not hospital %}
-    <div>
-      <label>Username *</label>
-      <input type="text" name="username" required class="w-full border px-3 py-2 rounded">
-    </div>
-    <div>
-      <label>Password *</label>
-      <input type="password" name="password" required class="w-full border px-3 py-2 rounded">
-    </div>
-    {% endif %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-    <div class="flex justify-end space-x-3">
-      <a href="{% url 'hospitals:hospital_list' %}" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</a>
-      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Hospital</button>
+      <!-- Hospital Name -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Hospital Name</label>
+        {{ form.name|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Owner First Name -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Owner First Name</label>
+        {{ form.owner_first_name|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Owner Last Name -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Owner Last Name</label>
+        {{ form.owner_last_name|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Email -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Email</label>
+        {{ form.email|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Phone -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Phone</label>
+        {{ form.phone|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Mobile -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Mobile</label>
+        {{ form.mobile|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- City -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">City</label>
+        {{ form.city|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Country -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Country</label>
+        {{ form.country|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Language -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Language</label>
+        {{ form.language|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Currency -->
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Currency</label>
+        {{ form.currency|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Address -->
+      <div class="sm:col-span-2">
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Address</label>
+        {{ form.address|add_class:"w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition" }}
+      </div>
+
+      <!-- Hospital Image -->
+      <div class="sm:col-span-2">
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Hospital Image</label>
+        {{ form.image|add_class:"w-full" }}
+      </div>
+
+      <!-- Verified Toggle -->
+      <div class="sm:col-span-2 flex items-center gap-3 mt-2">
+        <label class="text-gray-700 dark:text-gray-200 font-semibold">Verified</label>
+        <input type="checkbox" name="verified" value="True" class="w-6 h-6 rounded border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-cyan-400"
+               {% if hospital and hospital.verified %}checked{% endif %}>
+        <span class="text-sm text-gray-500 dark:text-gray-400">Tick if verified ✅</span>
+      </div>
+
+      <!-- Optional Username & Password for new hospital -->
+      {% if not hospital %}
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Username *</label>
+        <input type="text" name="username" required
+               class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition">
+      </div>
+
+      <div>
+        <label class="block text-gray-700 dark:text-gray-200 mb-1">Password *</label>
+        <input type="password" name="password" required
+               class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition">
+      </div>
+      {% endif %}
+
     </div>
+
+    <!-- Form Actions -->
+    <div class="flex justify-end gap-3 mt-4">
+      <a href="{% url 'hospitals:hospital_list' %}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+        Cancel
+      </a>
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+        Save Hospital
+      </button>
+    </div>
+
   </form>
 </div>
 {% endblock %}

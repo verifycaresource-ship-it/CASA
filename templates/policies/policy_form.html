@@ -4,243 +4,232 @@
 {% block title %}{{ dashboard_title }} | Health Insurance{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-8">
+<div
+  x-data="policyFlow()"
+  class="max-w-6xl mx-auto p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-lg mt-8 text-gray-900 dark:text-gray-100"
+>
 
+  <!-- Header -->
   <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
-    <a href="{% url 'policies:policy_list' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-      ⬅ Back to Policies
+    <h1 class="text-2xl font-bold">{{ dashboard_title }}</h1>
+    <a href="{% url 'policies:policy_list' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+      ⬅ Back
     </a>
   </div>
 
-  {% if messages %}
-    {% for message in messages %}
-      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
+  <!-- STEP 1: CLIENT SELECTION -->
+  <div x-show="step === 1" x-transition>
+    <h2 class="text-xl font-semibold mb-3">Step 1: Select Client</h2>
 
-  <form method="POST" enctype="multipart/form-data" class="space-y-4">
-    {% csrf_token %}
+    <div class="relative">
+      <input
+        type="text"
+        placeholder="Search client by ID or name..."
+        x-model="query"
+        @input="open = true"
+        class="w-full px-4 py-3 border rounded-lg bg-white dark:bg-zinc-800"
+      >
 
-    <!-- Policy Info -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-      <!-- Policy Number -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Policy Number</label>
-        <input type="text" name="policy_number" required
-               value="{{ policy.policy_number|default:auto_policy_number }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
-      <!-- Policy Type -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Type</label>
-        <select name="policy_type" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-          <option value="">Select Type</option>
-          {% for key, label in policy_types %}
-            <option value="{{ key }}" {% if policy and policy.policy_type == key %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Payment Mode -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Payment Mode</label>
-        <select name="payment_mode" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-          <option value="">Select Payment Mode</option>
-          {% for key, label in payment_modes %}
-            <option value="{{ key }}" {% if policy and policy.payment_mode == key %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Coverage Level -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Coverage Level</label>
-        <select name="coverage_level" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-          <option value="">Select Coverage Level</option>
-          {% for key, label in coverage_levels %}
-            <option value="{{ key }}" {% if policy and policy.coverage_level == key %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Client -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Client</label>
-        <select name="client" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-          <option value="">Select Client</option>
-          {% for client in clients %}
-            <option value="{{ client.id }}" {% if policy and policy.client.id == client.id %}selected{% endif %}>
-              {{ client.first_name }} {{ client.last_name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Premium -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Premium</label>
-        <input type="number" name="premium" step="0.01" required
-               value="{{ policy.premium|default:'' }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
-      <!-- Start Date -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Start Date</label>
-        <input type="date" name="start_date" required
-               value="{{ policy.start_date|date:'Y-m-d'|default:today }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
-      <!-- Expiry Date -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Expiry Date</label>
-        <input type="date" name="expiry_date" required
-               value="{{ policy.expiry_date|date:'Y-m-d'|default:next_year }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
-      <!-- NRIC / Passport -->
-      <div class="md:col-span-2">
-        <label class="block text-gray-700 font-semibold mb-1">NRIC / Passport</label>
-        <input type="text" name="nric_or_passport"
-               value="{{ policy.nric_or_passport|default:'' }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
-      <!-- Active Checkbox -->
-      <div class="flex items-center space-x-4 mt-2">
-        <input type="checkbox" name="is_active" id="active" class="h-5 w-5 text-green-600"
-               {% if policy and policy.is_active %}checked{% endif %}>
-        <label for="active" class="text-gray-700 font-medium">Active</label>
-      </div>
-
-      <!-- Coverage Details -->
-      <div class="md:col-span-2">
-        <label class="block text-gray-700 font-semibold mb-1">Coverage Details</label>
-        <textarea name="coverage_details" rows="4"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Example: Hospitalization, Dental, Maternity...">{{ policy.coverage_details|default:'' }}</textarea>
-      </div>
-
-      <!-- Max Claim Limit -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Max Claim Limit</label>
-        <input type="number" name="max_claim_limit" step="0.01"
-               value="{{ policy.max_claim_limit|default:0 }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
-      <!-- Waiting Period -->
-      <div>
-        <label class="block text-gray-700 font-semibold mb-1">Waiting Period (days)</label>
-        <input type="number" name="waiting_period_days"
-               value="{{ policy.waiting_period_days|default:0 }}"
-               class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
+      <ul
+        x-show="open && filteredClients.length"
+        x-transition
+        @click.away="open = false"
+        class="absolute z-50 w-full bg-white dark:bg-zinc-800 border rounded-lg shadow max-h-60 overflow-y-auto mt-1"
+      >
+        <template x-for="client in filteredClients" :key="client.id">
+          <li
+            @click="selectClient(client)"
+            class="px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer"
+          >
+            <strong>#<span x-text="client.id"></span></strong> —
+            <span x-text="client.name"></span>
+          </li>
+        </template>
+      </ul>
     </div>
 
-    <!-- Insured Persons -->
-    <div class="mt-6">
-      <h3 class="text-xl font-semibold mb-3">Insured Persons</h3>
-      <div id="insured-persons-container" class="space-y-4">
+    <p class="mt-3 text-sm text-gray-500">
+      Client must be selected before adding policy details.
+    </p>
+  </div>
 
-        {% if policy and policy.insured_persons.exists %}
-          {% for person in policy.insured_persons.all %}
-          <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-lg bg-gray-50 relative">
-            <input type="hidden" name="insured_id[]" value="{{ person.id }}">
-            <input type="text" name="insured_full_name[]" placeholder="Full Name" value="{{ person.full_name }}" class="w-full px-3 py-2 border rounded-lg">
-            <input type="text" name="insured_relationship[]" placeholder="Relationship" value="{{ person.relationship }}" class="w-full px-3 py-2 border rounded-lg">
-            <input type="date" name="insured_dob[]" value="{{ person.dob|date:'Y-m-d' }}" class="w-full px-3 py-2 border rounded-lg">
-            <select name="insured_gender[]" class="w-full px-3 py-2 border rounded-lg">
-              <option value="">Select Gender</option>
-              {% for value, label in GENDER_CHOICES %}
-                <option value="{{ value }}" {% if person.gender == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-            <input type="file" name="insured_photo[]" class="w-full py-1.5 px-2 border rounded-lg">
-            {% if person.photo %}
-              <img src="{{ person.photo.url }}" class="w-12 h-12 object-cover rounded-full" alt="Photo">
-            {% endif %}
-            <button type="button" class="absolute top-2 right-2 text-red-600 remove-person">✖</button>
-            {% if person.is_adult %}
-              <button type="button" class="bg-yellow-500 text-white px-2 py-1 rounded-lg fingerprint-btn" data-person-id="{{ person.id }}">🖐 Capture Fingerprint</button>
-            {% endif %}
-          </div>
-          {% endfor %}
-        {% else %}
-          <!-- Empty row for new insured person -->
-          <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-lg bg-gray-50 relative">
-            <input type="hidden" name="insured_id[]" value="">
-            <input type="text" name="insured_full_name[]" placeholder="Full Name" class="w-full px-3 py-2 border rounded-lg">
-            <input type="text" name="insured_relationship[]" placeholder="Relationship" class="w-full px-3 py-2 border rounded-lg">
-            <input type="date" name="insured_dob[]" class="w-full px-3 py-2 border rounded-lg">
-            <select name="insured_gender[]" class="w-full px-3 py-2 border rounded-lg">
-              <option value="">Select Gender</option>
-              {% for value, label in GENDER_CHOICES %}
-                <option value="{{ value }}">{{ label }}</option>
-              {% endfor %}
-            </select>
-            <input type="file" name="insured_photo[]" class="w-full py-1.5 px-2 border rounded-lg">
-            <button type="button" class="absolute top-2 right-2 text-red-600 remove-person">✖</button>
-            <button type="button" class="bg-yellow-500 text-white px-2 py-1 rounded-lg fingerprint-btn">🖐 Capture Fingerprint</button>
-          </div>
-        {% endif %}
+  <!-- STEP 2: POLICY FORM -->
+  <div x-show="step === 2 && selectedClient" x-transition class="mt-6">
 
-      </div>
-
-      <button type="button" id="add-person-btn" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-        ➕ Add Another Person
+    <div class="mb-4 flex items-center justify-between bg-green-50 p-3 rounded-lg">
+      <p>
+        Selected Client:
+        <strong x-text="selectedClient.name"></strong>
+      </p>
+      <button
+        type="button"
+        @click="resetClient()"
+        class="text-red-600 text-sm"
+      >
+        Change Client
       </button>
     </div>
 
-    <button type="submit" class="mt-6 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-      💾 Save Policy
-    </button>
-  </form>
+    <form method="POST" class="space-y-6" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- CLIENT ID -->
+      <input type="hidden" name="client" :value="selectedClient.id">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- Policy Number -->
+        <div>
+          <label class="block font-semibold mb-1">Policy Number</label>
+          <input type="text" name="policy_number" required
+            value="{{ policy.policy_number|default:auto_policy_number }}"
+            class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- Policy Type -->
+        <div>
+          <label class="block font-semibold mb-1">Policy Type</label>
+          <select name="policy_type" required class="w-full px-4 py-2 border rounded-lg">
+            <option value="">Select</option>
+            {% for key, label in policy_types %}
+              <option value="{{ key }}" {% if policy.policy_type == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Payment Mode -->
+        <div>
+          <label class="block font-semibold mb-1">Payment Mode</label>
+          <select name="payment_mode" required class="w-full px-4 py-2 border rounded-lg">
+            <option value="">Select</option>
+            {% for key, label in payment_modes %}
+              <option value="{{ key }}" {% if policy.payment_mode == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Coverage Level -->
+        <div>
+          <label class="block font-semibold mb-1">Coverage Level</label>
+          <select name="coverage_level" required class="w-full px-4 py-2 border rounded-lg">
+            <option value="">Select</option>
+            {% for key, label in coverage_levels %}
+              <option value="{{ key }}" {% if policy.coverage_level == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Premium -->
+        <div>
+          <label class="block font-semibold mb-1">Premium</label>
+          <input type="number" name="premium" step="0.01" required
+            value="{{ policy.premium|default:'' }}"
+            class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- Max Claim Limit -->
+        <div>
+          <label class="block font-semibold mb-1">Max Claim Limit</label>
+          <input type="number" name="max_claim_limit" step="0.01"
+            value="{{ policy.max_claim_limit|default:'' }}"
+            class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- Start Date -->
+        <div>
+          <label class="block font-semibold mb-1">Start Date</label>
+          <input type="date" name="start_date" required
+            value="{{ policy.start_date|date:'Y-m-d'|default:'' }}"
+            class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- Expiry Date -->
+        <div>
+          <label class="block font-semibold mb-1">Expiry Date</label>
+          <input type="date" name="expiry_date" required
+            value="{{ policy.expiry_date|date:'Y-m-d'|default:'' }}"
+            class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- Waiting Period -->
+        <div>
+          <label class="block font-semibold mb-1">Waiting Period (days)</label>
+          <input type="number" name="waiting_period_days"
+            value="{{ policy.waiting_period_days|default:'' }}"
+            class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- NRIC / Passport -->
+        <div>
+          <label class="block font-semibold mb-1">NRIC / Passport</label>
+          <input type="text" name="nric_or_passport"
+            value="{{ policy.nric_or_passport|default:'' }}"
+            class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- Coverage Details -->
+        <div class="md:col-span-2">
+          <label class="block font-semibold mb-1">Coverage Details</label>
+          <textarea name="coverage_details" rows="4"
+            class="w-full px-4 py-2 border rounded-lg">{{ policy.coverage_details|default:'' }}</textarea>
+        </div>
+
+        <!-- Active -->
+        <div class="flex items-center gap-2 md:col-span-2">
+          <input type="checkbox" name="is_active" class="h-5 w-5" {% if policy.is_active %}checked{% endif %}>
+          <label class="font-medium">Active Policy</label>
+        </div>
+
+      </div>
+
+      <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg">
+        💾 Save Policy
+      </button>
+    </form>
+
+  </div>
+
 </div>
 
+<!-- Alpine Logic -->
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  const container = document.getElementById('insured-persons-container');
-  const addBtn = document.getElementById('add-person-btn');
+function policyFlow() {
+  return {
+    step: 1,
+    query: '',
+    open: false,
+    selectedClient: {% if policy %}{ id: {{ policy.client.id }}, name: "{{ policy.client.first_name }} {{ policy.client.last_name }}" }{% else %}null{% endif %},
 
-  addBtn.addEventListener('click', function() {
-    const div = container.querySelector('div.grid').cloneNode(true);
-    div.querySelectorAll('input').forEach(input => input.value = '');
-    div.querySelectorAll('select').forEach(select => select.value = '');
-    div.querySelectorAll('img').forEach(img => img.remove());
-    container.appendChild(div);
+    clients: [
+      {% for client in clients %}
+        {
+          id: {{ client.id }},
+          name: "{{ client.first_name|escapejs }} {{ client.last_name|escapejs }}"
+        },
+      {% endfor %}
+    ],
 
-    div.querySelector('.remove-person').addEventListener('click', function() {
-      div.remove();
-    });
-  });
+    get filteredClients() {
+      if (!this.query) return this.clients
+      let q = this.query.toLowerCase()
+      return this.clients.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.id.toString().includes(q)
+      )
+    },
 
-  document.querySelectorAll('.remove-person').forEach(btn => {
-    btn.addEventListener('click', function() {
-      btn.parentElement.remove();
-    });
-  });
+    selectClient(client) {
+      this.selectedClient = client
+      this.step = 2
+      this.open = false
+    },
 
-  document.querySelectorAll('.fingerprint-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const personId = btn.dataset.personId || "new";
-      alert(`Trigger fingerprint capture for person ID: ${personId}`);
-    });
-  });
-});
+    resetClient() {
+      this.step = 1
+      this.query = ''
+      this.selectedClient = null
+    }
+  }
+}
 </script>
 {% endblock %}

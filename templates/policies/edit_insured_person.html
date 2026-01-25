@@ -4,41 +4,47 @@
 {% block title %}Edit {{ person.full_name }} | Health Insurance{% endblock %}
 
 {% block content %}
-<div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-lg mt-8">
-  <h1 class="text-2xl font-bold mb-4">Edit Insured Person</h1>
+<div class="max-w-lg mx-auto bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-lg mt-8 font-sans text-gray-900 dark:text-gray-100">
+
+  <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-blue-600">Edit Insured Person</h1>
 
   {% if messages %}
     {% for message in messages %}
-      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
+      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-gray-100' }}">
         {{ message }}
       </div>
     {% endfor %}
   {% endif %}
 
-  <form method="POST" enctype="multipart/form-data" class="space-y-4">
+  <form method="POST" enctype="multipart/form-data" class="space-y-6">
     {% csrf_token %}
 
+    <!-- Full Name -->
     <div>
-      <label class="block text-gray-700 font-semibold mb-1">Full Name</label>
-      <input type="text" name="full_name" value="{{ person.full_name }}"
-             class="w-full px-3 py-2 border rounded-lg">
+      <label class="block font-semibold mb-1">Full Name</label>
+      <input type="text" name="full_name" value="{{ person.full_name }}" required
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
     </div>
 
+    <!-- Relationship -->
     <div>
-      <label class="block text-gray-700 font-semibold mb-1">Relationship</label>
-      <input type="text" name="relationship" value="{{ person.relationship }}"
-             class="w-full px-3 py-2 border rounded-lg">
+      <label class="block font-semibold mb-1">Relationship</label>
+      <input type="text" name="relationship" value="{{ person.relationship }}" required
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
     </div>
 
+    <!-- Date of Birth -->
     <div>
-      <label class="block text-gray-700 font-semibold mb-1">Date of Birth</label>
-      <input type="date" name="dob" value="{{ person.dob|date:'Y-m-d' }}"
-             class="w-full px-3 py-2 border rounded-lg">
+      <label class="block font-semibold mb-1">Date of Birth</label>
+      <input type="date" name="dob" value="{{ person.dob|date:'Y-m-d' }}" required
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
     </div>
 
+    <!-- Gender -->
     <div>
-      <label class="block text-gray-700 font-semibold mb-1">Gender</label>
-      <select name="gender" class="w-full px-3 py-2 border rounded-lg">
+      <label class="block font-semibold mb-1">Gender</label>
+      <select name="gender" required
+              class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
         <option value="">Select Gender</option>
         <option value="male" {% if person.gender == "male" %}selected{% endif %}>Male</option>
         <option value="female" {% if person.gender == "female" %}selected{% endif %}>Female</option>
@@ -46,18 +52,40 @@
       </select>
     </div>
 
+    <!-- Photo -->
     <div>
-      <label class="block text-gray-700 font-semibold mb-1">Photo</label>
+      <label class="block font-semibold mb-1">Photo</label>
       {% if person.photo %}
-        <img src="{{ person.photo.url }}" alt="Current Photo" class="w-24 h-24 rounded-full mb-2">
+        <div class="flex items-center gap-4 mb-2">
+          <img src="{{ person.photo.url }}" alt="Current Photo" class="w-24 h-24 rounded-full object-cover border">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Current photo</p>
+        </div>
       {% endif %}
-      <input type="file" name="photo" class="w-full px-3 py-2 border rounded-lg">
-      <p class="text-sm text-gray-500">Leave blank to keep existing photo.</p>
+      <input type="file" name="photo" accept="image/*"
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Leave blank to keep existing photo.</p>
     </div>
 
-    <button type="submit" class="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-      💾 Save Changes
-    </button>
+    <!-- Save Button -->
+    <div class="flex justify-end">
+      <button type="submit"
+              class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition">
+        💾 Save Changes
+      </button>
+    </div>
+
   </form>
 </div>
+
+<style>
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
+
+  @media (max-width: 768px) {
+    .max-w-lg { padding: 1.5rem; }
+  }
+</style>
 {% endblock %}

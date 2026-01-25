@@ -1,86 +1,133 @@
-{% extends "base.html" %}
+{% extends "dashboard/base.html" %}
 {% load static %}
+
+{% block title %}{{ dashboard_title|default:"Register New Client" }} | HealthInsure{% endblock %}
+
 {% block content %}
+<div class="space-y-6 relative z-10">
 
-<div class="container mt-4">
-  <h2 class="mb-4">{{ dashboard_title|default:"Register New Client" }}</h2>
+  <!-- PAGE HEADER -->
+  <div class="flex justify-between items-center glass p-6 rounded-2xl shadow-xl relative overflow-hidden">
+    <h2 class="text-2xl md:text-3xl font-bold text-white">{{ dashboard_title|default:"Register New Client" }}</h2>
+    <div class="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-tr from-purple-500 to-pink-500 opacity-30 rounded-full blur-3xl animate-blob"></div>
+  </div>
 
-  <form method="POST" enctype="multipart/form-data" class="card p-4 shadow-sm rounded-3">
+  <!-- CLIENT FORM -->
+  <form method="POST" enctype="multipart/form-data" class="glass p-6 rounded-2xl shadow-xl space-y-4 relative overflow-hidden">
     {% csrf_token %}
 
-    <div class="row">
-      <div class="col-md-6 mb-3">
-        <label class="form-label">First Name</label>
-        {{ form.first_name }}
+    <style>
+      /* Input/Textarea Styles for Dark Glass */
+      .glass-input {
+        background-color: rgba(17,24,39,0.85); /* dark glass */
+        color: #fff !important;               /* typed text visible */
+        caret-color: #10B981;                 /* green caret */
+        border: 1px solid rgba(255,255,255,0.2);
+        font-family: 'Inter', sans-serif;
+      }
+      .glass-input::placeholder {
+        color: rgba(255,255,255,0.5);
+      }
+      .glass-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #06B6D4;       /* cyan focus ring */
+        background-color: rgba(17,24,39,1);
+      }
+      select.glass-input {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+      }
+    </style>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <!-- Name -->
+      <div>
+        <label class="block text-white font-medium mb-1">First Name</label>
+        {{ form.first_name|add_class:"w-full p-2 rounded-lg glass-input" }}
       </div>
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Last Name</label>
-        {{ form.last_name }}
+      <div>
+        <label class="block text-white font-medium mb-1">Last Name</label>
+        {{ form.last_name|add_class:"w-full p-2 rounded-lg glass-input" }}
       </div>
 
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Email</label>
-        {{ form.email }}
+      <!-- Contact -->
+      <div>
+        <label class="block text-white font-medium mb-1">Email</label>
+        {{ form.email|add_class:"w-full p-2 rounded-lg glass-input" }}
       </div>
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Phone</label>
-        {{ form.phone }}
-      </div>
-
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Date of Birth</label>
-        {{ form.dob }}
-      </div>
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Gender</label>
-        {{ form.gender }}
+      <div>
+        <label class="block text-white font-medium mb-1">Phone</label>
+        {{ form.phone|add_class:"w-full p-2 rounded-lg glass-input" }}
       </div>
 
-      <div class="col-12 mb-3">
-        <label class="form-label">Address</label>
-        {{ form.address }}
+      <!-- DOB & Gender -->
+      <div>
+        <label class="block text-white font-medium mb-1">Date of Birth</label>
+        {{ form.dob|add_class:"w-full p-2 rounded-lg glass-input" }}
+      </div>
+      <div>
+        <label class="block text-white font-medium mb-1">Gender</label>
+        {{ form.gender|add_class:"w-full p-2 rounded-lg glass-input" }}
       </div>
 
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Client Photo</label><br>
-        {{ form.photo }}
+      <!-- Address -->
+      <div class="md:col-span-2">
+        <label class="block text-white font-medium mb-1">Address</label>
+        {{ form.address|add_class:"w-full p-2 rounded-lg glass-input" }}
       </div>
 
-      <!-- 🔹 Fingerprint Upload -->
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Fingerprint (File Upload)</label><br>
-        <input type="file" name="fingerprint_file" accept="image/*,application/octet-stream" class="form-control">
-        <small class="text-muted">You can upload a fingerprint file or scan below.</small>
+      <!-- Photo -->
+      <div>
+        <label class="block text-white font-medium mb-1">Client Photo</label>
+        {{ form.photo|add_class:"w-full p-2 rounded-lg glass-input" }}
       </div>
 
-      <!-- 🔹 Base64 Fingerprint Field (optional) -->
-      <div class="col-12 mb-3">
-        <label class="form-label">Or Paste Fingerprint Base64 Data</label>
-        <textarea name="fingerprint_base64" rows="5" class="form-control" placeholder="Paste Base64 fingerprint string here"></textarea>
+      <!-- Fingerprint File Upload -->
+      <div>
+        <label class="block text-white font-medium mb-1">Fingerprint (File Upload)</label>
+        <input type="file" name="fingerprint_file" accept="image/*,application/octet-stream"
+          class="w-full p-2 rounded-lg glass-input">
+        <small class="text-gray-300 block mt-1">Upload a fingerprint file or scan below.</small>
       </div>
 
-      <!-- 🔹 (Optional) Live Scan Button Placeholder -->
-      <div class="col-12 mb-3">
-        <button type="button" class="btn btn-outline-primary" id="scanFingerprintBtn">
-          <i class="bi bi-fingerprint"></i> Scan Fingerprint (Future Integration)
+      <!-- Base64 Fingerprint -->
+      <div class="md:col-span-2">
+        <label class="block text-white font-medium mb-1">Or Paste Fingerprint Base64 Data</label>
+        <textarea name="fingerprint_base64" rows="5"
+          class="w-full p-2 rounded-lg glass-input"
+          placeholder="Paste Base64 fingerprint string here"></textarea>
+      </div>
+
+      <!-- Live Scan Button -->
+      <div class="md:col-span-2">
+        <button type="button" id="scanFingerprintBtn"
+          class="bg-cyan-400 hover:bg-cyan-500 text-white px-4 py-2 rounded-full shadow hover-scale transition-all">
+          <i class="bi bi-fingerprint"></i> Scan Fingerprint (Future)
         </button>
-        <small class="text-muted d-block mt-1">This button will be used for live scanning in the future.</small>
+        <small class="text-gray-300 block mt-1">This button will be used for live scanning in the future.</small>
       </div>
+
     </div>
 
-    <div class="mt-4">
-      <button type="submit" class="btn btn-success px-4">Save Client</button>
-      <a href="{% url 'clients:client_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+    <!-- Form Actions -->
+    <div class="flex gap-4 mt-4">
+      <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full shadow hover-scale transition-all">Save Client</button>
+      <a href="{% url 'clients:client_list' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-full shadow hover-scale transition-all">Cancel</a>
     </div>
+
+    <!-- Neon blobs -->
+    <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-gradient-to-tr from-purple-500 to-pink-500 opacity-20 rounded-full blur-3xl animate-blob"></div>
+    <div class="absolute -top-10 -left-10 w-24 h-24 bg-gradient-to-tr from-cyan-400 to-blue-500 opacity-20 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+
   </form>
 </div>
 
-<!-- Optional JavaScript for fingerprint scanning (future integration) -->
 <script>
-  document.getElementById("scanFingerprintBtn").addEventListener("click", async () => {
-    alert("Live fingerprint scanning is not yet implemented. You can upload or paste Base64 for now.");
-    // In future: call WebAuthn, fprintd bridge, or custom scanner API
-  });
+document.getElementById("scanFingerprintBtn").addEventListener("click", async () => {
+  alert("Live fingerprint scanning is not yet implemented. You can upload or paste Base64 for now.");
+});
 </script>
 
 {% endblock %}

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "hospitals",
     'django_extensions',
     'tasks',
+    'qr_code',
 
 ]
 
@@ -207,3 +208,5 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 # Development fallback: console backend
 # ----------------------------
 
+# Digital Persona / Fingerprint Scanner Service
+FINGERPRINT_SERVICE_URL = "http://127.0.0.1:5000/enroll"

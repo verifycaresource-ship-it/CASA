@@ -1,29 +1,97 @@
-<div class="bg-white shadow rounded p-4 mb-6">
-    <h3 class="font-semibold mb-2">Claims</h3>
-    <table id="claims-table" class="min-w-full table-auto">
-        <thead>
-            <tr>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Notes</th>
-                <th>Policy</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for claim in claims %}
-            <tr>
-                <td>{{ claim.amount }}</td>
-                <td>{{ claim.status }}</td>
-                <td>{{ claim.notes }}</td>
-                <td>{{ claim.policy.policy_number }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Claims | Health Insurance{% endblock %}
+
+{% block content %}
+<div class="space-y-6 relative z-10">
+
+  <!-- PAGE HEADER -->
+  <div class="flex justify-between items-center glass p-4 rounded-2xl shadow-xl">
+    <h1 class="text-2xl md:text-3xl font-bold text-white">Claims</h1>
+    <a href="{% url 'add_claim' %}" class="bg-cyan-400 hover:bg-cyan-500 text-white px-4 py-2 rounded-full shadow hover-scale transition-all">
+      + Add Claim
+    </a>
+    <!-- Neon blob -->
+    <div class="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-tr from-purple-500 to-pink-500 opacity-30 rounded-full blur-3xl animate-blob"></div>
+  </div>
+
+  <!-- SEARCH & FILTER -->
+  <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+    <input type="text" id="searchClaim" placeholder="Search claims..." class="px-4 py-2 rounded-full glass text-white placeholder-white w-full sm:w-1/3 focus:ring-2 focus:ring-cyan-400 transition">
+    <select id="filterClaim" class="px-4 py-2 rounded-full glass text-white w-full sm:w-1/6 focus:ring-2 focus:ring-cyan-400 transition">
+      <option value="">All Status</option>
+      <option value="approved">Approved</option>
+      <option value="pending">Pending</option>
+      <option value="rejected">Rejected</option>
+    </select>
+  </div>
+
+  <!-- CLAIMS TABLE -->
+  <div class="overflow-x-auto glass rounded-2xl shadow-xl relative mt-4 p-4">
+    <table class="min-w-full text-left text-white">
+      <thead class="backdrop-blur-md bg-cyan-500/30 rounded-t-lg">
+        <tr>
+          <th class="px-6 py-3 font-semibold">Amount</th>
+          <th class="px-6 py-3 font-semibold">Status</th>
+          <th class="px-6 py-3 font-semibold">Notes</th>
+          <th class="px-6 py-3 font-semibold">Policy</th>
+        </tr>
+      </thead>
+      <tbody id="claimsTable" class="divide-y divide-white/10">
+        {% for claim in claims %}
+        <tr class="hover:bg-cyan-500/20 transition-colors">
+          <td class="px-6 py-3">{{ claim.amount }}</td>
+          <td class="px-6 py-3">
+            {% if claim.status == 'approved' %}
+            <span class="bg-green-400/30 text-green-200 px-2 py-1 rounded-full text-xs">Approved</span>
+            {% elif claim.status == 'pending' %}
+            <span class="bg-yellow-400/30 text-yellow-200 px-2 py-1 rounded-full text-xs">Pending</span>
+            {% else %}
+            <span class="bg-red-400/30 text-red-200 px-2 py-1 rounded-full text-xs">Rejected</span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-3">{{ claim.notes }}</td>
+          <td class="px-6 py-3">{{ claim.policy.policy_number }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-6 py-3 text-center text-gray-400">No claims found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
+
+    <!-- Neon blob background for table -->
+    <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-purple-500 to-pink-500 opacity-20 rounded-full blur-3xl animate-blob"></div>
+  </div>
+
 </div>
 
+<!-- SEARCH & FILTER FUNCTIONALITY -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    $('#claims-table').DataTable();
-});
+  const searchInput = document.getElementById('searchClaim');
+  const tableRows = document.querySelectorAll('#claimsTable tr');
+
+  searchInput.addEventListener('input', (e) => {
+    const value = e.target.value.toLowerCase();
+    tableRows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      row.style.display = text.includes(value) ? '' : 'none';
+    });
+  });
+
+  const filterSelect = document.getElementById('filterClaim');
+  filterSelect.addEventListener('change', (e) => {
+    const status = e.target.value;
+    tableRows.forEach(row => {
+      if(!status) {
+        row.style.display = '';
+      } else {
+        const statusText = row.querySelector('td:nth-child(2)').innerText.toLowerCase();
+        row.style.display = statusText.includes(status) ? '' : 'none';
+      }
+    });
+  });
 </script>
+{% endblock %}

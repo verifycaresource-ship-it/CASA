@@ -1,0 +1,29 @@
+<!-- clients/verify_client.html -->
+{% extends 'dashboard/base.html' %}
+{% block title %}Verify Client | CareSource Africa{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-12 px-4 space-y-6">
+    <h1 class="text-2xl font-bold text-blue-900">Client Verification</h1>
+
+    <div class="bg-white shadow-md rounded-lg p-6 space-y-4">
+        <div class="flex items-center space-x-4">
+            <img src="{{ client.photo_url }}" class="w-20 h-20 rounded-lg object-cover border border-blue-300">
+            <div>
+                <p class="font-semibold text-lg">{{ client.full_name }}</p>
+                <p class="text-gray-500 text-sm">Member since {{ client.created_at|date:"Y" }}</p>
+            </div>
+        </div>
+
+        {% if active_policy %}
+        <div class="p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <p class="text-blue-900 font-semibold">Policy Number: {{ active_policy.policy_number }}</p>
+            <p>Type: {{ active_policy.get_policy_type_display }}</p>
+            <p>Expires: {{ active_policy.expiry_date|date:"M d, Y" }}</p>
+        </div>
+        {% else %}
+        <p class="text-red-600 font-semibold">No active policy</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

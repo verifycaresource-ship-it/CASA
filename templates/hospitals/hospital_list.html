@@ -1,81 +1,86 @@
 {% extends 'dashboard/base.html' %}
 
+{% block title %}Hospitals Dashboard | CareSource Africa{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
-        <a href="{% url 'hospitals:hospital_add' %}" 
-           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-           Add New Hospital
-        </a>
-    </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
 
-    <!-- Table -->
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="py-2 px-4 text-left">#</th>
-                    <th scope="col" class="py-2 px-4 text-left">Name</th>
-                    <th scope="col" class="py-2 px-4 text-left">Owner</th>
-                    <th scope="col" class="py-2 px-4 text-left">Email</th>
-                    <th scope="col" class="py-2 px-4 text-left">Phone</th>
-                    <th scope="col" class="py-2 px-4 text-left">Verified</th>
-                    <th scope="col" class="py-2 px-4 text-left">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for hospital in hospitals %}
-                <tr class="hover:bg-gray-50">
-                    <td class="py-2 px-4">{{ forloop.counter }}</td>
-                    <td class="py-2 px-4 break-words">{{ hospital.name }}</td>
-                    <td class="py-2 px-4 break-words">{{ hospital.owner_first_name }} {{ hospital.owner_last_name }}</td>
-                    <td class="py-2 px-4 break-words">{{ hospital.email }}</td>
-                    <td class="py-2 px-4 break-words">{{ hospital.phone|default_if_none:hospital.mobile }}</td>
-                    <td class="py-2 px-4">
-                        {% if hospital.verified %}
-                            <span class="text-green-600 font-semibold">Yes</span>
-                        {% else %}
-                            <span class="text-red-600 font-semibold">No</span>
-                        {% endif %}
-                    </td>
-                    <td class="py-2 px-4 flex flex-wrap gap-2">
-                        <!-- Edit hospital -->
-                        <a href="{% url 'hospitals:hospital_edit' hospital.id %}" 
-                           class="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
-                           aria-label="Edit {{ hospital.name }}">
-                           Edit
-                        </a>
+  <!-- Neon Floating Blobs -->
+  <div class="absolute -top-16 -left-16 w-36 h-36 bg-gradient-to-tr from-purple-500 to-pink-500 opacity-20 rounded-full blur-3xl animate-blob"></div>
+  <div class="absolute -bottom-16 -right-16 w-36 h-36 bg-gradient-to-tr from-cyan-400 to-blue-500 opacity-20 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
 
-                        <!-- View hospital -->
-                        <a href="{% url 'hospitals:hospital_detail' hospital.id %}" 
-                           class="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-                           aria-label="View {{ hospital.name }}">
-                           View
-                        </a>
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">{{ dashboard_title }}</h1>
+      <a href="{% url 'hospitals:hospital_add' %}" 
+         class="px-4 sm:px-5 py-2 bg-gradient-to-tr from-blue-500 to-cyan-400 text-white rounded-2xl font-semibold shadow-lg hover:scale-105 transition transform text-center">
+         ➕ Add New Hospital
+      </a>
+  </div>
 
-                        <!-- Delete hospital -->
-                        {% if user.is_superuser or role in "admin finance_officer" %}
-                        <form method="POST" action="{% url 'hospitals:hospital_delete' hospital.id %}" 
-                              onsubmit="return confirm('Are you sure you want to delete {{ hospital.name }}?');">
-                            {% csrf_token %}
-                            <button type="submit" 
-                                    class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
-                                    aria-label="Delete {{ hospital.name }}">
-                                Delete
-                            </button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="py-4 text-center text-gray-500">No hospitals found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+  <!-- Hospitals Table (Responsive) -->
+  <div class="glass overflow-x-auto rounded-2xl shadow p-2 sm:p-4 border border-gray-100">
+      <table class="min-w-full divide-y divide-gray-200 text-sm sm:text-base table-auto">
+          <thead class="bg-gray-800 sticky top-0 text-gray-200 text-xs sm:text-sm">
+              <tr>
+                  <th class="px-2 sm:px-4 py-2 text-left uppercase font-semibold">#</th>
+                  <th class="px-2 sm:px-4 py-2 text-left uppercase font-semibold">Name</th>
+                  <th class="px-2 sm:px-4 py-2 text-left uppercase font-semibold">Owner</th>
+                  <th class="px-2 sm:px-4 py-2 text-left uppercase font-semibold hidden md:table-cell">Email</th>
+                  <th class="px-2 sm:px-4 py-2 text-left uppercase font-semibold hidden md:table-cell">Phone</th>
+                  <th class="px-2 sm:px-4 py-2 text-left uppercase font-semibold">Verified</th>
+                  <th class="px-2 sm:px-4 py-2 text-center uppercase font-semibold">Actions</th>
+              </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-gray-100">
+              {% for hospital in hospitals %}
+              <tr class="hover:bg-gray-700 transition">
+                  <td class="px-2 sm:px-4 py-2">{{ forloop.counter }}</td>
+                  <td class="px-2 sm:px-4 py-2 break-words">{{ hospital.name }}</td>
+                  <td class="px-2 sm:px-4 py-2 break-words">{{ hospital.owner_first_name }} {{ hospital.owner_last_name }}</td>
+                  <td class="px-2 sm:px-4 py-2 break-words hidden md:table-cell">{{ hospital.email }}</td>
+                  <td class="px-2 sm:px-4 py-2 break-words hidden md:table-cell">{{ hospital.phone|default_if_none:hospital.mobile }}</td>
+                  <td class="px-2 sm:px-4 py-2">
+                      {% if hospital.verified %}
+                          <span class="px-2 py-1 text-xs sm:text-sm font-semibold rounded-full bg-green-700 text-green-100">✅ Yes</span>
+                      {% else %}
+                          <span class="px-2 py-1 text-xs sm:text-sm font-semibold rounded-full bg-red-700 text-red-100">❌ No</span>
+                      {% endif %}
+                  </td>
+                  <td class="px-2 sm:px-4 py-2 text-center">
+                      <div class="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2 flex-wrap">
+                          <a href="{% url 'hospitals:hospital_edit' hospital.id %}" 
+                             class="px-2 sm:px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs sm:text-sm font-medium">
+                             ✏ Edit
+                          </a>
+                          <a href="{% url 'hospitals:hospital_detail' hospital.id %}" 
+                             class="px-2 sm:px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm font-medium">
+                             👁 View
+                          </a>
+                          {% if user.is_superuser or role in "admin finance_officer" %}
+                          <form method="POST" action="{% url 'hospitals:hospital_delete' hospital.id %}" 
+                                onsubmit="return confirm('Are you sure you want to delete {{ hospital.name }}?');">
+                              {% csrf_token %}
+                              <button type="submit" 
+                                      class="px-2 sm:px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs sm:text-sm font-medium">
+                                  🗑 Delete
+                              </button>
+                          </form>
+                          {% endif %}
+                      </div>
+                  </td>
+              </tr>
+              {% empty %}
+              <tr>
+                  <td colspan="7" class="px-2 sm:px-4 py-6 text-center text-gray-400 text-sm">
+                      😕 No hospitals found.
+                      <a href="{% url 'hospitals:hospital_add' %}" class="text-cyan-400 font-semibold hover:underline">Add one now</a>.
+                  </td>
+              </tr>
+              {% endfor %}
+          </tbody>
+      </table>
+  </div>
+
 </div>
 {% endblock %}

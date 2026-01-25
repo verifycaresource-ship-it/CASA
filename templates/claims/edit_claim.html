@@ -1,78 +1,111 @@
 {% extends "dashboard/base.html" %}
 {% load static %}
 
-{% block title %}{{ dashboard_title }} | Health Insurance{% endblock %}
+{% block title %}Edit Claim {{ claim.claim_number }} | Health Insurance{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8 mt-8">
+<div class="max-w-4xl mx-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-8 mt-8 font-sans text-gray-900 dark:text-gray-100">
+
+  <!-- Header -->
   <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">{{ dashboard_title }}</h1>
+    <h1 class="text-2xl font-bold">{{ dashboard_title }}</h1>
     <a href="{% url 'claims:claim_list' %}"
-       class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
-      ← Back to Claims
+       class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition">
+       ← Back to Claims
     </a>
   </div>
 
+  <!-- Messages -->
+  {% if messages %}
+    <div class="space-y-2 mb-6">
+      {% for message in messages %}
+        <div class="px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-gray-100' }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Edit Form -->
   <form method="POST" class="space-y-6">
     {% csrf_token %}
 
-    <div>
-      <label for="claim_number" class="block text-sm font-medium text-gray-700">Claim Number</label>
-      <input type="text" id="claim_number" value="{{ claim.claim_number }}" readonly
-             class="mt-1 block w-full rounded-lg border-gray-300 bg-gray-100 shadow-sm focus:ring-0">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <!-- Claim Number (readonly) -->
+      <div>
+        <label class="block font-semibold mb-1">Claim Number</label>
+        <input type="text" value="{{ claim.claim_number }}" readonly
+               class="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+      </div>
+
+      <!-- Client (readonly) -->
+      <div>
+        <label class="block font-semibold mb-1">Client</label>
+        <input type="text" value="{{ claim.client.first_name }} {{ claim.client.last_name }}" readonly
+               class="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+      </div>
+
+      <!-- Policy (readonly) -->
+      <div>
+        <label class="block font-semibold mb-1">Policy</label>
+        <input type="text" value="{{ claim.policy.policy_number }}" readonly
+               class="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+      </div>
+
+      <!-- Hospital (readonly) -->
+      <div>
+        <label class="block font-semibold mb-1">Hospital</label>
+        <input type="text" value="{{ claim.hospital.name }}" readonly
+               class="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+      </div>
+
+      <!-- Amount -->
+      <div>
+        <label class="block font-semibold mb-1">Amount ($)</label>
+        <input type="number" step="0.01" name="amount" value="{{ claim.amount }}" required
+               class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+      </div>
+
+      <!-- Status -->
+      <div>
+        <label class="block font-semibold mb-1">Status</label>
+        <select name="status" required
+                class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+          <option value="pending" {% if claim.status == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="approved" {% if claim.status == 'approved' %}selected{% endif %}>Approved</option>
+          <option value="rejected" {% if claim.status == 'rejected' %}selected{% endif %}>Rejected</option>
+          <option value="reimbursed" {% if claim.status == 'reimbursed' %}selected{% endif %}>Reimbursed</option>
+        </select>
+      </div>
+
+      <!-- Notes -->
+      <div class="md:col-span-2">
+        <label class="block font-semibold mb-1">Notes / Description</label>
+        <textarea name="notes" rows="4"
+                  class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">{{ claim.notes }}</textarea>
+      </div>
     </div>
 
-    <div>
-      <label for="client" class="block text-sm font-medium text-gray-700">Client</label>
-      <input type="text" id="client" value="{{ claim.client.first_name }} {{ claim.client.last_name }}" readonly
-             class="mt-1 block w-full rounded-lg border-gray-300 bg-gray-100 shadow-sm focus:ring-0">
-    </div>
-
-    <div>
-      <label for="policy" class="block text-sm font-medium text-gray-700">Policy</label>
-      <input type="text" id="policy" value="{{ claim.policy.policy_number }}" readonly
-             class="mt-1 block w-full rounded-lg border-gray-300 bg-gray-100 shadow-sm focus:ring-0">
-    </div>
-
-    <div>
-      <label for="hospital" class="block text-sm font-medium text-gray-700">Hospital</label>
-      <input type="text" id="hospital" value="{{ claim.hospital.name }}" readonly
-             class="mt-1 block w-full rounded-lg border-gray-300 bg-gray-100 shadow-sm focus:ring-0">
-    </div>
-
-    <div>
-      <label for="amount" class="block text-sm font-medium text-gray-700">Amount ($)</label>
-      <input type="number" step="0.01" name="amount" id="amount" value="{{ claim.amount }}"
-             class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
-    </div>
-
-    <div>
-      <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-      <select name="status" id="status"
-              class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
-        <option value="pending" {% if claim.status == 'pending' %}selected{% endif %}>Pending</option>
-        <option value="approved" {% if claim.status == 'approved' %}selected{% endif %}>Approved</option>
-        <option value="rejected" {% if claim.status == 'rejected' %}selected{% endif %}>Rejected</option>
-        <option value="reimbursed" {% if claim.status == 'reimbursed' %}selected{% endif %}>Reimbursed</option>
-      </select>
-    </div>
-
-    <div>
-      <label for="notes" class="block text-sm font-medium text-gray-700">Notes / Description</label>
-      <textarea name="notes" id="notes" rows="4"
-                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">{{ claim.notes }}</textarea>
-    </div>
-
+    <!-- Buttons -->
     <div class="flex justify-end space-x-3 pt-4">
-      <a href="{% url 'claims:claim_list' %}"
-         class="px-5 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
-        Cancel
+      <a href="{% url 'claims:claim_list' %}" 
+         class="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition">
+         Cancel
       </a>
       <button type="submit"
-              class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">
         💾 Save Changes
       </button>
     </div>
   </form>
 </div>
+
+<style>
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
+</style>
 {% endblock %}

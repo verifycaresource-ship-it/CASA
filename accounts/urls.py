@@ -18,5 +18,6 @@ urlpatterns = [
     path("password-reset/", views.request_password_reset, name="request_password_reset"),
     path("password-reset/verify/<int:user_id>/", views.verify_reset_otp, name="verify_otp"),
     path("agent/dashboard/", views.agent_dashboard, name="agent_dashboard"),
+    
 
 ]

@@ -2,63 +2,226 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login | HealthInsure Pro</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at 20% 20%, #3b82f6, #1e3a8a); min-height: 100vh; }
-    .glass { background: rgba(255,255,255,0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.2); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mother & Child Care System | Secure Access</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+:root{
+  --blue:#3b82f6;
+  --cyan:#06b6d4;
+  --violet:#9333ea;
+  --dark:#060b18;
+}
+
+body{
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  background:radial-gradient(circle at top, #0b1b3a, #050914 70%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow-x:hidden;
+  color:#e6f2ff;
+  padding:1rem;
+}
+
+/* === Somali Star Field === */
+.star{
+  position:absolute;
+  width:2px;height:2px;
+  background:#e6f2ff;
+  opacity:.6;
+  border-radius:50%;
+  animation:twinkle 4s infinite ease-in-out;
+}
+@keyframes twinkle{50%{opacity:.2}}
+
+/* === DNA Ring === */
+.dna-ring{
+  position:absolute;
+  width:520px;height:520px;
+  border-radius:50%;
+  border:1px dashed rgba(99,179,237,.25);
+  animation:spin 40s linear infinite;
+  max-width:90vw;
+  max-height:90vw;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* === Main Card === */
+.card{
+  position:relative;
+  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+  backdrop-filter:blur(35px);
+  border-radius:2.5rem;
+  padding:2.5rem 2rem;
+  max-width:460px;
+  width:100%;
+  box-shadow:0 40px 120px rgba(59,130,246,.35);
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* === Identity Strip === */
+.identity{
+  background:linear-gradient(90deg, var(--blue), var(--cyan), var(--violet));
+  padding:.4rem .8rem;
+  border-radius:999px;
+  margin-bottom:1.5rem;
+  font-size:.75rem;
+  font-weight:700;
+  letter-spacing:.12em;
+}
+
+/* === Inputs === */
+input{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(148,163,184,.3);
+  color:white;
+}
+input:focus{
+  outline:none;
+  border-color:#38bdf8;
+  box-shadow:0 0 0 3px rgba(56,189,248,.25);
+}
+input::placeholder{color:#b6ccff}
+
+/* === Button === */
+.btn{
+  background:linear-gradient(90deg,var(--blue),var(--cyan),var(--violet));
+  padding:.85rem;
+  border-radius:1.2rem;
+  font-weight:700;
+  transition:.3s;
+}
+.btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 20px 40px rgba(6,182,212,.45);
+}
+
+/* === Trust Nodes === */
+.node{
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:999px;
+  padding:.35rem .7rem;
+  font-size:.65rem;
+  white-space:nowrap;
+}
+
+/* === Signature Line === */
+.signature{
+  position:absolute;
+  inset:auto 0 0 0;
+  height:2px;
+  width:80%;
+  background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity:.6;
+  border-radius:1px;
+}
+/* Smooth slow pulse for flux glow */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s infinite ease-in-out;
+}
+
+/* Responsive adjustments */
+@media (max-width:480px){
+  .w-36, .h-36 {
+    width:96px !important;
+    height:96px !important;
+  }
+}
+
+
+</style>
 </head>
-<body class="flex items-center justify-center p-6">
-  <div class="glass w-full max-w-md p-8 rounded-2xl shadow-2xl text-white">
-    <div class="flex items-center justify-center space-x-2 mb-6">
-      <i data-lucide="shield-check" class="w-8 h-8 text-blue-300"></i>
-      <h1 class="text-2xl font-bold">Health<span class="text-blue-400">Insure</span> Pro</h1>
-    </div>
 
-    {% if messages %}
-      <div class="mb-4 space-y-2">
-        {% for message in messages %}
-          <div class="p-3 rounded-lg text-sm {% if message.tags == 'error' %}bg-red-500/20 border border-red-400{% elif message.tags == 'success' %}bg-green-500/20 border border-green-400{% else %}bg-blue-500/20 border border-blue-400{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+<body>
 
-    <form method="POST" class="space-y-4">
-      {% csrf_token %}
-      <div>
-        <label class="text-sm font-medium">Username</label>
-        <div class="relative mt-1">
-          <i data-lucide="user" class="absolute left-3 top-2.5 w-4 h-4 text-gray-300"></i>
-          <input type="text" name="username" required class="w-full pl-10 p-2.5 bg-white/10 border border-gray-300/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-300" placeholder="Enter your username">
-        </div>
-      </div>
-      <div>
-        <label class="text-sm font-medium">Password</label>
-        <div class="relative mt-1">
-          <i data-lucide="lock" class="absolute left-3 top-2.5 w-4 h-4 text-gray-300"></i>
-          <input type="password" name="password" required class="w-full pl-10 p-2.5 bg-white/10 border border-gray-300/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-300" placeholder="Enter your password">
-        </div>
-      </div>
-      <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg text-white font-semibold hover:opacity-90 transition">
-        Sign In
-      </button>
-    </form>
+<!-- Stars -->
+<div class="star" style="top:10%;left:15%"></div>
+<div class="star" style="top:30%;left:80%"></div>
+<div class="star" style="top:70%;left:25%"></div>
+<div class="star" style="top:85%;left:60%"></div>
+<div class="dna-ring"></div>
 
-    <p class="text-center text-sm text-gray-300 mt-4">
-      Forgot password? <a href="{% url 'accounts:request_password_reset' %}" class="text-blue-300 hover:text-blue-400 underline">Reset it</a>
-    </p>
+<div class="card">
 
-    <div class="mt-6 text-center text-xs text-gray-400">
-      &copy; {{ now|date:"Y" }} HealthInsure Pro. All rights reserved.
-    </div>
+  <div class="identity text-center text-white">
+    NATIONAL MATERNAL & CHILD HEALTH PLATFORM
   </div>
-  <script>lucide.createIcons();</script>
+
+  <!-- Logo -->
+ <!-- Logo -->
+<div class="relative w-36 h-36 mx-auto mb-4">
+  <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-400 via-cyan-400 to-violet-500 blur-xl opacity-60 animate-pulse-slow"></div>
+  <img src="https://res.cloudinary.com/duwcyaitg/image/upload/v1769100978/fe62634a-7c50-44f2-829b-6a62ef0f0444_nysofl.png"
+       class="relative z-10 w-36 h-36 object-contain rounded-full border-4 border-white/30 shadow-[0_0_20px_rgba(59,130,246,0.7)]"
+       alt="MCH System Logo">
+</div>
+
+
+  <h1 class="text-3xl md:text-4xl font-extrabold text-center mt-2">
+    Mother & Child <span class="text-cyan-300">Care</span> System
+  </h1>
+
+  <p class="text-center text-sm text-cyan-200 mt-2 leading-relaxed">
+    A unified digital system safeguarding maternal health and
+    child wellbeing across Somalia.
+  </p>
+
+  <p class="text-center text-xs text-cyan-300 italic mt-1">
+    Daryeelka Hooyada & Ilmaha — Kalsooni & Caafimaad
+  </p>
+
+  <!-- Login Form -->
+  <form method="POST" class="mt-6 w-full space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="text-xs uppercase tracking-wide text-cyan-200">Username</label>
+      <input type="text" name="username" required
+        class="w-full p-3 rounded-xl mt-1"
+        placeholder="Your system ID">
+    </div>
+    <div>
+      <label class="text-xs uppercase tracking-wide text-cyan-200">Password</label>
+      <input type="password" name="password" required
+        class="w-full p-3 rounded-xl mt-1"
+        placeholder="Secure access key">
+    </div>
+
+    <button class="btn w-full mt-2">Access Secure System</button>
+  </form>
+
+  <!-- Trust -->
+  <div class="flex flex-wrap justify-center gap-2 mt-5">
+    <span class="node">Encrypted</span>
+    <span class="node">Role-Based</span>
+    <span class="node">24/7 Care</span>
+  </div>
+
+  <p class="text-xs text-center text-cyan-300 mt-4">
+    Forgot credentials?
+    <a href="{% url 'accounts:request_password_reset' %}" class="underline hover:text-white">Recover access</a>
+  </p>
+
+  <div class="text-[11px] text-center text-cyan-400 mt-3">
+    © {{ now|date:"Y" }} Mother & Child Care System — Somalia
+  </div>
+
+  <div class="signature"></div>
+</div>
+
+<script>lucide.createIcons();</script>
 </body>
 </html>

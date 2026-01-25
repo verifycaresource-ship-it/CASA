@@ -22,6 +22,15 @@ class Client(models.Model):
     fingerprint_data = models.BinaryField(blank=True, null=True, editable=False)
     fingerprint_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+         # ----------------------
+# Identity
+# ----------------------
+    nric_or_passport = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="National ID / Passport Number"
+        )
 
     # ----------------------
     # Shariah Compliance

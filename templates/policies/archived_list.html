@@ -1,0 +1,128 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Archived Policies{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-gray-900 dark:text-gray-100">
+
+  <!-- HEADER -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Archived Policies</h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1">
+        Historical record of archived & expired policies
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'policies:export_archived_csv' %}"
+         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow text-sm">
+        📄 Export CSV
+      </a>
+
+      <a href="{% url 'policies:export_archived_pdf' %}"
+         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow text-sm">
+        🧾 Export PDF
+      </a>
+
+      <a href="{% url 'policies:policy_list' %}"
+         class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg shadow text-sm">
+        ⬅ Back to Policies
+      </a>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <form method="get" class="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow flex flex-col sm:flex-row gap-3">
+    <input
+      type="text"
+      name="search"
+      value="{{ request.GET.search }}"
+      placeholder="Search policy number or client"
+      class="flex-1 px-4 py-2 rounded-lg border dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500"
+    />
+    <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+      🔍 Search
+    </button>
+  </form>
+
+  <!-- TABLE -->
+  <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 uppercase text-xs">
+        <tr>
+          <th class="p-3 text-left">Policy</th>
+          <th class="p-3 text-left">Client</th>
+          <th class="p-3 text-left">Premium</th>
+          <th class="p-3 text-left">Expiry Date</th>
+          <th class="p-3 text-left">Status</th>
+          <th class="p-3 text-left">Archived On</th>
+          <th class="p-3 text-left">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y dark:divide-zinc-700">
+        {% for p in policies %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800 transition">
+          <td class="p-3 font-medium">{{ p.policy_number }}</td>
+          <td class="p-3">{{ p.client }}</td>
+          <td class="p-3 text-green-600 font-semibold">${{ p.premium }}</td>
+          <td class="p-3 text-red-600">{{ p.expiry_date }}</td>
+          <td class="p-3">
+            <span class="bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full text-xs font-semibold">
+              ARCHIVED
+            </span>
+          </td>
+          <td class="p-3 text-sm text-gray-500">
+            {{ p.updated_at|date:"M d, Y" }}
+          </td>
+          <td class="p-3">
+            <div class="flex gap-2">
+              <a href="{% url 'policies:policy_detail' p.id %}"
+                 class="text-blue-600 hover:underline text-sm">
+                View
+              </a>
+
+              <a href="{% url 'policies:undo_archive_policy' p.id %}"
+                 class="text-green-600 hover:underline text-sm"
+                 onclick="return confirm('Restore this policy?');">
+                Undo
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="p-6 text-center text-gray-400">
+            No archived policies found
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PAGINATION -->
+  {% if page_obj %}
+  <div class="flex justify-center gap-3 mt-6">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 border rounded">
+        ⬅ Prev
+      </a>
+    {% endif %}
+
+    <span class="px-4 py-2 bg-blue-600 text-white rounded">
+      {{ page_obj.number }}
+    </span>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 border rounded">
+        Next ➡
+      </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
