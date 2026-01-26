@@ -1,15 +1,14 @@
 """
 Django settings for health_insurance project.
-
-Structured configuration for development and future production readiness.
+Production-ready with Render support.
 """
 
 from pathlib import Path
-import os
 from datetime import timedelta
+import os
+
 from decouple import config
-
-
+import dj_database_url
 
 # ----------------------------
 # Base directory
@@ -19,13 +18,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ----------------------------
 # Security
 # ----------------------------
-SECRET_KEY = os.environ.get(
+SECRET_KEY = config(
     "DJANGO_SECRET_KEY",
-    "django-insecure-zh)q)o4&m)57i6!whqr^#@&(kf_%tc3i+o7-+kp38!!0m^dcjk"
+    default="django-insecure-zh)q)o4&m)57i6!whqr^#@&(kf_%tc3i+o7-+kp38!!0m^dcjk",
 )
-DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.environ.get(
-    "DJANGO_ALLOWED_HOSTS", "0.0.0.0,127.0.0.1,localhost"
+
+DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
+
+ALLOWED_HOSTS = config(
+    "DJANGO_ALLOWED_HOSTS",
+    default="127.0.0.1,localhost",
 ).split(",")
 
 # ----------------------------
@@ -39,13 +41,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "widget_tweaks",
 
     # Third-party apps
     "rest_framework",
     "rest_framework.authtoken",
     "django_filters",
     "corsheaders",
+    "widget_tweaks",
+    "django_extensions",
+    "qr_code",
 
     # Local apps
     "accounts",
@@ -53,17 +57,14 @@ INSTALLED_APPS = [
     "policies",
     "claims",
     "hospitals",
-    'django_extensions',
-    'tasks',
-    'qr_code',
-
+    "tasks",
 ]
 
 # ----------------------------
 # Middleware
 # ----------------------------
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # must be first for CORS
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -74,7 +75,7 @@ MIDDLEWARE = [
 ]
 
 # ----------------------------
-# URLs and WSGI
+# URLs / WSGI
 # ----------------------------
 ROOT_URLCONF = "health_insurance.urls"
 WSGI_APPLICATION = "health_insurance.wsgi.application"
@@ -82,17 +83,13 @@ WSGI_APPLICATION = "health_insurance.wsgi.application"
 # ----------------------------
 # Database
 # ----------------------------
-import dj_database_url
-
 DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
-        ssl_require=False,
+        ssl_require=not DEBUG,  # REQUIRED for Render
     )
 }
-
-# ✅ Development SQLite; switch to PostgreSQL/MySQL in production
 
 # ----------------------------
 # Authentication
@@ -118,9 +115,9 @@ SIMPLE_JWT = {
 }
 
 # ----------------------------
-# CORS (for API Frontend)
+# CORS
 # ----------------------------
-CORS_ALLOW_ALL_ORIGINS = True  # ✅ Dev only; specify origins in production
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all only in dev
 
 # ----------------------------
 # Password validation
@@ -141,7 +138,7 @@ USE_I18N = True
 USE_TZ = True
 
 # ----------------------------
-# Static & Media Files
+# Static & Media
 # ----------------------------
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
@@ -156,7 +153,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # root templates folder
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -180,37 +177,33 @@ LOGGING = {
 }
 
 # ----------------------------
-# Default primary key type
+# Default PK
 # ----------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ----------------------------
-# Login / Logout redirects
+# Auth redirects
 # ----------------------------
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/clients/login/"
-FINGERPRINT_SERVICE_URL = "http://127.0.0.1:5000/enroll"
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
 # ----------------------------
-# Email Configuration
+# External services
 # ----------------------------
-# Use environment variables for production safety
+FINGERPRINT_SERVICE_URL = config(
+    "FINGERPRINT_SERVICE_URL",
+    default="http://127.0.0.1:5000/enroll",
+)
+
+# ----------------------------
+# Email
+# ----------------------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")  # fallback SMTP host
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool, default=True)
-EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)  # optional
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
-
-# ----------------------------
-# Development fallback: console backend
-# ----------------------------
-
-# Digital Persona / Fingerprint Scanner Service
-FINGERPRINT_SERVICE_URL = "http://127.0.0.1:5000/enroll"
