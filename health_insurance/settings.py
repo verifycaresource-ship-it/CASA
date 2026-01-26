@@ -82,34 +82,12 @@ WSGI_APPLICATION = "health_insurance.wsgi.application"
 # ----------------------------
 # Database
 # ----------------------------
-from pathlib import Path
-import os
-import dj_database_url
-from decouple import config
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# SECURITY
-SECRET_KEY = config("SECRET_KEY", default="unsafe-dev-key")
-DEBUG = config("DEBUG", default=False, cast=bool)
-
-ALLOWED_HOSTS = ["*"]  # tighten later
-
-# ======================
-# DATABASE CONFIG
-# ======================
-
 DATABASES = {
-    "default": dj_database_url.parse(
-        config(
-            "DATABASE_URL",
-            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
-        ),
-        conn_max_age=600,
-        ssl_require=not DEBUG,   # SSL only in production
-    )
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",  # Development DB
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
-
 # ✅ Development SQLite; switch to PostgreSQL/MySQL in production
 
 # ----------------------------
