@@ -1,0 +1,110 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Population Health Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6 text-blue-900">{{ dashboard_title }}</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+
+        <!-- Total Claims Last 7 Days -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Total Claims - Last 7 Days</h2>
+            <canvas id="claimsChart7"></canvas>
+        </div>
+
+        <!-- Total Claims Last 30 Days -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Total Claims - Last 30 Days</h2>
+            <canvas id="claimsChart30"></canvas>
+        </div>
+
+        <!-- Gender Distribution -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Gender Distribution - Last 7 Days</h2>
+            <canvas id="genderChart"></canvas>
+        </div>
+
+        <!-- Age Distribution -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Age Distribution - Last 7 Days</h2>
+            <canvas id="ageChart"></canvas>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const last7days = {{ last_7_days|json_script:"last7days" }};
+const last30days = {{ last_30_days|json_script:"last30days" }};
+
+// Total Claims Last 7 Days
+new Chart(document.getElementById('claimsChart7'), {
+    type: 'line',
+    data: {
+        labels: last7days.map(d => d.date),
+        datasets: [{
+            label: 'Total Claims',
+            data: last7days.map(d => d.total_claims),
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.2)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+});
+
+// Total Claims Last 30 Days
+new Chart(document.getElementById('claimsChart30'), {
+    type: 'line',
+    data: {
+        labels: last30days.map(d => d.date),
+        datasets: [{
+            label: 'Total Claims',
+            data: last30days.map(d => d.total_claims),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16,185,129,0.2)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+});
+
+// Gender Distribution
+new Chart(document.getElementById('genderChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Male', 'Female'],
+        datasets: [{
+            data: [
+                last7days.reduce((sum,d)=>sum+d.male_clients,0),
+                last7days.reduce((sum,d)=>sum+d.female_clients,0)
+            ],
+            backgroundColor: ['#3b82f6','#ec4899']
+        }]
+    }
+});
+
+// Age Distribution
+new Chart(document.getElementById('ageChart'), {
+    type: 'bar',
+    data: {
+        labels: ['0-18','19-35','36-60','60+'],
+        datasets: [{
+            label: 'Clients',
+            data: [
+                last7days.reduce((sum,d)=>sum+d.age_0_18,0),
+                last7days.reduce((sum,d)=>sum+d.age_19_35,0),
+                last7days.reduce((sum,d)=>sum+d.age_36_60,0),
+                last7days.reduce((sum,d)=>sum+d.age_60_plus,0)
+            ],
+            backgroundColor: ['#f87171','#fbbf24','#34d399','#60a5fa']
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+</script>
+{% endblock %}
