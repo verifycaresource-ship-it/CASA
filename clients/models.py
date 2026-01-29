@@ -14,6 +14,7 @@ class Client(models.Model):
         max_length=20, blank=True, null=True,
         validators=[RegexValidator(r'^\+?1?\d{9,15}$', "Enter valid phone")]
     )
+    secure_token = models.CharField(max_length=64, blank=True, null=True, editable=False)
     email = models.EmailField(blank=True, null=True)
     dob = models.DateField(blank=True, null=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
@@ -117,3 +118,31 @@ class WebAuthnCredential(models.Model):
 
     def __str__(self):
         return f"WebAuthn Credential for {self.client.full_name}"
+
+
+# clients/models.py
+from django.db import models
+from django.utils import timezone
+import secrets
+
+class ClientVerificationToken(models.Model):
+    client = models.ForeignKey("Client", on_delete=models.CASCADE, related_name="verification_tokens")
+    token = models.CharField(max_length=32, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = secrets.token_urlsafe(16)
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timezone.timedelta(minutes=10)  # valid for 10 minutes
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        return timezone.now() < self.expires_at
+
+    @property
+    def registered_by_name(self):
+        if self.registered_by:
+            return self.registered_by.get_full_name() or self.registered_by.username
+        return "—"

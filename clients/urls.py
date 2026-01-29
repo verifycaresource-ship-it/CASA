@@ -6,7 +6,9 @@ from .views import (
     edit_client,
     client_detail,
     capture_fingerprint,
-    ClientViewSet
+    ClientViewSet,
+    generate_qr,
+    verify_qr
 )
 
 app_name = "clients"
@@ -30,8 +32,10 @@ urlpatterns = [
     # Fingerprint AJAX Capture (used in client_form.html)
     path("capture_fingerprint/", capture_fingerprint, name="capture_fingerprint"),
 
+    # QR Code Endpoints (only agents)
+    path("qr/generate/<int:client_id>/", generate_qr, name="generate_qr"),
+    path("qr/verify/", verify_qr, name="verify_qr"),
+
     # DRF API Endpoints
     path("api/", include(router.urls)),
-
-    
 ]

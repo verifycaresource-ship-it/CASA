@@ -166,18 +166,13 @@ def client_detail(request, pk):
     # Active policy
     active_policy = (
         Policy.objects
-        .filter(
-            client=client,
-            is_active=True,
-            is_archived=False,
-            expiry_date__gte=timezone.now().date()
-        )
+        .filter(client=client, is_active=True, is_archived=False, expiry_date__gte=timezone.now().date())
         .order_by("-start_date")
         .first()
     )
 
-    # Generate one-time secure token
-    if not hasattr(client, 'secure_token') or not client.secure_token:
+    # Generate secure token if not exists
+    if not client.secure_token:
         client.secure_token = secrets.token_urlsafe(16)
         client.save(update_fields=['secure_token'])
 
@@ -187,6 +182,7 @@ def client_detail(request, pk):
         "now": timezone.now(),
     }
     return render(request, "clients/client_detail.html", context)
+
 
 
 # ---------------------------
@@ -220,3 +216,69 @@ def capture_fingerprint(request):
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
+
+# clients/views.py
+import qrcode
+import io
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from .models import Client, ClientVerificationToken
+from django.contrib.auth.decorators import login_required
+from .decorators import roles_required
+
+@login_required
+@roles_required("agent")  # Only agents can generate QR for verification
+def generate_qr(request, client_id):
+    client = get_object_or_404(Client, pk=client_id)
+
+    # Create a short-lived verification token
+    token_obj = ClientVerificationToken.objects.create(client=client)
+
+    # Encode token info in QR code
+    qr_data = f"client_id={client.id}&verify_token={token_obj.token}"
+    qr_img = qrcode.make(qr_data)
+
+    # Convert to HTTP response
+    buffer = io.BytesIO()
+    qr_img.save(buffer, format="PNG")
+    buffer.seek(0)
+    return HttpResponse(buffer.getvalue(), content_type="image/png")
+
+# clients/views.py
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from urllib.parse import parse_qs
+
+@login_required
+@roles_required("agent")
+@csrf_exempt  # Can remove if using token-based auth in API
+def verify_qr(request):
+    """
+    Agent posts scanned QR code content: client_id and verify_token
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid request method."})
+
+    client_id = request.POST.get("client_id")
+    token = request.POST.get("verify_token")
+
+    if not client_id or not token:
+        return JsonResponse({"success": False, "error": "Missing QR code data."})
+
+    try:
+        token_obj = ClientVerificationToken.objects.get(client_id=client_id, token=token)
+        if not token_obj.is_valid():
+            return JsonResponse({"success": False, "error": "Token expired."})
+
+        # Mark client as verified
+        client = token_obj.client
+        client.status = "verified"
+        client.fingerprint_verified = True
+        client.save(update_fields=["status", "fingerprint_verified"])
+
+        # Delete token after use
+        token_obj.delete()
+
+        return JsonResponse({"success": True, "message": f"Client {client.full_name} verified successfully!"})
+    except ClientVerificationToken.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Invalid token."})

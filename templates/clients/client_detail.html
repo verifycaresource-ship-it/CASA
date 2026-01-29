@@ -77,12 +77,12 @@
 
         <p class="relative z-10">
           <strong class="text-blue-900">Gender:</strong>
-          {{ client.gender|title }}
+          {{ client.gender|title|default:"—" }}
         </p>
 
         <p class="relative z-10">
           <strong class="text-blue-900">DOB:</strong>
-          {{ client.dob|date:"M d, Y" }}
+          {{ client.dob|date:"M d, Y"|default:"—" }}
         </p>
 
         <p class="relative z-10">
@@ -92,7 +92,7 @@
 
         <p class="relative z-10">
           <strong class="text-blue-900">Registered By:</strong>
-          {{ client.registered_by }}
+          {{ client.registered_by_name }}
         </p>
 
         <p class="relative z-10">
