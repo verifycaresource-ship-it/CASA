@@ -1,5 +1,8 @@
 import base64
 import secrets
+import os
+import calendar
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,13 +11,15 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.db.models.functions import ExtractMonth
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+from rest_framework import viewsets
+
 from .models import Client
 from .forms import ClientForm
 from .decorators import roles_required
-from .fingerprint_service import enroll_client_from_base64, verify_client_from_base64, capture_fingerprint
+from .fingerprint_service import enroll_client_from_base64
 from policies.models import Policy
-from django.contrib.auth import get_user_model
-from rest_framework import viewsets
 from .serializers import ClientSerializer
 
 User = get_user_model()
@@ -64,19 +69,15 @@ def client_list(request):
     female_clients = Client.objects.filter(gender="female").count()
     other_clients = Client.objects.filter(gender="other").count()
 
-    # Monthly chart (new clients by month) - PostgreSQL compatible
+    # Monthly chart (new clients by month)
     month_data_qs = Client.objects.annotate(
-        month=ExtractMonth('dob')
+        month=ExtractMonth('dob')  # PostgreSQL-compatible
     ).values('month').annotate(count=Count('id')).order_by('month')
 
-    months = [m['month'] for m in month_data_qs]
+    months = [calendar.month_name[m['month']] for m in month_data_qs]
     month_data = [m['count'] for m in month_data_qs]
 
-    # Optional: convert month numbers to names
-    import calendar
-    months = [calendar.month_name[m] for m in months]
-
-    # Agents for filter dropdown
+    # Agents for dropdown
     agents = User.objects.filter(role='agent')
 
     context = {
@@ -100,36 +101,47 @@ def client_list(request):
 
 
 # ---------------------------
+# ADD / EDIT CLIENT HELPER
+# ---------------------------
+def save_client_form(request, form, client=None):
+    """Handles saving client with optional fingerprint."""
+    if form.is_valid():
+        client = form.save(commit=False)
+        fingerprint_base64 = request.POST.get("fingerprint_base64")
+
+        if fingerprint_base64:
+            try:
+                enroll_client_from_base64(client, fingerprint_base64)
+                client.status = "verified"
+            except Exception as e:
+                client.status = "failed"
+                messages.warning(request, f"Fingerprint enrollment failed: {e}")
+        else:
+            if not client.pk:  # new client
+                client.status = "pending"
+
+        if not client.pk:
+            client.registered_by = request.user
+
+        client.save()
+        messages.success(
+            request,
+            f"Client '{client.full_name}' {'updated' if client.pk else 'registered'} successfully!"
+        )
+        return redirect("clients:client_list")
+    else:
+        messages.error(request, "Please correct the errors below.")
+        return render(request, "clients/client_form.html", {"form": form, "dashboard_title": "Client Form"})
+
+
+# ---------------------------
 # ADD CLIENT
 # ---------------------------
 @login_required
 @roles_required("admin", "agent")
 def add_client(request):
-    if request.method == "POST":
-        form = ClientForm(request.POST, request.FILES)
-        if form.is_valid():
-            client = form.save(commit=False)
-            fingerprint_base64 = request.POST.get("fingerprint_base64")
-            if fingerprint_base64:
-                try:
-                    enroll_client_from_base64(client, fingerprint_base64)
-                    client.status = "verified"
-                except Exception as e:
-                    client.status = "failed"
-                    messages.warning(request, f"Fingerprint enrollment failed: {e}")
-            else:
-                client.status = "pending"
-
-            client.registered_by = request.user
-            client.save()
-            messages.success(request, f"Client '{client.full_name}' registered successfully!")
-            return redirect("clients:client_list")
-        else:
-            messages.error(request, "Please correct the errors below.")
-    else:
-        form = ClientForm()
-
-    return render(request, "clients/client_form.html", {"form": form, "dashboard_title": "Register New Client"})
+    form = ClientForm(request.POST or None, request.FILES or None)
+    return save_client_form(request, form)
 
 
 # ---------------------------
@@ -139,26 +151,8 @@ def add_client(request):
 @roles_required("admin", "agent")
 def edit_client(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    if request.method == "POST":
-        form = ClientForm(request.POST, request.FILES, instance=client)
-        if form.is_valid():
-            client = form.save(commit=False)
-            fingerprint_base64 = request.POST.get("fingerprint_base64")
-            if fingerprint_base64:
-                try:
-                    enroll_client_from_base64(client, fingerprint_base64)
-                    client.status = "verified"
-                except Exception as e:
-                    messages.warning(request, f"Fingerprint enrollment failed: {e}")
-            client.save()
-            messages.success(request, f"Client '{client.full_name}' updated successfully!")
-            return redirect("clients:client_list")
-        else:
-            messages.error(request, "Please correct the errors below.")
-    else:
-        form = ClientForm(instance=client)
-
-    return render(request, "clients/client_form.html", {"form": form, "dashboard_title": f"Edit Client: {client.full_name}"})
+    form = ClientForm(request.POST or None, request.FILES or None, instance=client)
+    return save_client_form(request, form, client)
 
 
 # ---------------------------
@@ -198,32 +192,27 @@ def client_detail(request, pk):
 # ---------------------------
 # FINGERPRINT CAPTURE (AJAX)
 # ---------------------------
-
 @login_required
 @roles_required("admin", "agent")
 def capture_fingerprint(request):
     """
-    Capture fingerprint via Digital Persona SDK (Windows/Linux) OR
-    provide a dummy template in production (Render cloud).
+    Returns Base64 fingerprint template.
+    Provides dummy template in cloud if hardware not available.
     """
-    import base64
-
     try:
-        # Check if running locally or in Render
-        import os
         if os.environ.get("RENDER") or not os.environ.get("FINGERPRINT_HARDWARE"):
-            # Provide dummy fingerprint in cloud / Render
+            # Cloud fallback
             dummy_bytes = b"dummy_fingerprint_template"
             template_base64 = base64.b64encode(dummy_bytes).decode("utf-8")
         else:
-            # Local capture using fingerprint device
-            from .fingerprint_service import capture_fingerprint as capture_fp
-            template_bytes = capture_fp()
+            # Local capture
+            template_bytes = capture_fingerprint()
             template_base64 = base64.b64encode(template_bytes).decode("utf-8")
 
         return JsonResponse({"success": True, "fingerprint": template_base64})
     except Exception as e:
         return JsonResponse({"success": False, "fingerprint": None, "error": str(e)})
+
 
 # ---------------------------
 # DRF VIEWSET

@@ -30,79 +30,43 @@
         select.glass-input { appearance: none; }
       </style>
 
-      <!-- -----------------------------
-           Personal Info Section
-           ----------------------------- -->
+      <!-- Personal Info -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          {{ form.first_name.label_tag }}<br>
-          {{ form.first_name|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
-        <div>
-          {{ form.last_name.label_tag }}<br>
-          {{ form.last_name|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
-        <div>
-          {{ form.phone.label_tag }}<br>
-          {{ form.phone|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
-        <div>
-          {{ form.email.label_tag }}<br>
-          {{ form.email|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
-        <div>
-          {{ form.dob.label_tag }}<br>
-          {{ form.dob|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
-        <div>
-          {{ form.gender.label_tag }}<br>
-          {{ form.gender|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
-        <div class="sm:col-span-2">
-          {{ form.address.label_tag }}<br>
-          {{ form.address|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
+        <div>{{ form.first_name.label_tag }}<br>{{ form.first_name|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
+        <div>{{ form.last_name.label_tag }}<br>{{ form.last_name|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
+        <div>{{ form.phone.label_tag }}<br>{{ form.phone|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
+        <div>{{ form.email.label_tag }}<br>{{ form.email|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
+        <div>{{ form.dob.label_tag }}<br>{{ form.dob|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
+        <div>{{ form.gender.label_tag }}<br>{{ form.gender|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
+        <div class="sm:col-span-2">{{ form.address.label_tag }}<br>{{ form.address|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
       </div>
 
-      <!-- -----------------------------
-           Photo & Identity Section
-           ----------------------------- -->
+      <!-- Photo & ID -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
-        <div>
-          {{ form.photo.label_tag }}<br>
-          {{ form.photo|add_class:"w-full p-2 rounded-lg glass-input" }}
-        </div>
-        <div>
-          {{ form.nric_or_passport.label_tag }}<br>
-          {{ form.nric_or_passport|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}
-        </div>
+        <div>{{ form.photo.label_tag }}<br>{{ form.photo|add_class:"w-full p-2 rounded-lg glass-input" }}</div>
+        <div>{{ form.nric_or_passport.label_tag }}<br>{{ form.nric_or_passport|add_class:"w-full px-4 py-2 rounded-lg glass-input" }}</div>
       </div>
 
-      <!-- -----------------------------
-           Fingerprint Capture
-           ----------------------------- -->
+      <!-- Fingerprint Capture -->
       <div class="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <button type="button" id="capture-fingerprint"
-                class="px-6 py-3 bg-gradient-to-tr from-cyan-400 to-blue-500 text-white font-semibold rounded-xl shadow hover:scale-105 transition transform hover:brightness-110">
-            Place Finger & Capture
+          class="px-6 py-3 bg-gradient-to-tr from-cyan-400 to-blue-500 text-white font-semibold rounded-xl shadow hover:scale-105 transition transform hover:brightness-110">
+          Place Finger & Capture
         </button>
-
         <span id="fingerprint-status" class="text-red-500 font-medium mt-2 sm:mt-0">
           No fingerprint captured ❌
         </span>
-
         <input type="hidden" name="fingerprint_base64" id="fingerprint_base64">
       </div>
 
-      <!-- -----------------------------
-           Submit Buttons
-           ----------------------------- -->
+      <!-- Submit Buttons -->
       <div class="mt-8 flex flex-wrap gap-4">
           <button type="submit" class="px-6 py-3 bg-gradient-to-tr from-green-400 to-teal-500 text-white font-semibold rounded-xl shadow hover:scale-105 transition transform">
               Save Client
           </button>
           <a href="{% url 'clients:client_list' %}" class="px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-800 transition">Cancel</a>
       </div>
+
   </form>
 
   <!-- Neon Floating Blobs -->
@@ -110,14 +74,14 @@
   <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-gradient-to-tr from-cyan-400 to-blue-500 opacity-20 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
 </div>
 
-<!-- -----------------------------
-     Fingerprint JS
-     ----------------------------- -->
+<!-- Fingerprint JS -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const captureBtn = document.getElementById("capture-fingerprint");
     const statusEl = document.getElementById("fingerprint-status");
     const fingerprintInput = document.getElementById("fingerprint_base64");
+
+    if (!captureBtn || !statusEl || !fingerprintInput) return;
 
     captureBtn.addEventListener("click", async function() {
         statusEl.textContent = "Waiting for fingerprint...";
@@ -125,31 +89,22 @@ document.addEventListener("DOMContentLoaded", function() {
         statusEl.classList.add("text-yellow-400");
 
         try {
-            const response = await fetch("{% url 'clients:capture_fingerprint' %}", {
-                method: "GET",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}"
-                }
-            });
-
+            const response = await fetch("{% url 'clients:capture_fingerprint' %}");
             const data = await response.json();
-            console.log("Fingerprint capture response:", data);
 
             if (data.success && data.fingerprint) {
                 fingerprintInput.value = data.fingerprint;
                 statusEl.textContent = "Fingerprint Captured ✅";
-                statusEl.classList.remove("text-yellow-400","text-red-500");
+                statusEl.classList.remove("text-red-500","text-yellow-400");
                 statusEl.classList.add("text-green-500");
             } else {
-                statusEl.textContent = data.error || "Capture failed ❌";
-                statusEl.classList.remove("text-yellow-400","text-green-500");
+                statusEl.textContent = data.error || "Capture failed ❌ Try again";
+                statusEl.classList.remove("text-green-500","text-yellow-400");
                 statusEl.classList.add("text-red-500");
             }
-
         } catch (err) {
-            console.error("Fingerprint capture error:", err);
             statusEl.textContent = "Error capturing fingerprint ❌";
-            statusEl.classList.remove("text-yellow-400","text-green-500");
+            statusEl.classList.remove("text-green-500","text-yellow-400");
             statusEl.classList.add("text-red-500");
         }
     });
