@@ -1,16 +1,23 @@
 import base64
+import secrets
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.db.models.functions import ExtractMonth
+from django.utils import timezone
 from .models import Client
 from .forms import ClientForm
 from .decorators import roles_required
-
-# Import fingerprint functions
 from .fingerprint_service import enroll_client_from_base64, verify_client_from_base64, capture_fingerprint
+from policies.models import Policy
+from django.contrib.auth import get_user_model
+from rest_framework import viewsets
+from .serializers import ClientSerializer
+
+User = get_user_model()
 
 
 # ---------------------------
@@ -25,14 +32,19 @@ def client_list(request):
 
     clients = Client.objects.all()
 
+    # Search filter
     if search_query:
         clients = clients.filter(
-            first_name__icontains=search_query
-        ) | clients.filter(last_name__icontains=search_query) | clients.filter(email__icontains=search_query)
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
 
+    # Gender filter
     if gender_filter:
         clients = clients.filter(gender=gender_filter)
 
+    # Agent filter
     if agent_filter:
         clients = clients.filter(registered_by__id=agent_filter)
 
@@ -52,10 +64,20 @@ def client_list(request):
     female_clients = Client.objects.filter(gender="female").count()
     other_clients = Client.objects.filter(gender="other").count()
 
-    # Monthly chart (new clients by month)
-    month_data_qs = Client.objects.extra({'month': "strftime('%%m', dob)"}).values('month').annotate(count=Count('id')).order_by('month')
+    # Monthly chart (new clients by month) - PostgreSQL compatible
+    month_data_qs = Client.objects.annotate(
+        month=ExtractMonth('dob')
+    ).values('month').annotate(count=Count('id')).order_by('month')
+
     months = [m['month'] for m in month_data_qs]
     month_data = [m['count'] for m in month_data_qs]
+
+    # Optional: convert month numbers to names
+    import calendar
+    months = [calendar.month_name[m] for m in months]
+
+    # Agents for filter dropdown
+    agents = User.objects.filter(role='agent')
 
     context = {
         "clients": page_obj,
@@ -72,7 +94,7 @@ def client_list(request):
         "other_clients": other_clients,
         "months": months,
         "month_data": month_data,
-        "agents": None,  # populate with User.objects.filter(role='agent') if needed
+        "agents": agents,
     }
     return render(request, "clients/client_list.html", context)
 
@@ -106,6 +128,7 @@ def add_client(request):
             messages.error(request, "Please correct the errors below.")
     else:
         form = ClientForm()
+
     return render(request, "clients/client_form.html", {"form": form, "dashboard_title": "Register New Client"})
 
 
@@ -134,23 +157,19 @@ def edit_client(request, pk):
             messages.error(request, "Please correct the errors below.")
     else:
         form = ClientForm(instance=client)
+
     return render(request, "clients/client_form.html", {"form": form, "dashboard_title": f"Edit Client: {client.full_name}"})
 
 
-from django.shortcuts import render, get_object_or_404
-from django.utils import timezone
-
-from .models import Client
-from policies.models import Policy
-
-
-import secrets
-from django.utils import timezone
-
+# ---------------------------
+# CLIENT DETAIL
+# ---------------------------
+@login_required
+@roles_required("admin", "agent")
 def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
 
-    # ✅ Active policy
+    # Active policy
     active_policy = (
         Policy.objects
         .filter(
@@ -163,7 +182,7 @@ def client_detail(request, pk):
         .first()
     )
 
-    # 🔒 Generate a one-time secure token for QR login verification
+    # Generate one-time secure token
     if not hasattr(client, 'secure_token') or not client.secure_token:
         client.secure_token = secrets.token_urlsafe(16)
         client.save(update_fields=['secure_token'])
@@ -176,39 +195,27 @@ def client_detail(request, pk):
     return render(request, "clients/client_detail.html", context)
 
 
-
-
-
 # ---------------------------
 # FINGERPRINT CAPTURE (AJAX)
 # ---------------------------
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-import base64
-from .fingerprint_service import capture_fingerprint as capture_fp
-
 @login_required
 @roles_required("admin", "agent")
 def capture_fingerprint(request):
     """
-    Capture fingerprint via Digital Persona SDK (Windows/Linux).
+    Capture fingerprint via Digital Persona SDK.
     Returns Base64 encoded template.
     """
     try:
-        template_bytes = capture_fp()  # call fingerprint_service.py
+        template_bytes = capture_fingerprint()  # call fingerprint_service.py
         template_base64 = base64.b64encode(template_bytes).decode("utf-8")
         return JsonResponse({"success": True, "fingerprint": template_base64})
     except Exception as e:
         return JsonResponse({"success": False, "fingerprint": None, "error": str(e)})
 
 
-
 # ---------------------------
-# DRF VIEWSET (optional)
+# DRF VIEWSET
 # ---------------------------
-from rest_framework import viewsets
-from .serializers import ClientSerializer
-
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
