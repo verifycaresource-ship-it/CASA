@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 from accounts.views import dashboard  # main dashboard
+from django.conf.urls.static import static
 
 # =========================
 # 🌐 DRF Routers

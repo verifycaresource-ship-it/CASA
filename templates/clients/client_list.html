@@ -20,42 +20,41 @@
       ➕ Add Client
     </a>
   </div>
-    <!-- Search & Filters -->
-<div class="glass p-4 rounded-2xl shadow flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 items-start sm:items-center">
-  <form method="get" class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full items-start sm:items-center">
-    
-    <!-- Search -->
-    <input type="text" name="search" placeholder="Search clients..." value="{{ search_query }}" 
-           class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 flex-1 text-gray-900 w-full sm:w-auto">
 
-    <!-- Gender Filter -->
-    <select name="gender" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
-      <option value="">All Genders</option>
-      {% for g, value in gender_options %}
-        <option value="{{ g }}" {% if gender_filter == g %}selected{% endif %}>{{ value }}</option>
-      {% endfor %}
-    </select>
+  <!-- Search & Filters -->
+  <div class="glass p-4 rounded-2xl shadow flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 items-start sm:items-center">
+    <form method="get" class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full items-start sm:items-center">
+      
+      <!-- Search -->
+      <input type="text" name="search" placeholder="Search clients..." value="{{ search_query }}" 
+             class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 flex-1 text-gray-900 w-full sm:w-auto">
 
-    <!-- Agent Filter -->
-    <select name="agent" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
-      <option value="">All Agents</option>
-      {% for agent in agents %}
-        <option value="{{ agent.id }}" {% if agent_filter|default:'' == agent.id|stringformat:"s" %}selected{% endif %}>
-          {{ agent.get_full_name|default:agent.username }}
-        </option>
-      {% endfor %}
-    </select>
+      <!-- Gender Filter -->
+      <select name="gender" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
+        <option value="">All Genders</option>
+        <option value="male" {% if gender_filter == 'male' %}selected{% endif %}>Male</option>
+        <option value="female" {% if gender_filter == 'female' %}selected{% endif %}>Female</option>
+        <option value="other" {% if gender_filter == 'other' %}selected{% endif %}>Other</option>
+      </select>
 
-    <!-- Submit -->
-    <button type="submit" class="px-3 py-2 bg-gradient-to-tr from-blue-500 to-cyan-400 text-white rounded-lg hover:scale-105 transition transform w-full sm:w-auto">
-      🔍 Filter
-    </button>
+      <!-- Agent Filter -->
+      <select name="agent" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
+        <option value="">All Agents</option>
+        {% for agent in agents %}
+          <option value="{{ agent.id }}" {% if agent_filter|default:'' == agent.id|stringformat:"s" %}selected{% endif %}>{{ agent.username }}</option>
+        {% endfor %}
+      </select>
 
-  </form>
-</div>
+      <!-- Submit -->
+      <button type="submit" class="px-3 py-2 bg-gradient-to-tr from-blue-500 to-cyan-400 text-white rounded-lg hover:scale-105 transition transform w-full sm:w-auto">
+        🔍 Filter
+      </button>
+
+    </form>
+  </div>
 
   <!-- KPI Cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
     <div class="glass p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow-xl transition transform hover:scale-105">
       <h3 class="text-gray-300 font-semibold text-sm sm:text-base">Total Clients</h3>
       <p class="text-2xl sm:text-3xl font-bold text-blue-400">{{ total_clients }}</p>
@@ -74,38 +73,15 @@
     </div>
   </div>
 
-  <!-- Filters -->
-  {% if agents %}
-  <div class="glass p-4 rounded-2xl shadow flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 items-start sm:items-center">
-    <form method="get" class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full items-start sm:items-center">
-      <input type="text" name="search" placeholder="Search clients..." value="{{ search_query }}" 
-             class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 flex-1 text-gray-900 w-full sm:w-auto">
-      <select name="gender" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
-        <option value="">All Genders</option>
-        <option value="male" {% if gender_filter == 'male' %}selected{% endif %}>Male</option>
-        <option value="female" {% if gender_filter == 'female' %}selected{% endif %}>Female</option>
-        <option value="other" {% if gender_filter == 'other' %}selected{% endif %}>Other</option>
-      </select>
-      <select name="agent" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
-        <option value="">All Agents</option>
-        {% for agent in agents %}
-          <option value="{{ agent.id }}" {% if agent_filter|default:'' == agent.id|stringformat:"s" %}selected{% endif %}>{{ agent.username }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit" class="px-3 py-2 bg-gradient-to-tr from-blue-500 to-cyan-400 text-white rounded-lg hover:scale-105 transition transform w-full sm:w-auto">Filter</button>
-    </form>
-  </div>
-  {% endif %}
-
   <!-- Charts -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-    <div class="glass p-4 rounded-2xl shadow flex flex-col items-center">
+    <div class="glass p-4 rounded-2xl shadow flex flex-col items-center w-full">
       <h3 class="text-white text-lg sm:text-xl font-semibold mb-2">Clients by Gender</h3>
       <div class="w-full h-64 sm:h-72">
         <canvas id="genderChart" class="w-full h-full"></canvas>
       </div>
     </div>
-    <div class="glass p-4 rounded-2xl shadow flex flex-col items-center">
+    <div class="glass p-4 rounded-2xl shadow flex flex-col items-center w-full">
       <h3 class="text-white text-lg sm:text-xl font-semibold mb-2">Clients by Registration Month</h3>
       <div class="w-full h-64 sm:h-72">
         <canvas id="monthlyChart" class="w-full h-full"></canvas>
@@ -115,7 +91,7 @@
 
   <!-- Clients Table -->
   <div class="glass overflow-x-auto rounded-2xl shadow p-2 sm:p-4 border border-gray-100">
-    <table class="min-w-full divide-y divide-gray-200 text-sm sm:text-base">
+    <table class="min-w-full divide-y divide-gray-200 text-sm sm:text-base table-auto">
       <thead class="bg-gray-800 sticky top-0 text-gray-200 text-xs sm:text-sm">
         <tr>
           <th class="px-2 sm:px-4 py-2 text-left font-semibold uppercase">#</th>
@@ -139,8 +115,8 @@
             {% endif %}
           </td>
           <td class="px-2 sm:px-4 py-2 font-semibold">{{ client.first_name }} {{ client.last_name }}</td>
-          <td class="px-2 sm:px-4 py-2 text-sm">{{ client.email }}</td>
-          <td class="px-2 sm:px-4 py-2 text-sm">{{ client.phone }}</td>
+          <td class="px-2 sm:px-4 py-2 text-sm">{{ client.email|default:"N/A" }}</td>
+          <td class="px-2 sm:px-4 py-2 text-sm">{{ client.phone|default:"N/A" }}</td>
           <td class="px-2 sm:px-4 py-2 text-center">
             {% if client.status == 'verified' %}
               <span class="px-2 py-1 text-xs sm:text-sm font-semibold rounded-full bg-green-700 text-green-100">✅ Verified</span>
