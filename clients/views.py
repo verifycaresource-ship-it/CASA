@@ -147,15 +147,10 @@ from policies.models import Policy
 import secrets
 from django.utils import timezone
 
-from django.shortcuts import render, get_object_or_404
-from django.utils import timezone
-from policies.models import Policy
-from .models import Client
-
 def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
 
-    # Get only the active policy (no status field)
+    # ✅ Active policy
     active_policy = (
         Policy.objects
         .filter(
@@ -167,45 +162,21 @@ def client_detail(request, pk):
         .order_by("-start_date")
         .first()
     )
+
+    # 🔒 Generate a one-time secure token for QR login verification
+    if not hasattr(client, 'secure_token') or not client.secure_token:
+        client.secure_token = secrets.token_urlsafe(16)
+        client.save(update_fields=['secure_token'])
 
     context = {
         "client": client,
         "active_policy": active_policy,
         "now": timezone.now(),
     }
-
     return render(request, "clients/client_detail.html", context)
 
 
 
-
-
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
-
-@login_required
-def verify_client(request, client_id, token):
-    client = get_object_or_404(Client, pk=client_id)
-
-    if str(client.secure_token) != token:
-        return HttpResponseForbidden("Unauthorized access")
-
-    active_policy = (
-        Policy.objects
-        .filter(
-            client=client,
-            is_active=True,
-            is_archived=False,
-            expiry_date__gte=timezone.now().date()
-        )
-        .order_by("-start_date")
-        .first()
-    )
-
-    return render(request, "clients/verify_client.html", {
-        "client": client,
-        "active_policy": active_policy,
-    })
 
 
 # ---------------------------
@@ -241,16 +212,3 @@ from .serializers import ClientSerializer
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
-
-
-from django.contrib.auth.decorators import login_required
-
-@login_required
-def verify_client(request, client_id, policy_number, token):
-    client = get_object_or_404(Client, pk=client_id, secure_token=token)
-    policy = get_object_or_404(Policy, client=client, policy_number=policy_number, is_active=True)
-
-    return render(request, "clients/verify_client.html", {
-        "client": client,
-        "policy": policy
-    })

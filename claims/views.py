@@ -2,64 +2,129 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.db.models import Sum, F, FloatField
+from django.db.models.functions import Coalesce
 from rest_framework import viewsets, permissions
+from claims.services.clinical_parser import parse_structured_file
 
-from .models import Claim
-from .serializers import ClaimSerializer
-from clients.models import Client
-from policies.models import Policy
-from hospitals.models import Hospital, HospitalAssignment
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+
+from claims.models import Claim, ClinicalEvent, RiskScore
+from claims.services.clinical_parser import parse_structured_file
+
+from hospitals.models import HospitalAssignment
 from accounts.utils import roles_required
+from .serializers import ClaimSerializer
 
 
-# -----------------------
-# 🏥 Submit Claim for Assignment
-# -----------------------
+# ========================
+# 🏥 Submit Claim for Hospital Assignment
+# ========================
 @login_required
 @roles_required("hospital")
 def submit_claim_for_assignment(request, assignment_id):
     """
     Hospital submits a claim for an accepted assignment.
+    - Creates claim
+    - Parses structured clinical file (if uploaded)
+    - Auto-links clinical events
+    - Auto-generates maternal + neonatal risk scores
     """
+
+    hospital = getattr(request.user, "hospital_profile", None)
+
     assignment = get_object_or_404(
         HospitalAssignment,
         pk=assignment_id,
-        hospital=getattr(request.user, "hospital_profile", None),
+        hospital=hospital,
         status="accepted"
     )
 
     if request.method == "POST":
-        description = request.POST.get("description", "").strip()
-        amount = request.POST.get("claim_amount")
+        client = assignment.client
+        policy = assignment.policy
+        amount = request.POST.get("amount")
+        notes = request.POST.get("notes", "").strip()
+        document = request.FILES.get("document")
 
-        # Step 1: Verify client before claim submission (future feature)
-        # Example placeholder:
-        # verified = verify_client_identity(assignment.client)
-        # if not verified:
-        #     messages.error(request, "Client verification failed.")
-        #     return redirect("claims:submit_claim_for_assignment", assignment_id=assignment_id)
-
-        if not (description and amount):
-            messages.error(request, "All fields are required.")
+        if not amount:
+            messages.error(request, "Claim amount is required.")
             return redirect("claims:submit_claim_for_assignment", assignment_id=assignment_id)
 
         claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
 
-        Claim.objects.create(
+        # =====================
+        # 1️⃣ Create Claim
+        # =====================
+        claim = Claim.objects.create(
             claim_number=claim_number,
-            hospital=assignment.hospital,
-            client=assignment.client,
-            policy=assignment.policy,
+            hospital=hospital,
+            client=client,
+            policy=policy,
             amount=amount,
+            notes=notes,
+            document=document,
             status="pending",
-            notes=description,
             created_by=request.user,
         )
 
+        # =====================
+        # 2️⃣ Clinical Intelligence Pipeline
+        # =====================
+        try:
+            if document:
+                # Parse hospital clinical upload
+                results = parse_structured_file(document, hospital)
+
+                # Auto-link clinical events to this claim
+                ClinicalEvent.objects.filter(
+                    hospital=hospital,
+                    policy=policy,
+                    claim__isnull=True
+                ).update(claim=claim)
+
+                messages.success(
+                    request,
+                    f"Clinical data processed: "
+                    f"{results['created_events']} events, "
+                    f"{results['created_risks']} risks"
+                )
+            else:
+                # Fallback manual event
+                clinical_event = ClinicalEvent.objects.create(
+                    claim=claim,
+                    client=client,
+                    policy=policy,
+                    hospital=hospital,
+                    visit_type="OTHER",
+                    doctor_name="N/A",
+                    department="N/A",
+                    notes="Initial claim submission (no structured file)",
+                    source="manual_entry"
+                )
+
+                # Default low-risk baseline
+                RiskScore.objects.bulk_create([
+                    RiskScore(event=clinical_event, type="maternal", score=0.0, level="LOW"),
+                    RiskScore(event=clinical_event, type="neonatal", score=0.0, level="LOW"),
+                ])
+
+        except Exception as e:
+            messages.warning(
+                request,
+                f"Claim submitted, but clinical data could not be processed: {str(e)}"
+            )
+
+        # =====================
+        # 3️⃣ Finalize Assignment
+        # =====================
         assignment.status = "completed"
         assignment.save(update_fields=["status", "updated_at"])
 
-        messages.success(request, f"Claim {claim_number} submitted for {assignment.client}.")
+        messages.success(request, f"Claim {claim_number} submitted for {client.full_name}.")
         return redirect("hospitals:assigned_clients")
 
     return render(request, "claims/submit_claim.html", {
@@ -68,38 +133,131 @@ def submit_claim_for_assignment(request, assignment_id):
     })
 
 
-# -----------------------
-# 🏥 Hospital Claim Dashboard
-# -----------------------
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, F, Q, FloatField
+from django.db.models.functions import Coalesce
+from .models import Claim, ClinicalEvent, RiskScore
+from accounts.utils import roles_required
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db.models import Sum, F, FloatField
+from django.db.models.functions import Coalesce
+
+from .models import Claim, ClinicalEvent, RiskScore
+from accounts.utils import roles_required
+
+
+# ========================
+# 🏥 Hospital Dashboard (Full Intelligence System)
+# ========================
 @login_required
 @roles_required("hospital")
-def hospital_claim_dashboard(request):
-    """Dashboard for hospitals to view and manage their submitted claims."""
-    user = request.user
-    hospital = getattr(user, "hospital_profile", None)
+def hospital_dashboard(request):
+    """
+    National-grade hospital dashboard with:
+    - Financial intelligence
+    - Clinical monitoring
+    - Risk analytics
+    """
 
+    hospital = getattr(request.user, "hospital_profile", None)
     if not hospital:
         messages.error(request, "Hospital profile not found.")
         return redirect("accounts:dashboard")
 
-    claims = Claim.objects.filter(hospital=hospital).select_related("client", "policy").order_by("-created_at")
+    # ======================
+    # Claims Intelligence
+    # ======================
+    claims = Claim.objects.filter(
+        hospital=hospital
+    ).select_related("client", "policy").order_by("-created_at")
 
+    total_claims = claims.count()
+    pending_claims = claims.filter(status="pending").count()
+    approved_claims = claims.filter(status="approved").count()
+    rejected_claims = claims.filter(status="rejected").count()
+
+    revenue_collected = claims.filter(
+        status__in=["approved", "reimbursed"]
+    ).aggregate(
+        total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
+    )["total"]
+
+    pending_amount = claims.filter(
+        status="pending"
+    ).aggregate(
+        total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
+    )["total"]
+
+    recent_claims = claims[:5]
+
+    # ======================
+    # Clinical Intelligence
+    # ======================
+    clinical_events = ClinicalEvent.objects.filter(
+        hospital=hospital
+    ).select_related("client", "claim").order_by("-event_datetime")[:5]
+
+    # ======================
+    # Risk Intelligence
+    # ======================
+    risk_scores = RiskScore.objects.filter(
+        event__hospital=hospital
+    ).select_related("event", "event__client").order_by("-created_at")[:10]
+
+    # ======================
+    # High Risk Overview
+    # ======================
+    high_risk_maternal = RiskScore.objects.filter(
+        event__hospital=hospital,
+        type="maternal",
+        level="HIGH"
+    ).count()
+
+    high_risk_neonatal = RiskScore.objects.filter(
+        event__hospital=hospital,
+        type="neonatal",
+        level="HIGH"
+    ).count()
+
+    # ======================
+    # Context
+    # ======================
     context = {
+        "dashboard_title": f"{hospital.name} Dashboard",
         "hospital": hospital,
-        "dashboard_title": f"{hospital.name} Claims Dashboard",
-        "total_claims": claims.count(),
-        "pending_claims": claims.filter(status="pending").count(),
-        "approved_claims": claims.filter(status="approved").count(),
-        "rejected_claims": claims.filter(status="rejected").count(),
+
+        # Claims
         "claims": claims,
+        "total_claims": total_claims,
+        "pending_claims": pending_claims,
+        "approved_claims": approved_claims,
+        "rejected_claims": rejected_claims,
+        "revenue_collected": revenue_collected,
+        "pending_amount": pending_amount,
+        "recent_claims": recent_claims,
+
+        # Clinical
+        "recent_clinical_events": clinical_events,
+
+        # Risk
+        "recent_risk_scores": risk_scores,
+        "high_risk_maternal": high_risk_maternal,
+        "high_risk_neonatal": high_risk_neonatal,
     }
 
     return render(request, "claims/hospital_dashboard.html", context)
 
 
-# -----------------------
-# 🧩 Claim List (all roles)
-# -----------------------
+
+
+# ========================
+# 🧩 Claim List (All Roles)
+# ========================
 @login_required
 def claim_list(request):
     user = request.user
@@ -126,59 +284,9 @@ def claim_list(request):
     })
 
 
-# -----------------------
-# 🏥 Add Claim (Hospital)
-# -----------------------
-@login_required
-@roles_required("hospital")
-def add_claim(request):
-    """Hospitals submit a new claim for a client with an active policy."""
-    user = request.user
-    hospital = getattr(user, "hospital_profile", None)
-
-    if not hospital:
-        messages.error(request, "Your hospital profile is missing.")
-        return redirect("claims:claim_list")
-
-    if request.method == "POST":
-        client_id = request.POST.get("client")
-        policy_id = request.POST.get("policy")
-        amount = request.POST.get("amount")
-        notes = request.POST.get("notes", "")
-
-        if client_id and policy_id and amount:
-            client = get_object_or_404(Client, pk=client_id)
-            policy = get_object_or_404(Policy, pk=policy_id, is_active=True)
-
-            claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-            Claim.objects.create(
-                claim_number=claim_number,
-                client=client,
-                policy=policy,
-                hospital=hospital,
-                amount=amount,
-                status="pending",
-                notes=notes,
-                created_by=user,
-            )
-            messages.success(request, f"Claim {claim_number} submitted successfully.")
-            return redirect("claims:claim_list")
-        else:
-            messages.error(request, "All fields are required.")
-
-    clients = Client.objects.all()
-    policies = Policy.objects.filter(is_active=True)
-
-    return render(request, "claims/add_claim.html", {
-        "dashboard_title": "Submit New Claim",
-        "clients": clients,
-        "policies": policies,
-    })
-
-
-# -----------------------
+# ========================
 # ✏️ Edit Claim (Admin/Claim Officer)
-# -----------------------
+# ========================
 @login_required
 @roles_required("admin", "claim_officer")
 def edit_claim(request, pk):
@@ -199,15 +307,16 @@ def edit_claim(request, pk):
     })
 
 
-# -----------------------
+# ========================
 # 🔍 Claim Detail
-# -----------------------
+# ========================
 @login_required
 def claim_detail(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
     user = request.user
     role = getattr(user, "role", None)
 
+    # Role-based access
     if user.is_superuser:
         role = "admin"
     elif role == "hospital":
@@ -223,64 +332,67 @@ def claim_detail(request, pk):
         messages.error(request, "Access denied.")
         return redirect("claims:claim_list")
 
+    # Get clinical events and risk scores
+    clinical_events = claim.clinical_events.select_related("hospital", "client").all()
+    risk_scores = RiskScore.objects.filter(event__in=clinical_events)
+
     return render(request, "claims/claim_detail.html", {
         "claim": claim,
+        "clinical_events": clinical_events,
+        "risk_scores": risk_scores,
         "dashboard_title": f"Claim Details - {claim.claim_number}",
         "role": role,
     })
 
 
-# -----------------------
+# ========================
 # ✅ Approve Claim
-# -----------------------
+# ========================
 @login_required
 @roles_required("admin", "claim_officer")
 def approve_claim(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
     if claim.status != "approved":
-        claim.status = "approved"
-        claim.save()
+        claim.approve_claim()
         messages.success(request, f"Claim {claim.claim_number} approved successfully.")
     else:
         messages.info(request, f"Claim {claim.claim_number} is already approved.")
     return redirect("claims:claim_detail", pk=pk)
 
 
-# -----------------------
+# ========================
 # ❌ Reject Claim
-# -----------------------
+# ========================
 @login_required
 @roles_required("admin", "claim_officer")
 def reject_claim(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
     if claim.status != "rejected":
-        claim.status = "rejected"
-        claim.save()
+        claim.reject_claim(notes=request.POST.get("notes", None))
         messages.warning(request, f"Claim {claim.claim_number} rejected.")
     else:
         messages.info(request, f"Claim {claim.claim_number} is already rejected.")
     return redirect("claims:claim_detail", pk=pk)
 
 
-# -----------------------
+# ========================
 # 💰 Reimburse Claim
-# -----------------------
+# ========================
 @login_required
 @roles_required("admin")
 def reimburse_claim(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
-    if claim.status == "approved":
-        claim.status = "reimbursed"
-        claim.save()
+    try:
+        claim.mark_reimbursed()
         messages.success(request, f"Claim {claim.claim_number} marked as reimbursed.")
-    else:
-        messages.error(request, "Only approved claims can be reimbursed.")
+    except Exception as e:
+        messages.error(request, str(e))
     return redirect("claims:claim_detail", pk=pk)
 
 
-# -----------------------
-# 🌐 DRF API
-# -----------------------
+# ========================
+# 🌐 DRF API ViewSet
+# ========================
 class ClaimViewSet(viewsets.ModelViewSet):
     queryset = Claim.objects.all()
     serializer_class = ClaimSerializer

@@ -104,7 +104,9 @@ def logout_view(request):
 # DASHBOARD
 # ==============================
 @login_required(login_url="accounts:login")
+@roles_required("admin", "finance_officer", "claim_officer")
 def dashboard(request):
+
     user = request.user
     if user.role == "agent":
         return redirect("accounts:agent_dashboard")

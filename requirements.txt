@@ -94,3 +94,4 @@ zopfli==0.4.0
 dj-database-url
 python-decouple
 psycopg2-binary
+

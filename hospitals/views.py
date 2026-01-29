@@ -114,32 +114,124 @@ def hospital_form(request, pk=None):
 
 
 # =========================
-# 🏥 HOSPITAL DASHBOARD
+# 🏥 HOSPITAL DASHBOARD (Modern Flux UI)
 # =========================
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, F, FloatField
+from django.db.models.functions import Coalesce
+from datetime import datetime, timedelta
+from accounts.utils import roles_required
+from claims.models import Claim, ClinicalEvent, RiskScore
+
 @login_required
+@roles_required("hospital")
 def hospital_dashboard(request):
+    """
+    Modern hospital dashboard:
+    - KPIs: claims totals, revenue
+    - High-risk maternal & neonatal
+    - Recent claims
+    - Charts: claims trends, visit types, risk levels, high-risk heatmap
+    """
     hospital = getattr(request.user, "hospital_profile", None)
     if not hospital:
-        messages.error(request, "Your hospital profile is missing.")
+        messages.error(request, "Hospital profile not found.")
         return redirect("accounts:dashboard")
-    claims = Claim.objects.filter(hospital=hospital).order_by("-created_at")
+
+    # =======================
+    # CLAIMS METRICS
+    # =======================
+    claims = Claim.objects.filter(hospital=hospital)
+    total_claims = claims.count()
+    pending_claims = claims.filter(status="pending").count()
+    approved_claims = claims.filter(status="approved").count()
+    rejected_claims = claims.filter(status="rejected").count()
+    revenue_collected = claims.filter(status__in=["approved", "reimbursed"]).aggregate(
+        total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
+    )["total"]
+    pending_amount = claims.filter(status="pending").aggregate(
+        total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
+    )["total"]
+
+    # =======================
+    # HIGH-RISK COUNTS
+    # =======================
+    high_risk_scores = RiskScore.objects.filter(event__hospital=hospital, level="HIGH")
+    high_risk_maternal = high_risk_scores.filter(type="maternal").count() or 0
+    high_risk_neonatal = high_risk_scores.filter(type="neonatal").count() or 0
+
+    # =======================
+    # RECENT DATA
+    # =======================
+    recent_claims = claims.select_related("client", "policy").order_by("-created_at")[:5]
+    recent_clinical_events = ClinicalEvent.objects.filter(hospital=hospital).order_by("-event_datetime")[:5]
+    recent_risk_scores = RiskScore.objects.filter(event__in=recent_clinical_events).order_by("-created_at")[:5]
+
+    # =======================
+    # CHART DATA
+    # =======================
+    # 1️⃣ Claims Trend (last 6 months)
+    today = datetime.today()
+    months = [(today - timedelta(days=30*i)).strftime("%b %Y") for i in reversed(range(6))]
+    claims_chart_data = []
+    for i in reversed(range(6)):
+        month_start = datetime(today.year, today.month, 1) - timedelta(days=30*i)
+        month_end = month_start + timedelta(days=30)
+        count = claims.filter(created_at__gte=month_start, created_at__lt=month_end).count()
+        claims_chart_data.append(count)
+
+    # 2️⃣ Visit Type Distribution
+    visit_types = ClinicalEvent.VISIT_TYPES
+    visit_labels = [vt[1] for vt in visit_types]
+    visit_data = [ClinicalEvent.objects.filter(hospital=hospital, visit_type=vt[0]).count() for vt in visit_types]
+
+    # 3️⃣ Risk Level Distribution
+    risk_levels = ["LOW", "MEDIUM", "HIGH"]
+    risk_labels = risk_levels
+    risk_data = [RiskScore.objects.filter(event__hospital=hospital, level=level).count() for level in risk_levels]
+
+    # 4️⃣ High-Risk Heatmap
+    heatmap_labels = ["Maternal", "Neonatal"]
+    heatmap_data = [high_risk_maternal, high_risk_neonatal]
+
+    # =======================
+    # CONTEXT
+    # =======================
     context = {
         "dashboard_title": f"{hospital.name} Dashboard",
         "hospital": hospital,
-        "claims": claims,
-        "total_claims": claims.count(),
-        "pending_claims": claims.filter(status="pending").count(),
-        "approved_claims": claims.filter(status="approved").count(),
-        "rejected_claims": claims.filter(status="rejected").count(),
-        "revenue_collected": claims.filter(status__in=["approved", "reimbursed"]).aggregate(
-            total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
-        )["total"],
-        "pending_amount": claims.filter(status="pending").aggregate(
-            total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
-        )["total"],
-        "recent_claims": claims[:5],
+        # KPIs
+        "total_claims": total_claims,
+        "pending_claims": pending_claims,
+        "approved_claims": approved_claims,
+        "rejected_claims": rejected_claims,
+        "revenue_collected": revenue_collected,
+        "pending_amount": pending_amount,
+        # High Risk
+        "high_risk_maternal": high_risk_maternal,
+        "high_risk_neonatal": high_risk_neonatal,
+        # Recent
+        "recent_claims": recent_claims,
+        "recent_clinical_events": recent_clinical_events,
+        "recent_risk_scores": recent_risk_scores,
+        # Charts
+        "claims_chart_labels": months,
+        "claims_chart_data": claims_chart_data,
+        "visit_labels": visit_labels,
+        "visit_data": visit_data,
+        "risk_labels": risk_labels,
+        "risk_data": risk_data,
+        "heatmap_labels": heatmap_labels,
+        "heatmap_data": heatmap_data,
+        # User
+        "user": request.user,
     }
+
     return render(request, "hospitals/dashboard.html", context)
+
+
 
 
 # =========================

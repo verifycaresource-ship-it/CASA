@@ -1,157 +1,225 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}Hospital Dashboard | HealthInsure{% endblock %}
+{% block title %}{{ dashboard_title }} | HealthInsure{% endblock %}
+{% block header_title %}{{ dashboard_title }}{% endblock %}
 
 {% block content %}
-<div class="space-y-8 animate-fade-in">
-  
-  <!-- Header -->
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-    <div>
-      <h1 class="text-3xl font-extrabold mb-1 text-gray-800 dark:text-white">
-        Welcome, {{ user.username|capfirst }}
-      </h1>
-      <p class="text-gray-500 dark:text-gray-400">Here’s an overview of your hospital’s performance.</p>
-    </div>
-    <a href="{% url 'claims:add_claim' %}" 
-       class="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all hover:scale-105">
-      <i data-lucide="plus-circle" class="w-5 h-5 mr-2"></i>
-      Submit New Claim
-    </a>
-  </div>
+<div class="space-y-10 animate-fade-in px-4 md:px-6 lg:px-10">
 
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 mt-6">
+  <!-- ================== -->
+  <!-- KPI CARDS -->
+  <!-- ================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
     <!-- Total Claims -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+    <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Total Claims</p>
-        <i data-lucide="clipboard-list" class="w-7 h-7 text-blue-600"></i>
+        <p class="text-gray-300 text-sm uppercase tracking-wide">Total Claims</p>
+        <span class="text-cyan-400 text-3xl">📄</span>
       </div>
-      <h3 class="text-3xl font-bold">{{ total_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-white mt-2">{{ total_claims|default:"0" }}</h3>
     </div>
 
-    <!-- Pending Claims -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+    <!-- Pending -->
+    <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Pending Claims</p>
-        <i data-lucide="hourglass" class="w-7 h-7 text-yellow-500"></i>
+        <p class="text-gray-300 text-sm uppercase tracking-wide">Pending</p>
+        <span class="text-yellow-400 text-3xl">⏳</span>
       </div>
-      <h3 class="text-3xl font-bold text-yellow-500">{{ pending_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-yellow-400 mt-2">{{ pending_claims|default:"0" }}</h3>
     </div>
 
-    <!-- Approved Claims -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+    <!-- Approved -->
+    <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Approved Claims</p>
-        <i data-lucide="check-circle" class="w-7 h-7 text-green-500"></i>
+        <p class="text-gray-300 text-sm uppercase tracking-wide">Approved</p>
+        <span class="text-green-400 text-3xl">✅</span>
       </div>
-      <h3 class="text-3xl font-bold text-green-500">{{ approved_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-green-400 mt-2">{{ approved_claims|default:"0" }}</h3>
     </div>
 
-    <!-- Rejected Claims -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+    <!-- Rejected -->
+    <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Rejected Claims</p>
-        <i data-lucide="x-circle" class="w-7 h-7 text-red-500"></i>
+        <p class="text-gray-300 text-sm uppercase tracking-wide">Rejected</p>
+        <span class="text-red-400 text-3xl">❌</span>
       </div>
-      <h3 class="text-3xl font-bold text-red-500">{{ rejected_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-red-400 mt-2">{{ rejected_claims|default:"0" }}</h3>
     </div>
 
-    <!-- Revenue Collected -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+    <!-- Revenue -->
+    <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Revenue Collected</p>
-        <i data-lucide="dollar-sign" class="w-7 h-7 text-teal-500"></i>
+        <p class="text-gray-300 text-sm uppercase tracking-wide">Revenue Collected</p>
+        <span class="text-teal-400 text-3xl">💰</span>
       </div>
-      <h3 class="text-3xl font-bold text-teal-500">
-        ${{ revenue_collected|floatformat:2|default:"0.00" }}
-      </h3>
+      <h3 class="text-3xl font-bold text-teal-400 mt-2">${{ revenue_collected|floatformat:2|default:"0.00" }}</h3>
     </div>
 
-    <!-- Pending Claim Amount -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex flex-col gap-3 transition hover:shadow-lg">
+    <!-- Pending Amount -->
+    <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500">Pending Amount</p>
-        <i data-lucide="clock" class="w-7 h-7 text-orange-500"></i>
+        <p class="text-gray-300 text-sm uppercase tracking-wide">Pending Amount</p>
+        <span class="text-orange-400 text-3xl">🕒</span>
       </div>
-      <h3 class="text-3xl font-bold text-orange-500">
-        ${{ pending_amount|floatformat:2|default:"0.00" }}
-      </h3>
+      <h3 class="text-3xl font-bold text-orange-400 mt-2">${{ pending_amount|floatformat:2|default:"0.00" }}</h3>
     </div>
   </div>
 
-  <!-- Recent Claims Section -->
-  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6 mt-10 transition hover:shadow-lg">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-xl font-bold text-gray-800 dark:text-white">Recent Claims</h2>
-      <a href="{% url 'claims:claim_list' %}" 
-         class="text-blue-600 hover:underline text-sm font-medium">View All</a>
+  <!-- ================== -->
+  <!-- ANALYTICS CHARTS -->
+  <!-- ================== -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+    <!-- Claims Trend -->
+    <div class="glass p-6 rounded-2xl shadow-lg">
+      <h3 class="text-xl font-semibold text-white mb-4">📈 Monthly Claims Trend</h3>
+      <canvas id="claimsChart" class="w-full h-64"></canvas>
     </div>
 
-    <div class="overflow-x-auto rounded-xl border dark:border-gray-700">
-      <table class="min-w-full text-sm text-left">
-        <thead class="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs tracking-wider">
+    <!-- Visit Types -->
+    <div class="glass p-6 rounded-2xl shadow-lg">
+      <h3 class="text-xl font-semibold text-white mb-4">🏥 Visit Types Distribution</h3>
+      <canvas id="visitChart" class="w-full h-64"></canvas>
+    </div>
+
+    <!-- Risk Levels -->
+    <div class="glass p-6 rounded-2xl shadow-lg md:col-span-2">
+      <h3 class="text-xl font-semibold text-white mb-4">⚠️ Risk Level Distribution</h3>
+      <canvas id="riskChart" class="w-full h-64"></canvas>
+    </div>
+  </div>
+
+  <!-- ================== -->
+  <!-- RECENT CLINICAL EVENTS -->
+  <!-- ================== -->
+  <div class="glass p-6 rounded-2xl shadow-lg">
+    <h3 class="text-xl font-semibold text-white mb-4">🩺 Recent Clinical Events</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/5">
           <tr>
-            <th class="px-4 py-3">Claim #</th>
-            <th class="px-4 py-3">Policy</th>
-            <th class="px-4 py-3">Amount</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3 text-right">Action</th>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Client</th>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Visit Type</th>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Date/Time</th>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Notes</th>
           </tr>
         </thead>
-        <tbody class="divide-y dark:divide-gray-700">
-          {% for claim in recent_claims %}
-          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            <td class="px-4 py-3 font-semibold">{{ claim.claim_number }}</td>
-            <td class="px-4 py-3">{{ claim.policy.policy_number }}</td>
-            <td class="px-4 py-3">${{ claim.amount|floatformat:2 }}</td>
-            <td class="px-4 py-3">
-              {% if claim.status == 'approved' %}
-                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                  {{ claim.status|capfirst }}
-                </span>
-              {% elif claim.status == 'pending' %}
-                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
-                  {{ claim.status|capfirst }}
-                </span>
-              {% elif claim.status == 'reimbursed' %}
-                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
-                  {{ claim.status|capfirst }}
-                </span>
-              {% else %}
-                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
-                  {{ claim.status|capfirst }}
-                </span>
-              {% endif %}
-            </td>
-            <td class="px-4 py-3 text-right">
-              <a href="{% url 'claims:claim_detail' claim.id %}" 
-                 class="text-blue-600 hover:underline font-medium">View</a>
-            </td>
+        <tbody class="divide-y divide-white/10">
+          {% for event in recent_clinical_events %}
+          <tr class="hover:bg-white/5 transition">
+            <td class="px-4 py-3 text-gray-200">{{ event.client.full_name }}</td>
+            <td class="px-4 py-3 text-gray-200">{{ event.visit_type }}</td>
+            <td class="px-4 py-3 text-gray-400">{{ event.event_datetime|date:"Y-m-d H:i" }}</td>
+            <td class="px-4 py-3 text-gray-300">{{ event.notes|default:"-" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="text-center py-5 text-gray-500">No recent claims available.</td>
+            <td colspan="4" class="text-center text-gray-400 py-6 italic">No recent clinical events.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+
+  <!-- ================== -->
+  <!-- RECENT RISK SCORES -->
+  <!-- ================== -->
+  <div class="glass p-6 rounded-2xl shadow-lg">
+    <h3 class="text-xl font-semibold text-white mb-4">⚠️ Recent Risk Scores</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/5">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Client</th>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Type</th>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Score</th>
+            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Level</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+          {% for risk in recent_risk_scores %}
+          <tr class="hover:bg-white/5 transition">
+            <td class="px-4 py-3 text-gray-200">{{ risk.event.client.full_name }}</td>
+            <td class="px-4 py-3 text-gray-200">{{ risk.type|capfirst }}</td>
+            <td class="px-4 py-3 text-teal-400 font-semibold">{{ risk.score }}</td>
+            <td class="px-4 py-3">
+              {% if risk.level == "LOW" %}
+                <span class="text-green-400 font-semibold">Low</span>
+              {% elif risk.level == "MEDIUM" %}
+                <span class="text-yellow-400 font-semibold">Medium</span>
+              {% else %}
+                <span class="text-red-400 font-semibold">High</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-gray-400 py-6 italic">No recent risk scores available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
-<!-- Animate icons -->
+<!-- ================== -->
+<!-- CHART.JS SCRIPTS -->
+<!-- ================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  lucide.createIcons();
+const claimsLabels = {{ claims_chart_labels|safe }};
+const claimsData = {{ claims_chart_data|safe }};
+const visitLabels = {{ visit_labels|safe }};
+const visitData = {{ visit_data|safe }};
+const riskLabels = {{ risk_labels|safe }};
+const riskData = {{ risk_data|safe }};
+
+// Claims Line Chart
+new Chart(document.getElementById("claimsChart"), {
+    type: "line",
+    data: {
+        labels: claimsLabels,
+        datasets: [{
+            label: "Claims",
+            data: claimsData,
+            backgroundColor: "rgba(14, 116, 144, 0.2)",
+            borderColor: "rgba(14, 116, 144, 1)",
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true
+        }]
+    },
+    options: { responsive: true }
+});
+
+// Visit Doughnut
+new Chart(document.getElementById("visitChart"), {
+    type: "doughnut",
+    data: {
+        labels: visitLabels,
+        datasets: [{
+            label: "Visits",
+            data: visitData,
+            backgroundColor: ["#0ea4c4","#facc15","#10b981","#f87171","#8b5cf6"]
+        }]
+    },
+    options: { responsive: true }
+});
+
+// Risk Bar Chart
+new Chart(document.getElementById("riskChart"), {
+    type: "bar",
+    data: {
+        labels: riskLabels,
+        datasets: [{
+            label: "Risk Cases",
+            data: riskData,
+            backgroundColor: ["#10b981","#facc15","#f87171"]
+        }]
+    },
+    options: { responsive: true }
+});
 </script>
 
-<style>
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fade-in {
-    animation: fade-in 0.6s ease-out;
-  }
-</style>
 {% endblock %}

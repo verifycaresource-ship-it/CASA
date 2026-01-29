@@ -7,11 +7,8 @@ urlpatterns = [
     # General claim list
     path('', views.claim_list, name='claim_list'),
 
-    # Add claim (Hospital)
-    path('add/', views.add_claim, name='add_claim'),
-
     # Hospital dashboard
-    path('hospital-dashboard/', views.hospital_claim_dashboard, name='hospital_claim_dashboard'),
+    path('hospital-dashboard/', views.hospital_dashboard, name='hospital_dashboard'),
 
     # Submit claim for a hospital assignment
     path('submit/assignment/<int:assignment_id>/', views.submit_claim_for_assignment, name='submit_claim_for_assignment'),
