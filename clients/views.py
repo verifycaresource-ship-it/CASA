@@ -198,20 +198,32 @@ def client_detail(request, pk):
 # ---------------------------
 # FINGERPRINT CAPTURE (AJAX)
 # ---------------------------
+
 @login_required
 @roles_required("admin", "agent")
 def capture_fingerprint(request):
     """
-    Capture fingerprint via Digital Persona SDK.
-    Returns Base64 encoded template.
+    Capture fingerprint via Digital Persona SDK (Windows/Linux) OR
+    provide a dummy template in production (Render cloud).
     """
+    import base64
+
     try:
-        template_bytes = capture_fingerprint()  # call fingerprint_service.py
-        template_base64 = base64.b64encode(template_bytes).decode("utf-8")
+        # Check if running locally or in Render
+        import os
+        if os.environ.get("RENDER") or not os.environ.get("FINGERPRINT_HARDWARE"):
+            # Provide dummy fingerprint in cloud / Render
+            dummy_bytes = b"dummy_fingerprint_template"
+            template_base64 = base64.b64encode(dummy_bytes).decode("utf-8")
+        else:
+            # Local capture using fingerprint device
+            from .fingerprint_service import capture_fingerprint as capture_fp
+            template_bytes = capture_fp()
+            template_base64 = base64.b64encode(template_bytes).decode("utf-8")
+
         return JsonResponse({"success": True, "fingerprint": template_base64})
     except Exception as e:
         return JsonResponse({"success": False, "fingerprint": None, "error": str(e)})
-
 
 # ---------------------------
 # DRF VIEWSET

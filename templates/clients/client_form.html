@@ -81,25 +81,18 @@
       <!-- -----------------------------
            Fingerprint Capture
            ----------------------------- -->
-   <!-- -----------------------------
-     Fingerprint Capture
-     ----------------------------- -->
-<div class="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-  <!-- Capture Button -->
-  <button type="button" id="capture-fingerprint"
-          class="px-6 py-3 bg-gradient-to-tr from-cyan-400 to-blue-500 text-white font-semibold rounded-xl shadow hover:scale-105 transition transform hover:brightness-110">
-      Place Finger & Capture
-  </button>
+      <div class="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <button type="button" id="capture-fingerprint"
+                class="px-6 py-3 bg-gradient-to-tr from-cyan-400 to-blue-500 text-white font-semibold rounded-xl shadow hover:scale-105 transition transform hover:brightness-110">
+            Place Finger & Capture
+        </button>
 
-  <!-- Status -->
-  <span id="fingerprint-status" class="text-red-500 font-medium mt-2 sm:mt-0">
-    No fingerprint captured ❌
-  </span>
+        <span id="fingerprint-status" class="text-red-500 font-medium mt-2 sm:mt-0">
+          No fingerprint captured ❌
+        </span>
 
-  <!-- Hidden Input for Form Submission -->
-  <input type="hidden" name="fingerprint_base64" id="fingerprint_base64">
-</div>
-
+        <input type="hidden" name="fingerprint_base64" id="fingerprint_base64">
+      </div>
 
       <!-- -----------------------------
            Submit Buttons
@@ -110,7 +103,6 @@
           </button>
           <a href="{% url 'clients:client_list' %}" class="px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-800 transition">Cancel</a>
       </div>
-
   </form>
 
   <!-- Neon Floating Blobs -->
@@ -118,55 +110,44 @@
   <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-gradient-to-tr from-cyan-400 to-blue-500 opacity-20 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
 </div>
 
-<!-- Fingerprint JS -->
-<!-- Fingerprint JS -->
+<!-- -----------------------------
+     Fingerprint JS
+     ----------------------------- -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const captureBtn = document.getElementById("capture-fingerprint");
     const statusEl = document.getElementById("fingerprint-status");
     const fingerprintInput = document.getElementById("fingerprint_base64");
 
-    if (!captureBtn || !statusEl || !fingerprintInput) {
-        console.error("Fingerprint elements not found in DOM");
-        return;
-    }
-
     captureBtn.addEventListener("click", async function() {
-        // Update UI to show waiting state
         statusEl.textContent = "Waiting for fingerprint...";
         statusEl.classList.remove("text-red-500","text-green-500");
         statusEl.classList.add("text-yellow-400");
 
         try {
-            // Call Django view that captures fingerprint
-            const response = await fetch("{% url 'clients:capture_fingerprint' %}");
-            
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status}`);
-            }
+            const response = await fetch("{% url 'clients:capture_fingerprint' %}", {
+                method: "GET",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            });
 
             const data = await response.json();
             console.log("Fingerprint capture response:", data);
 
             if (data.success && data.fingerprint) {
-                // Set hidden input value for form submission
                 fingerprintInput.value = data.fingerprint;
-
-                // Update UI status
                 statusEl.textContent = "Fingerprint Captured ✅";
                 statusEl.classList.remove("text-yellow-400","text-red-500");
                 statusEl.classList.add("text-green-500");
             } else {
-                // Handle backend errors
-                statusEl.textContent = data.error || "Capture failed ❌ Try again";
+                statusEl.textContent = data.error || "Capture failed ❌";
                 statusEl.classList.remove("text-yellow-400","text-green-500");
                 statusEl.classList.add("text-red-500");
             }
 
         } catch (err) {
             console.error("Fingerprint capture error:", err);
-
-            // Show error in UI
             statusEl.textContent = "Error capturing fingerprint ❌";
             statusEl.classList.remove("text-yellow-400","text-green-500");
             statusEl.classList.add("text-red-500");
