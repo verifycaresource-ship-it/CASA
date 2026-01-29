@@ -6,11 +6,12 @@
   <title>{% block title %}{{ dashboard_title|default:"Dashboard" }} | HealthInsure{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <!-- Tailwind CSS & Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    body { font-family: Inter, sans-serif; }
+    body { font-family: 'Inter', sans-serif; }
     .glass {
       background: rgba(255,255,255,.06);
       backdrop-filter: blur(16px);
@@ -25,6 +26,8 @@
     .sidebar-collapsed { width: 5rem !important; }
     .sidebar-collapsed span.label { display: none; }
     .sidebar-collapsed a { justify-content: center; }
+    /* Scrollable main content */
+    #main { overflow-y: auto; height: 100vh; }
   </style>
 
   {% block extra_head %}{% endblock %}
@@ -32,20 +35,19 @@
 
 <body class="h-full overflow-hidden">
 
-<!-- BACKGROUND -->
+<!-- Background Blobs -->
 <div class="fixed -top-32 -left-32 w-80 h-80 bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 blur-3xl opacity-20"></div>
 
 {% if user.is_authenticated %}
-
-<!-- MOBILE OVERLAY -->
+<!-- Mobile overlay -->
 <div id="overlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden"></div>
 
-<!-- SIDEBAR -->
+<!-- Sidebar -->
 <aside id="sidebar"
   class="fixed inset-y-0 left-0 z-40 w-64 glass p-4 flex flex-col
          transform -translate-x-full md:translate-x-0 transition-all duration-300">
 
-  <!-- LOGO -->
+  <!-- Logo -->
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-xl font-bold text-cyan-400">
       <span class="label">Health</span><span class="text-white label">Insure</span>
@@ -54,46 +56,53 @@
     <button id="closeSidebar" class="md:hidden">✕</button>
   </div>
 
-  <!-- NAV -->
+  <!-- Nav Links -->
   <nav id="navLinks" class="space-y-1 text-sm">
     {% if user.role == 'hospital' %}
       <a href="{% url 'hospitals:dashboard' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">🏥 <span class="label">Dashboard</span></a>
-      <a href="{% url 'hospitals:assigned_clients' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">📋 <span class="label">Clients</span></a>
+      <a href="{% url 'hospitals:assigned_clients' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">📋 <span class="label">Assigned Clients</span></a>
+      <a href="{% url 'hospitals:submit_claim' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">🧾 <span class="label">Submit Claim</span></a>
+
     {% elif user.role == 'agent' %}
       <a href="{% url 'clients:client_list' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">👥 <span class="label">Clients</span></a>
-      <a href="{% url 'clients:add_client' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg bg-green-500 text-white">➕ <span class="label">Register</span></a>
-    {% else %}
+      <a href="{% url 'clients:add_client' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg bg-green-500 text-white">➕ <span class="label">Register Client</span></a>
+
+    {% elif user.is_superuser or user.role == 'admin' %}
       <a href="{% url 'accounts:dashboard' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">🏠 <span class="label">Dashboard</span></a>
       <a href="{% url 'clients:client_list' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">👥 <span class="label">Clients</span></a>
       <a href="{% url 'policies:policy_list' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">📄 <span class="label">Policies</span></a>
       <a href="{% url 'claims:claim_list' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">💰 <span class="label">Claims</span></a>
+      <a href="{% url 'hospitals:hospital_list' %}" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg">🏥 <span class="label">Hospitals</span></a>
     {% endif %}
   </nav>
 
-  <!-- LOGOUT -->
+  <!-- Logout -->
   <div class="mt-auto">
     <a href="{% url 'accounts:logout' %}" class="block text-center bg-red-500 py-2 rounded-lg">Logout</a>
   </div>
 </aside>
 
-<!-- MOBILE TOGGLE -->
+<!-- Mobile Sidebar Toggle -->
 <button id="openSidebar" class="md:hidden fixed top-4 left-4 z-50 bg-cyan-500 text-white p-3 rounded-xl">☰</button>
 
-<!-- MAIN -->
-<div id="main" class="md:ml-64 min-h-screen flex flex-col transition-all">
+<!-- Main Content -->
+<div id="main" class="md:ml-64 flex flex-col transition-all">
 
-  <!-- HEADER -->
+  <!-- Header -->
   <header class="glass px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-20">
     <h1 class="text-lg font-semibold">{% block header_title %}{{ dashboard_title|default:"Dashboard" }}{% endblock %}</h1>
 
-    <!-- GLOBAL SEARCH -->
-    <input type="search" placeholder="Search system…"
-      class="hidden sm:block px-4 py-2 rounded-lg bg-gray-800 text-sm focus:ring-2 focus:ring-cyan-400">
-
-    <span class="text-sm">👋 {{ user.username|title }}</span>
+    <div class="flex items-center gap-4">
+      <!-- Search -->
+      <input type="search" placeholder="Search system…" class="hidden sm:block px-4 py-2 rounded-lg bg-gray-800 text-sm focus:ring-2 focus:ring-cyan-400">
+      <!-- Dark mode toggle -->
+      <button id="darkToggle" class="px-3 py-1 rounded-lg bg-gray-800 text-white">🌙</button>
+      <!-- Username -->
+      <span class="text-sm">👋 {{ user.username|title }}</span>
+    </div>
   </header>
 
-  <!-- CONTENT -->
+  <!-- Page Content -->
   <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
     {% block content %}{% endblock %}
   </main>
@@ -101,25 +110,29 @@
 
 {% endif %}
 
-<!-- SYSTEM JS -->
+<!-- Scripts -->
 <script>
   const sidebar = document.getElementById('sidebar');
   const main = document.getElementById('main');
   const overlay = document.getElementById('overlay');
+  const openSidebarBtn = document.getElementById('openSidebar');
+  const closeSidebarBtn = document.getElementById('closeSidebar');
+  const collapseBtn = document.getElementById('collapseBtn');
+  const darkToggle = document.getElementById('darkToggle');
 
-  // MOBILE
-  openSidebar?.addEventListener('click', () => {
+  // Mobile Sidebar
+  openSidebarBtn?.addEventListener('click', () => {
     sidebar.classList.remove('-translate-x-full');
     overlay.classList.remove('hidden');
   });
-  closeSidebar?.addEventListener('click', close);
+  closeSidebarBtn?.addEventListener('click', closeSidebar);
   overlay?.addEventListener('click', close);
   function close() {
     sidebar.classList.add('-translate-x-full');
     overlay.classList.add('hidden');
   }
 
-  // COLLAPSE
+  // Collapse Sidebar
   collapseBtn?.addEventListener('click', () => {
     sidebar.classList.toggle('sidebar-collapsed');
     main.classList.toggle('md:ml-64');
@@ -127,10 +140,21 @@
   });
   if (localStorage.sidebar === 'collapsed') collapseBtn?.click();
 
-  // ACTIVE LINK
+  // Active link highlight
   document.querySelectorAll('.nav-link').forEach(link => {
     if (link.href === window.location.href) link.classList.add('active-link');
   });
+
+  // Dark mode toggle
+  darkToggle?.addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    darkToggle.textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+  });
+  if (localStorage.theme === 'dark') { 
+    document.documentElement.classList.add('dark'); 
+    darkToggle.textContent = '☀️'; 
+  }
 </script>
 
 {% block extra_scripts %}{% endblock %}
