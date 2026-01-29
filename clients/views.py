@@ -25,6 +25,9 @@ from .serializers import ClientSerializer
 User = get_user_model()
 
 
+
+
+
 # ---------------------------
 # CLIENT DASHBOARD / LIST
 # ---------------------------
@@ -34,50 +37,65 @@ def client_list(request):
     search_query = request.GET.get("search", "")
     gender_filter = request.GET.get("gender", "")
     agent_filter = request.GET.get("agent", "")
+    status_filter = request.GET.get("status", "")  # NEW: status filter
 
     clients = Client.objects.all()
 
-    # Search filter
+    # -----------------
+    # Apply filters
+    # -----------------
     if search_query:
         clients = clients.filter(
             Q(first_name__icontains=search_query) |
             Q(last_name__icontains=search_query) |
-            Q(email__icontains=search_query)
+            Q(email__icontains=search_query) |
+            Q(phone__icontains=search_query)
         )
 
-    # Gender filter
     if gender_filter:
         clients = clients.filter(gender=gender_filter)
 
-    # Agent filter
     if agent_filter:
         clients = clients.filter(registered_by__id=agent_filter)
 
+    if status_filter:
+        clients = clients.filter(status=status_filter)
+
+    # -----------------
     # Pagination
+    # -----------------
     paginator = Paginator(clients.order_by("-id"), 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # KPI counts
+    # -----------------
+    # KPI counts (all clients)
+    # -----------------
     total_clients = Client.objects.count()
     verified_clients = Client.objects.filter(status="verified").count()
     pending_clients = Client.objects.filter(status="pending").count()
     failed_clients = Client.objects.filter(status="failed").count()
 
-    # Gender chart
+    # -----------------
+    # Gender chart counts
+    # -----------------
     male_clients = Client.objects.filter(gender="male").count()
     female_clients = Client.objects.filter(gender="female").count()
     other_clients = Client.objects.filter(gender="other").count()
 
-    # Monthly chart (new clients by month)
+    # -----------------
+    # Monthly chart (by registration date)
+    # -----------------
     month_data_qs = Client.objects.annotate(
-        month=ExtractMonth('dob')  # PostgreSQL-compatible
+        month=ExtractMonth('created_at')  # assuming created_at field
     ).values('month').annotate(count=Count('id')).order_by('month')
 
     months = [calendar.month_name[m['month']] for m in month_data_qs]
     month_data = [m['count'] for m in month_data_qs]
 
+    # -----------------
     # Agents for dropdown
+    # -----------------
     agents = User.objects.filter(role='agent')
 
     context = {
@@ -86,6 +104,7 @@ def client_list(request):
         "search_query": search_query,
         "gender_filter": gender_filter,
         "agent_filter": agent_filter,
+        "status_filter": status_filter,  # pass to template
         "total_clients": total_clients,
         "verified_clients": verified_clients,
         "pending_clients": pending_clients,
@@ -98,6 +117,7 @@ def client_list(request):
         "agents": agents,
     }
     return render(request, "clients/client_list.html", context)
+
 
 
 # ---------------------------

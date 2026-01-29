@@ -20,6 +20,39 @@
       ➕ Add Client
     </a>
   </div>
+    <!-- Search & Filters -->
+<div class="glass p-4 rounded-2xl shadow flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 items-start sm:items-center">
+  <form method="get" class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full items-start sm:items-center">
+    
+    <!-- Search -->
+    <input type="text" name="search" placeholder="Search clients..." value="{{ search_query }}" 
+           class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 flex-1 text-gray-900 w-full sm:w-auto">
+
+    <!-- Gender Filter -->
+    <select name="gender" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
+      <option value="">All Genders</option>
+      {% for g, value in gender_options %}
+        <option value="{{ g }}" {% if gender_filter == g %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Agent Filter -->
+    <select name="agent" class="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 text-gray-900 w-full sm:w-auto">
+      <option value="">All Agents</option>
+      {% for agent in agents %}
+        <option value="{{ agent.id }}" {% if agent_filter|default:'' == agent.id|stringformat:"s" %}selected{% endif %}>
+          {{ agent.get_full_name|default:agent.username }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <!-- Submit -->
+    <button type="submit" class="px-3 py-2 bg-gradient-to-tr from-blue-500 to-cyan-400 text-white rounded-lg hover:scale-105 transition transform w-full sm:w-auto">
+      🔍 Filter
+    </button>
+
+  </form>
+</div>
 
   <!-- KPI Cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
