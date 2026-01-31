@@ -348,16 +348,27 @@ def claim_detail(request, pk):
 # ========================
 # ✅ Approve Claim
 # ========================
+from django.views.decorators.http import require_POST
+from django.core.exceptions import ValidationError
+
 @login_required
-@roles_required("admin", "claim_officer")
+@roles_required("admin", "claim_officer", "finance")
+@require_POST
 def approve_claim(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
-    if claim.status != "approved":
-        claim.approve_claim()
-        messages.success(request, f"Claim {claim.claim_number} approved successfully.")
-    else:
-        messages.info(request, f"Claim {claim.claim_number} is already approved.")
+
+    try:
+        if claim.status != "approved":
+            claim.approve_claim(user=request.user)
+            messages.success(request, f"Claim {claim.claim_number} approved successfully.")
+        else:
+            messages.info(request, f"Claim {claim.claim_number} is already approved.")
+    except ValidationError as e:
+        messages.error(request, e.message)
+
     return redirect("claims:claim_detail", pk=pk)
+
+
 
 
 # ========================

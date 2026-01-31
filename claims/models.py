@@ -36,7 +36,26 @@ class Claim(models.Model):
 
     # Shariah Compliance
     shariah_approved = models.BooleanField(default=False, help_text="Approved by Shariah board")
+    shariah_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="shariah_approvals",
+        help_text="User who approved claim from Shariah board"
+    )
     shariah_review_notes = models.TextField(blank=True, null=True)
+
+    # Financial Approval
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_approvals",
+        help_text="Admin / Claim Officer / Finance who approved the claim"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     # Auditing
     created_at = models.DateTimeField(auto_now_add=True)
@@ -48,25 +67,42 @@ class Claim(models.Model):
     def __str__(self):
         return f"{self.claim_number} - {self.client.full_name}"
 
-    # Workflow Property
+    # =======================
+    # Workflow Properties
+    # =======================
     @property
     def workflow_status(self):
         if not self.shariah_approved:
             return "pending_shariah_approval"
         return self.status
 
+    # =======================
     # Workflow Methods
+    # =======================
     def approve_shariah(self, reviewer=None, notes=None):
+        """Mark claim approved by Shariah board."""
         self.shariah_approved = True
+        if reviewer:
+            self.shariah_approved_by = reviewer
         if notes:
             self.shariah_review_notes = notes
-        self.save(update_fields=["shariah_approved", "shariah_review_notes", "updated_at"])
+        self.save(update_fields=["shariah_approved", "shariah_approved_by", "shariah_review_notes", "updated_at"])
 
-    def approve_claim(self):
+    def approve_claim(self, user=None):
+        """
+        Financial approval: Admin, Claim Officer, Finance only.
+        Raises ValidationError if Shariah not approved or user unauthorized.
+        """
         if not self.shariah_approved:
             raise ValidationError("Claim must be approved by Shariah board first")
+
+        if user and not user.groups.filter(name__in=["admin", "claim_officer", "finance"]).exists():
+            raise ValidationError("You do not have permission to approve this claim")
+
         self.status = "approved"
-        self.save(update_fields=["status", "updated_at"])
+        self.approved_by = user
+        self.approved_at = timezone.now()
+        self.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
 
     def reject_claim(self, notes=None):
         self.status = "rejected"
@@ -106,7 +142,6 @@ class ClinicalEvent(models.Model):
     def __str__(self):
         return f"{self.client.full_name} - {self.visit_type} on {self.event_datetime.date()}"
 
-    # Convenience: total risk score per event
     @property
     def maternal_risk(self):
         return self.risk_scores.filter(type="maternal").aggregate(

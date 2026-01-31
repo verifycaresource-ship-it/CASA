@@ -47,11 +47,7 @@ Claim Details
     <div>
       <p class="text-sm uppercase text-gray-400">Hospital</p>
       <p class="font-semibold text-lg">
-        {% if claim.hospital %}
-          {{ claim.hospital.name }}
-        {% else %}
-          N/A
-        {% endif %}
+        {% if claim.hospital %}{{ claim.hospital.name }}{% else %}N/A{% endif %}
       </p>
     </div>
 
@@ -67,17 +63,26 @@ Claim Details
       <p class="capitalize font-semibold text-lg
         {% if claim.status == 'approved' %}text-green-400
         {% elif claim.status == 'rejected' %}text-red-400
+        {% elif claim.workflow_status == 'pending_shariah_approval' %}text-yellow-400
         {% else %}text-yellow-400{% endif %}
       ">
         {{ claim.status }}
       </p>
     </div>
 
+    <!-- Shariah Approval -->
+    <div>
+      <p class="text-sm uppercase text-gray-400">Shariah Approval</p>
+      {% if claim.shariah_approved %}
+        <p class="font-semibold text-green-400">Approved</p>
+      {% else %}
+        <p class="font-semibold text-yellow-400">Pending</p>
+      {% endif %}
+    </div>
+
     <div class="md:col-span-2">
       <p class="text-sm uppercase text-gray-400">Notes / Description</p>
-      <p class="text-gray-300 mt-1">
-        {{ claim.notes|default:"N/A" }}
-      </p>
+      <p class="text-gray-300 mt-1">{{ claim.notes|default:"N/A" }}</p>
     </div>
 
     <div>
@@ -93,10 +98,11 @@ Claim Details
         {{ claim.created_at|date:"M d, Y H:i" }}
       </p>
     </div>
+
   </div>
 
-  <!-- Admin / Claim Officer Actions -->
-  {% if role == 'admin' or role == 'claim_officer' %}
+  <!-- Admin Actions Only -->
+  {% if role == 'admin' %}
   <div class="mt-10 border-t border-white/10 pt-6">
     <h2 class="text-lg font-semibold text-cyan-300 mb-4">
       Administrative Actions
@@ -104,21 +110,24 @@ Claim Details
 
     <div class="flex flex-wrap gap-3">
 
+      <!-- Edit -->
       <a href="{% url 'claims:edit_claim' claim.id %}"
          class="px-4 py-2 neon-green text-white rounded-lg hover-scale transition">
         ✏️ Edit
       </a>
 
-      {% if claim.status != 'approved' %}
+      <!-- Approve Claim (Admin Only) -->
+      {% if claim.shariah_approved and claim.status != 'approved' %}
       <form method="POST" action="{% url 'claims:approve_claim' claim.id %}">
         {% csrf_token %}
         <button type="submit"
                 class="px-4 py-2 neon-blue text-white rounded-lg hover-scale transition">
-          ✅ Approve
+          ✅ Approve Claim
         </button>
       </form>
       {% endif %}
 
+      <!-- Reject Claim -->
       {% if claim.status != 'rejected' %}
       <form method="POST" action="{% url 'claims:reject_claim' claim.id %}">
         {% csrf_token %}
@@ -129,6 +138,7 @@ Claim Details
       </form>
       {% endif %}
 
+      <!-- Reimburse -->
       {% if claim.status == 'approved' %}
       <form method="POST" action="{% url 'claims:reimburse_claim' claim.id %}">
         {% csrf_token %}
