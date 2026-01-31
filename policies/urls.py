@@ -27,7 +27,9 @@ urlpatterns = [
     # ---------------------------
     # Insured persons
     # ---------------------------
-    path('policy/<int:policy_id>/add-insured/', views.add_insured_person, name='add_insured_person'),
+    path("policy/<int:policy_id>/add-insured/", views.add_insured_person, name="add_insured_person"),
+
+
     path('insured/<int:person_id>/edit/', views.edit_insured_person, name='edit_insured_person'),
     path('insured/<int:person_id>/delete/', views.delete_insured_person, name='delete_insured_person'),
 

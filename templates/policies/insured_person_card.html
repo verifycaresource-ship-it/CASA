@@ -1,68 +1,91 @@
+{% extends 'dashboard/base.html' %}
 {% load static %}
-<div class="bg-white dark:bg-gray-700 shadow-md rounded-lg p-4 flex items-center space-x-4">
 
-  <!-- Photo -->
-  <div class="flex-shrink-0">
-    {% if person.photo %}
-      <img src="{{ person.photo.url }}" alt="{{ person.full_name }}"
-           class="w-16 h-16 rounded-full object-cover border">
-    {% else %}
-      <img src="{% static 'images/default-user.png' %}" alt="No Photo"
-           class="w-16 h-16 rounded-full object-cover border">
-    {% endif %}
-  </div>
+{% block title %}Edit {{ person.full_name }} | Health Insurance{% endblock %}
 
-  <!-- Info -->
-  <div class="flex-1">
-    <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
-      {{ person.full_name }}
-    </h4>
+{% block content %}
+<div class="max-w-lg mx-auto bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-lg mt-8 font-sans text-gray-900 dark:text-gray-100">
 
-    <p class="text-sm text-gray-600 dark:text-gray-300">
-      {{ person.relationship|default:"-" }}
-    </p>
+  <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-blue-600">Edit Insured Person</h1>
 
-    <p class="text-sm text-gray-600 dark:text-gray-300">
-      DOB:
-      {% if person.dob %}
-          {{ person.dob|date:"M d, Y" }}
-      {% else %}
-          -
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-gray-100' }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+
+    <!-- Full Name -->
+    <div>
+      <label class="block font-semibold mb-1">Full Name</label>
+      <input type="text" name="full_name" value="{{ person.full_name }}" required
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+    </div>
+
+    <!-- Relationship -->
+    <div>
+      <label class="block font-semibold mb-1">Relationship</label>
+      <input type="text" name="relationship" value="{{ person.relationship }}" required
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+    </div>
+
+    <!-- Date of Birth -->
+    <div>
+      <label class="block font-semibold mb-1">Date of Birth</label>
+      <input type="date" name="dob" value="{{ person.dob|date:'Y-m-d' }}" required
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+    </div>
+
+    <!-- Gender -->
+    <div>
+      <label class="block font-semibold mb-1">Gender</label>
+      <select name="gender" required
+              class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+        <option value="">Select Gender</option>
+        <option value="male" {% if person.gender == "male" %}selected{% endif %}>Male</option>
+        <option value="female" {% if person.gender == "female" %}selected{% endif %}>Female</option>
+        <option value="other" {% if person.gender == "other" %}selected{% endif %}>Other</option>
+      </select>
+    </div>
+
+    <!-- Photo -->
+    <div>
+      <label class="block font-semibold mb-1">Photo</label>
+      {% if person.photo %}
+        <div class="flex items-center gap-4 mb-2">
+          <img src="{{ person.photo.url }}" alt="Current Photo" class="w-24 h-24 rounded-full object-cover border">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Current photo</p>
+        </div>
       {% endif %}
+      <input type="file" name="photo" accept="image/*"
+             class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-flux-blue">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Leave blank to keep existing photo.</p>
+    </div>
 
-      {% if person.age %}
-          ({{ person.age }} yrs)
-      {% endif %}
-    </p>
+    <!-- Save Button -->
+    <div class="flex justify-end">
+      <button type="submit"
+              class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition">
+        💾 Save Changes
+      </button>
+    </div>
 
-    <p class="text-sm text-gray-600 dark:text-gray-300">
-      Gender: {{ person.gender|default:"-" }}
-    </p>
-
-    <p class="text-sm text-green-600 dark:text-green-400">
-      {% if person.is_adult %}Adult{% else %}Minor{% endif %}
-    </p>
-  </div>
-
-  <!-- Actions -->
-  <div class="flex flex-col items-end space-y-2">
-    {% if user.is_superuser or user.role == 'admin' %}
-      
-      <a href="{% url 'policies:edit_insured_person' person.id %}" 
-         class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm transition">
-         ✏️ Edit
-      </a>
-
-      <form action="{% url 'policies:delete_insured_person' person.id %}" method="POST" class="inline">
-        {% csrf_token %}
-        <button type="submit"
-                class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm transition"
-                onclick="return confirm('Are you sure you want to delete {{ person.full_name }}?');">
-          🗑 Delete
-        </button>
-      </form>
-
-    {% endif %}
-  </div>
-
+  </form>
 </div>
+
+<style>
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
+
+  @media (max-width: 768px) {
+    .max-w-lg { padding: 1.5rem; }
+  }
+</style>
+{% endblock %}

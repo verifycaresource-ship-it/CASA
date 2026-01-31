@@ -6,7 +6,7 @@ import io
 import csv
 import base64
 from datetime import date, datetime, timedelta
-
+from .models import Client
 # ---------------------------
 # DJANGO CORE
 # ---------------------------
@@ -66,24 +66,30 @@ class PolicyViewSet(viewsets.ModelViewSet):
 # POLICY LIST + FILTERS + DASHBOARD ANALYTICS
 # -------------------------------------------------------------------
 
+from datetime import date, timedelta, datetime
+from django.db.models import Q, Sum, Count
+from django.core.paginator import Paginator
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models.functions import TruncMonth
+
+from .models import Policy
+from clients.models import Client  # Make sure your Client model is imported
+# from users.decorators import roles_required  # Your custom role decorator
+
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_list(request):
-
     today = date.today()
 
-    # -------------------------------------------------------
+    # -------------------------------
     # BASE QUERY
-    # -------------------------------------------------------
-    policies = (
-        Policy.objects
-        .select_related("client")
-        .order_by("-start_date")
-    )
+    # -------------------------------
+    policies = Policy.objects.select_related("client").order_by("-start_date")
 
-    # -------------------------------------------------------
+    # -------------------------------
     # FILTERS
-    # -------------------------------------------------------
+    # -------------------------------
     search = request.GET.get("search", "").strip()
     policy_type = request.GET.get("type", "")
     active = request.GET.get("active", "")
@@ -91,7 +97,6 @@ def policy_list(request):
     start_date = request.GET.get("start", "")
     end_date = request.GET.get("end", "")
 
-    # ---- SEARCH (Policy No + Client Names) ----
     if search:
         policies = policies.filter(
             Q(policy_number__icontains=search) |
@@ -99,135 +104,85 @@ def policy_list(request):
             Q(client__last_name__icontains=search)
         )
 
-    # ---- POLICY TYPE ----
     if policy_type:
         policies = policies.filter(policy_type=policy_type)
 
-    # ---- ACTIVE FILTER ----
     if active == "true":
         policies = policies.filter(is_active=True)
     elif active == "false":
         policies = policies.filter(is_active=False)
 
-    # ---- DATE RANGE FILTER ----
     try:
         if start_date:
-            policies = policies.filter(
-                start_date__gte=datetime.strptime(start_date, "%Y-%m-%d").date()
-            )
-
+            policies = policies.filter(start_date__gte=datetime.strptime(start_date, "%Y-%m-%d").date())
         if end_date:
-            policies = policies.filter(
-                start_date__lte=datetime.strptime(end_date, "%Y-%m-%d").date()
-            )
+            policies = policies.filter(start_date__lte=datetime.strptime(end_date, "%Y-%m-%d").date())
     except ValueError:
-        pass   # ignore invalid date input safely
+        pass
 
-    # ---- CURRENT MONTH FILTER ----
     if month_only:
-        policies = policies.filter(
-            start_date__year=today.year,
-            start_date__month=today.month
-        )
+        policies = policies.filter(start_date__year=today.year, start_date__month=today.month)
 
-    # -------------------------------------------------------
+    # -------------------------------
     # KPI METRICS
-    # -------------------------------------------------------
+    # -------------------------------
     total_count = Policy.objects.count()
     active_count = Policy.objects.filter(is_active=True).count()
+    monthly_count = Policy.objects.filter(start_date__year=today.year, start_date__month=today.month).count()
+    total_revenue = Policy.objects.aggregate(total=Sum("premium"))["total"] or 0
+    monthly_revenue = Policy.objects.filter(start_date__year=today.year, start_date__month=today.month).aggregate(total=Sum("premium"))["total"] or 0
 
-    monthly_count = Policy.objects.filter(
-        start_date__year=today.year,
-        start_date__month=today.month
-    ).count()
-
-    total_revenue = (
-        Policy.objects.aggregate(total=Sum("premium"))["total"] or 0
-    )
-
-    monthly_revenue = (
-        Policy.objects.filter(
-            start_date__year=today.year,
-            start_date__month=today.month
-        )
-        .aggregate(total=Sum("premium"))["total"] or 0
-    )
-
-    # -------------------------------------------------------
+    # -------------------------------
     # RENEWAL + EXPIRY ALERTS
-    # -------------------------------------------------------
-    renewals = (
-        Policy.objects
-        .filter(
-            expiry_date__gte=today,
-            expiry_date__lte=today + timedelta(days=30)
-        )
-        .order_by("expiry_date")
-    )
+    # -------------------------------
+    renewals = Policy.objects.filter(expiry_date__gte=today, expiry_date__lte=today + timedelta(days=30)).order_by("expiry_date")
+    expired_alerts = Policy.objects.filter(expiry_date__lt=today).order_by("-expiry_date")[:10]
 
-    expired_alerts = (
-        Policy.objects
-        .filter(expiry_date__lt=today)
-        .order_by("-expiry_date")[:10]
-    )
+    # -------------------------------
+    # MONTHLY ANALYTICS
+    # -------------------------------
+    monthly_sales = Policy.objects.annotate(month=TruncMonth("start_date")).values("month").annotate(
+        count=Count("id"),
+        revenue=Sum("premium")
+    ).order_by("month")
 
-    # -------------------------------------------------------
-    # MONTHLY ANALYTICS (Charts)
-    # -------------------------------------------------------
-    monthly_sales = (
-        Policy.objects
-        .annotate(month=TruncMonth("start_date"))
-        .values("month")
-        .annotate(
-            count=Count("id"),
-            revenue=Sum("premium")
-        )
-        .order_by("month")
-    )
+    chart_labels = [record["month"].strftime("%b %Y") for record in monthly_sales]
+    chart_counts = [record["count"] for record in monthly_sales]
+    chart_revenue = [float(record["revenue"] or 0) for record in monthly_sales]
 
-    chart_labels = [
-        record["month"].strftime("%b %Y")
-        for record in monthly_sales
-    ]
+    # -------------------------------
+    # CLIENTS FOR ADD POLICY MODAL
+    # -------------------------------
+    clients = Client.objects.filter(is_active=True).order_by("first_name", "last_name")
 
-    chart_counts = [
-        record["count"]
-        for record in monthly_sales
-    ]
-
-    chart_revenue = [
-        float(record["revenue"] or 0)
-        for record in monthly_sales
-    ]
-
-    # -------------------------------------------------------
+    # -------------------------------
     # PAGINATION
-    # -------------------------------------------------------
+    # -------------------------------
     paginator = Paginator(policies, 10)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    # -------------------------------------------------------
+    # -------------------------------
     # TEMPLATE CONTEXT
-    # -------------------------------------------------------
+    # -------------------------------
     context = {
         "policies": page_obj.object_list,
         "page_obj": page_obj,
 
-        # Search & Filters
+        # Filters
         "search": search,
         "policy_type": policy_type,
         "active": active,
         "start": start_date,
         "end": end_date,
 
-        # KPI Summary
+        # KPI
         "total_count": total_count,
         "active_count": active_count,
         "monthly_count": monthly_count,
         "total_revenue": total_revenue,
         "monthly_revenue": monthly_revenue,
 
-        # Renewal Alerts
+        # Alerts
         "renewals": renewals,
         "expired_alerts": expired_alerts,
 
@@ -236,12 +191,16 @@ def policy_list(request):
         "chart_counts": chart_counts,
         "chart_revenue": chart_revenue,
 
+        # Clients for modal
+        "clients": clients,
+
         # Metadata
         "dashboard_title": "Policy Analytics",
         "role": getattr(request.user, "role", "guest"),
     }
 
     return render(request, "policies/policy_list.html", context)
+
 
 
 
@@ -303,51 +262,6 @@ def assign_to_hospital(request, pk):
     })
 
 
-@login_required
-@roles_required("admin", "finance_officer")
-def add_insured_person(request, policy_id):
-    policy = get_object_or_404(Policy, id=policy_id)
-
-    if request.method == "POST":
-        # Determine how many persons were submitted
-        persons = []
-        index = 0
-        while f"full_name_{index}" in request.POST:
-            full_name = request.POST.get(f"full_name_{index}")
-            relationship = request.POST.get(f"relationship_{index}")
-            dob_str = request.POST.get(f"dob_{index}")
-            gender = request.POST.get(f"gender_{index}")
-            fingerprint_base64 = request.POST.get(f"fingerprint_base64_{index}")
-            photo = request.FILES.get(f"photo_{index}")
-
-            dob_value = None
-            if dob_str:
-                try:
-                    dob_value = datetime.strptime(dob_str, "%Y-%m-%d").date()
-                except ValueError:
-                    dob_value = None
-
-            if full_name and relationship and dob_value:
-                person = policy.insured_persons.create(
-                    full_name=full_name.strip(),
-                    relationship=relationship.strip(),
-                    dob=dob_value,
-                    gender=gender if gender else None,
-                    photo=photo,
-                )
-                # If adult, save fingerprint
-                age = (datetime.today().date() - dob_value).days // 365
-                if age >= 18 and fingerprint_base64:
-                    person.fingerprint_data = base64.b64decode(fingerprint_base64)
-                    person.fingerprint_verified = True
-                    person.save()
-
-            index += 1
-
-        messages.success(request, f"{index} insured person(s) added to policy {policy.policy_number}.")
-        return redirect("policies:policy_detail", pk=policy.id)
-
-    return render(request, "policies/add_insured_person.html", {"policy": policy})
 
 # -------------------------------------------------------------------
 # EDIT INSURED PERSON
@@ -598,182 +512,6 @@ class PolicyViewSet(viewsets.ModelViewSet):
 # POLICY LIST + FILTERS + DASHBOARD ANALYTICS
 # -------------------------------------------------------------------
 
-@login_required
-@roles_required("admin", "finance_officer")
-def policy_list(request):
-
-    today = date.today()
-
-    # -------------------------------------------------------
-    # BASE QUERY
-    # -------------------------------------------------------
-    policies = (
-        Policy.objects
-        .select_related("client")
-        .order_by("-start_date")
-    )
-
-    # -------------------------------------------------------
-    # FILTERS
-    # -------------------------------------------------------
-    search = request.GET.get("search", "").strip()
-    policy_type = request.GET.get("type", "")
-    active = request.GET.get("active", "")
-    month_only = request.GET.get("monthly", "")
-    start_date = request.GET.get("start", "")
-    end_date = request.GET.get("end", "")
-
-    # ---- SEARCH (Policy No + Client Names) ----
-    if search:
-        policies = policies.filter(
-            Q(policy_number__icontains=search) |
-            Q(client__first_name__icontains=search) |
-            Q(client__last_name__icontains=search)
-        )
-
-    # ---- POLICY TYPE ----
-    if policy_type:
-        policies = policies.filter(policy_type=policy_type)
-
-    # ---- ACTIVE FILTER ----
-    if active == "true":
-        policies = policies.filter(is_active=True)
-    elif active == "false":
-        policies = policies.filter(is_active=False)
-
-    # ---- DATE RANGE FILTER ----
-    try:
-        if start_date:
-            policies = policies.filter(
-                start_date__gte=datetime.strptime(start_date, "%Y-%m-%d").date()
-            )
-
-        if end_date:
-            policies = policies.filter(
-                start_date__lte=datetime.strptime(end_date, "%Y-%m-%d").date()
-            )
-    except ValueError:
-        pass   # ignore invalid date input safely
-
-    # ---- CURRENT MONTH FILTER ----
-    if month_only:
-        policies = policies.filter(
-            start_date__year=today.year,
-            start_date__month=today.month
-        )
-
-    # -------------------------------------------------------
-    # KPI METRICS
-    # -------------------------------------------------------
-    total_count = Policy.objects.count()
-    active_count = Policy.objects.filter(is_active=True).count()
-
-    monthly_count = Policy.objects.filter(
-        start_date__year=today.year,
-        start_date__month=today.month
-    ).count()
-
-    total_revenue = (
-        Policy.objects.aggregate(total=Sum("premium"))["total"] or 0
-    )
-
-    monthly_revenue = (
-        Policy.objects.filter(
-            start_date__year=today.year,
-            start_date__month=today.month
-        )
-        .aggregate(total=Sum("premium"))["total"] or 0
-    )
-
-    # -------------------------------------------------------
-    # RENEWAL + EXPIRY ALERTS
-    # -------------------------------------------------------
-    renewals = (
-        Policy.objects
-        .filter(
-            expiry_date__gte=today,
-            expiry_date__lte=today + timedelta(days=30)
-        )
-        .order_by("expiry_date")
-    )
-
-    expired_alerts = (
-        Policy.objects
-        .filter(expiry_date__lt=today)
-        .order_by("-expiry_date")[:10]
-    )
-
-    # -------------------------------------------------------
-    # MONTHLY ANALYTICS (Charts)
-    # -------------------------------------------------------
-    monthly_sales = (
-        Policy.objects
-        .annotate(month=TruncMonth("start_date"))
-        .values("month")
-        .annotate(
-            count=Count("id"),
-            revenue=Sum("premium")
-        )
-        .order_by("month")
-    )
-
-    chart_labels = [
-        record["month"].strftime("%b %Y")
-        for record in monthly_sales
-    ]
-
-    chart_counts = [
-        record["count"]
-        for record in monthly_sales
-    ]
-
-    chart_revenue = [
-        float(record["revenue"] or 0)
-        for record in monthly_sales
-    ]
-
-    # -------------------------------------------------------
-    # PAGINATION
-    # -------------------------------------------------------
-    paginator = Paginator(policies, 10)
-    page_obj = paginator.get_page(request.GET.get("page"))
-
-    # -------------------------------------------------------
-    # TEMPLATE CONTEXT
-    # -------------------------------------------------------
-    context = {
-        "policies": page_obj.object_list,
-        "page_obj": page_obj,
-
-        # Search & Filters
-        "search": search,
-        "policy_type": policy_type,
-        "active": active,
-        "start": start_date,
-        "end": end_date,
-
-        # KPI Summary
-        "total_count": total_count,
-        "active_count": active_count,
-        "monthly_count": monthly_count,
-        "total_revenue": total_revenue,
-        "monthly_revenue": monthly_revenue,
-
-        # Renewal Alerts
-        "renewals": renewals,
-        "expired_alerts": expired_alerts,
-
-        # Charts
-        "chart_labels": chart_labels,
-        "chart_counts": chart_counts,
-        "chart_revenue": chart_revenue,
-
-        # Metadata
-        "dashboard_title": "Policy Analytics",
-        "role": getattr(request.user, "role", "guest"),
-    }
-
-    return render(request, "policies/policy_list.html", context)
 
 
 
@@ -808,51 +546,7 @@ def assign_to_hospital(request, pk):
     })
 
 
-@login_required
-@roles_required("admin", "finance_officer")
-def add_insured_person(request, policy_id):
-    policy = get_object_or_404(Policy, id=policy_id)
 
-    if request.method == "POST":
-        # Determine how many persons were submitted
-        persons = []
-        index = 0
-        while f"full_name_{index}" in request.POST:
-            full_name = request.POST.get(f"full_name_{index}")
-            relationship = request.POST.get(f"relationship_{index}")
-            dob_str = request.POST.get(f"dob_{index}")
-            gender = request.POST.get(f"gender_{index}")
-            fingerprint_base64 = request.POST.get(f"fingerprint_base64_{index}")
-            photo = request.FILES.get(f"photo_{index}")
-
-            dob_value = None
-            if dob_str:
-                try:
-                    dob_value = datetime.strptime(dob_str, "%Y-%m-%d").date()
-                except ValueError:
-                    dob_value = None
-
-            if full_name and relationship and dob_value:
-                person = policy.insured_persons.create(
-                    full_name=full_name.strip(),
-                    relationship=relationship.strip(),
-                    dob=dob_value,
-                    gender=gender if gender else None,
-                    photo=photo,
-                )
-                # If adult, save fingerprint
-                age = (datetime.today().date() - dob_value).days // 365
-                if age >= 18 and fingerprint_base64:
-                    person.fingerprint_data = base64.b64decode(fingerprint_base64)
-                    person.fingerprint_verified = True
-                    person.save()
-
-            index += 1
-
-        messages.success(request, f"{index} insured person(s) added to policy {policy.policy_number}.")
-        return redirect("policies:policy_detail", pk=policy.id)
-
-    return render(request, "policies/add_insured_person.html", {"policy": policy})
 
 
 
@@ -1099,199 +793,24 @@ class PolicyViewSet(viewsets.ModelViewSet):
     serializer_class = PolicySerializer
     permission_classes = [permissions.IsAuthenticated]
 
+
 @login_required
 @roles_required("admin", "finance_officer")
-def policy_list(request):
-
-    today = date.today()
-
-    # -------------------------------------------------------
-    # BASE QUERY
-    # -------------------------------------------------------
-    policies = (
-        Policy.objects
-        .select_related("client")
-        .order_by("-start_date")
-    )
-
-    # -------------------------------------------------------
-    # FILTERS
-    # -------------------------------------------------------
-    search = request.GET.get("search", "").strip()
-    policy_type = request.GET.get("type", "")
-    active = request.GET.get("active", "")
-    month_only = request.GET.get("monthly", "")
-    start_date = request.GET.get("start", "")
-    end_date = request.GET.get("end", "")
-
-    # ---- SEARCH (Policy No + Client Names) ----
-    if search:
-        policies = policies.filter(
-            Q(policy_number__icontains=search) |
-            Q(client__first_name__icontains=search) |
-            Q(client__last_name__icontains=search)
-        )
-
-    # ---- POLICY TYPE ----
-    if policy_type:
-        policies = policies.filter(policy_type=policy_type)
-
-    # ---- ACTIVE FILTER ----
-    if active == "true":
-        policies = policies.filter(is_active=True)
-    elif active == "false":
-        policies = policies.filter(is_active=False)
-
-    # ---- DATE RANGE FILTER ----
-    try:
-        if start_date:
-            policies = policies.filter(
-                start_date__gte=datetime.strptime(start_date, "%Y-%m-%d").date()
-            )
-
-        if end_date:
-            policies = policies.filter(
-                start_date__lte=datetime.strptime(end_date, "%Y-%m-%d").date()
-            )
-    except ValueError:
-        pass   # ignore invalid date input safely
-
-    # ---- CURRENT MONTH FILTER ----
-    if month_only:
-        policies = policies.filter(
-            start_date__year=today.year,
-            start_date__month=today.month
-        )
-
-    # -------------------------------------------------------
-    # KPI METRICS
-    # -------------------------------------------------------
-    total_count = Policy.objects.count()
-    active_count = Policy.objects.filter(is_active=True).count()
-
-    monthly_count = Policy.objects.filter(
-        start_date__year=today.year,
-        start_date__month=today.month
-    ).count()
-
-    total_revenue = (
-        Policy.objects.aggregate(total=Sum("premium"))["total"] or 0
-    )
-
-    monthly_revenue = (
-        Policy.objects.filter(
-            start_date__year=today.year,
-            start_date__month=today.month
-        )
-        .aggregate(total=Sum("premium"))["total"] or 0
-    )
-
-    # -------------------------------------------------------
-    # RENEWAL + EXPIRY ALERTS
-    # -------------------------------------------------------
-    renewals = (
-        Policy.objects
-        .filter(
-            expiry_date__gte=today,
-            expiry_date__lte=today + timedelta(days=30)
-        )
-        .order_by("expiry_date")
-    )
-
-    expired_alerts = (
-        Policy.objects
-        .filter(expiry_date__lt=today)
-        .order_by("-expiry_date")[:10]
-    )
-
-    # -------------------------------------------------------
-    # MONTHLY ANALYTICS (Charts)
-    # -------------------------------------------------------
-    monthly_sales = (
-        Policy.objects
-        .annotate(month=TruncMonth("start_date"))
-        .values("month")
-        .annotate(
-            count=Count("id"),
-            revenue=Sum("premium")
-        )
-        .order_by("month")
-    )
-
-    chart_labels = [
-        record["month"].strftime("%b %Y")
-        for record in monthly_sales
-    ]
-
-    chart_counts = [
-        record["count"]
-        for record in monthly_sales
-    ]
-
-    chart_revenue = [
-        float(record["revenue"] or 0)
-        for record in monthly_sales
-    ]
-
-    # -------------------------------------------------------
-    # PAGINATION
-    # -------------------------------------------------------
-    paginator = Paginator(policies, 10)
-    page_obj = paginator.get_page(request.GET.get("page"))
-
-    # -------------------------------------------------------
-    # TEMPLATE CONTEXT
-    # -------------------------------------------------------
-    context = {
-        "policies": page_obj.object_list,
-        "page_obj": page_obj,
-
-        # Search & Filters
-        "search": search,
-        "policy_type": policy_type,
-        "active": active,
-        "start": start_date,
-        "end": end_date,
-
-        # KPI Summary
-        "total_count": total_count,
-        "active_count": active_count,
-        "monthly_count": monthly_count,
-        "total_revenue": total_revenue,
-        "monthly_revenue": monthly_revenue,
-
-        # Renewal Alerts
-        "renewals": renewals,
-        "expired_alerts": expired_alerts,
-
-        # Charts
-        "chart_labels": chart_labels,
-        "chart_counts": chart_counts,
-        "chart_revenue": chart_revenue,
-
-        # Metadata
-        "dashboard_title": "Policy Analytics",
-        "role": getattr(request.user, "role", "guest"),
-    }
-
-    return render(request, "policies/policy_list.html", context)
-
-# -------------------------------------------------------------------
-# ADD / EDIT POLICY (WITH INSURED PERSONS)
-# -------------------------------------------------------------------
-@login_required
-@roles_required("admin", "finance_officer")
-def policy_form(request, pk=None):
+def policy_form(request, pk=None, client_id=None):
     policy = get_object_or_404(Policy, pk=pk) if pk else None
-    clients = Client.objects.all()
+    clients = Client.objects.all().order_by("first_name", "last_name")
     auto_policy_number = policy.policy_number if policy else f"POL-{uuid.uuid4().hex[:8].upper()}"
     today = timezone.now().date()
     next_year = today.replace(year=today.year + 1)
 
+    # Preselect client if client_id is passed
+    selected_client = None
+    if client_id:
+        selected_client = get_object_or_404(Client, pk=client_id)
+
     if request.method == "POST":
         data = request.POST
         files = request.FILES
-
         client = get_object_or_404(Client, pk=data.get("client"))
         policy_number = data.get("policy_number") or auto_policy_number
 
@@ -1301,8 +820,8 @@ def policy_form(request, pk=None):
             return redirect(request.path)
 
         try:
-            # ---------------- Update or Create Policy ----------------
             if policy:
+                # Update existing
                 policy.client = client
                 policy.policy_number = policy_number
                 policy.policy_type = data.get("policy_type")
@@ -1319,6 +838,7 @@ def policy_form(request, pk=None):
                 policy.save()
                 messages.success(request, f"Policy '{policy.policy_number}' updated successfully.")
             else:
+                # Create new
                 policy = Policy.objects.create(
                     client=client,
                     policy_number=policy_number,
@@ -1338,60 +858,8 @@ def policy_form(request, pk=None):
                 messages.success(request, f"Policy '{policy_number}' added successfully.")
 
             # ---------------- Insured Persons ----------------
-            full_names = data.getlist("insured_full_name[]")
-            relationships = data.getlist("insured_relationship[]")
-            dobs = data.getlist("insured_dob[]")
-            genders = data.getlist("insured_gender[]")
-            photos = files.getlist("insured_photo[]")
-            insured_ids = data.getlist("insured_id[]")
-
-            for i in range(len(full_names)):
-                name = full_names[i].strip()
-                relationship = relationships[i].strip()
-                if not name or not relationship:
-                    continue
-
-                dob_value = None
-                if dobs[i]:
-                    try:
-                        dob_value = datetime.strptime(dobs[i], "%Y-%m-%d").date()
-                    except ValueError:
-                        pass
-
-                gender = genders[i] if i < len(genders) else None
-                photo = photos[i] if i < len(photos) else None
-                insured_id = insured_ids[i] if i < len(insured_ids) else None
-
-                # Update existing person
-                if insured_id:
-                    person = InsuredPerson.objects.filter(id=insured_id, policy=policy).first()
-                    if person:
-                        person.full_name = name
-                        person.relationship = relationship
-                        person.gender = gender or person.gender
-                        if dob_value:
-                            person.dob = dob_value
-                        if photo:
-                            person.photo = photo
-                        person.save()
-                        continue
-
-                # Create new person
-                new_person = InsuredPerson.objects.create(
-                    policy=policy,
-                    full_name=name,
-                    relationship=relationship,
-                    dob=dob_value,
-                    gender=gender,
-                    photo=photo,
-                )
-
-                # Save fingerprint if adult
-                fingerprint_base64 = data.get(f"fingerprint_base64_{i}")
-                if new_person.is_adult and fingerprint_base64:
-                    new_person.fingerprint_data = base64.b64decode(fingerprint_base64)
-                    new_person.fingerprint_verified = True
-                    new_person.save()
+            # (keep your existing logic here unchanged)
+            # ...
 
             return redirect("policies:policy_detail", pk=policy.pk)
 
@@ -1401,6 +869,7 @@ def policy_form(request, pk=None):
     return render(request, "policies/policy_form.html", {
         "policy": policy,
         "clients": clients,
+        "selected_client": selected_client,
         "policy_types": Policy.POLICY_TYPE,
         "payment_modes": PAYMENT_MODE_CHOICES,
         "coverage_levels": COVERAGE_LEVEL_CHOICES,
@@ -1409,9 +878,9 @@ def policy_form(request, pk=None):
         "auto_policy_number": auto_policy_number,
         "today": today,
         "next_year": next_year,
-        "GENDER_CHOICES": GENDER_CHOICES,   # <-- add here
-
+        "GENDER_CHOICES": GENDER_CHOICES,
     })
+
 
 
 # -------------------------------------------------------------------
@@ -1443,52 +912,84 @@ def assign_to_hospital(request, pk):
         "hospitals": hospitals,
         "dashboard_title": f"Assign Hospital for {policy.policy_number}",
     })
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from datetime import datetime, date
+import base64
+
+from .models import Policy, InsuredPerson
+from .decorators import roles_required
+
 
 @login_required
 @roles_required("admin", "finance_officer")
 def add_insured_person(request, policy_id):
+    """
+    Matches insuredPersonsForm Alpine template EXACTLY
+    """
     policy = get_object_or_404(Policy, id=policy_id)
 
     if request.method == "POST":
-        # Determine how many persons were submitted
-        persons = []
         index = 0
+        saved_count = 0
+
         while f"full_name_{index}" in request.POST:
-            full_name = request.POST.get(f"full_name_{index}")
-            relationship = request.POST.get(f"relationship_{index}")
+            full_name = request.POST.get(f"full_name_{index}", "").strip()
+            relationship = request.POST.get(f"relationship_{index}", "").strip()
             dob_str = request.POST.get(f"dob_{index}")
             gender = request.POST.get(f"gender_{index}")
             fingerprint_base64 = request.POST.get(f"fingerprint_base64_{index}")
             photo = request.FILES.get(f"photo_{index}")
 
-            dob_value = None
-            if dob_str:
-                try:
-                    dob_value = datetime.strptime(dob_str, "%Y-%m-%d").date()
-                except ValueError:
-                    dob_value = None
+            # --- Validate ---
+            if not full_name or not relationship or not dob_str:
+                index += 1
+                continue
 
-            if full_name and relationship and dob_value:
-                person = policy.insured_persons.create(
-                    full_name=full_name.strip(),
-                    relationship=relationship.strip(),
-                    dob=dob_value,
-                    gender=gender if gender else None,
-                    photo=photo,
-                )
-                # If adult, save fingerprint
-                age = (datetime.today().date() - dob_value).days // 365
-                if age >= 18 and fingerprint_base64:
+            try:
+                dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+            except ValueError:
+                index += 1
+                continue
+
+            # --- Create insured person ---
+            person = InsuredPerson.objects.create(
+                policy=policy,
+                full_name=full_name,
+                relationship=relationship,
+                dob=dob,
+                gender=gender if gender else None,
+                photo=photo,
+            )
+
+            # --- Adult check ---
+            today = date.today()
+            age = today.year - dob.year - (
+                (today.month, today.day) < (dob.month, dob.day)
+            )
+
+            if age >= 18 and fingerprint_base64:
+                try:
                     person.fingerprint_data = base64.b64decode(fingerprint_base64)
                     person.fingerprint_verified = True
                     person.save()
+                except Exception:
+                    pass  # fingerprint optional
 
+            saved_count += 1
             index += 1
 
-        messages.success(request, f"{index} insured person(s) added to policy {policy.policy_number}.")
+        messages.success(
+            request,
+            f"{saved_count} insured person(s) added to policy {policy.policy_number}."
+        )
+
         return redirect("policies:policy_detail", pk=policy.id)
 
-    return render(request, "policies/add_insured_person.html", {"policy": policy})
+    return render(request, "policies/add_insured_person.html", {
+        "policy": policy,
+    })
 
 # -------------------------------------------------------------------
 # EDIT INSURED PERSON
@@ -1893,3 +1394,107 @@ def archive_policy(request, pk):
 
     messages.success(request, f"Policy {policy.policy_number} archived successfully.")
     return redirect("policies:policy_list")  # Adjust redirect as needed
+@login_required
+@roles_required("admin", "finance_officer")
+def policy_form(request, pk=None):
+    """
+    Add or edit a policy. If 'client' GET parameter is present, preselect the client.
+    """
+    policy = get_object_or_404(Policy, pk=pk) if pk else None
+
+    # All clients for dropdown
+    clients = Client.objects.all()
+
+    # Check if client is pre-selected (from modal)
+    client_id = request.GET.get("client")
+    selected_client = None
+    if client_id:
+        selected_client = Client.objects.filter(pk=client_id).first()
+    elif policy:
+        selected_client = policy.client
+
+    auto_policy_number = policy.policy_number if policy else f"POL-{uuid.uuid4().hex[:8].upper()}"
+    today = timezone.now().date()
+    next_year = today.replace(year=today.year + 1)
+
+    if request.method == "POST":
+        data = request.POST
+        files = request.FILES
+
+        # Ensure client is selected
+        client = get_object_or_404(Client, pk=data.get("client"))
+        policy_number = data.get("policy_number") or auto_policy_number
+
+        # Validate required fields
+        required_fields = ["policy_type", "start_date", "expiry_date", "premium"]
+        if not all(data.get(f) for f in required_fields):
+            messages.error(request, "Please fill in all required fields.")
+            return redirect(request.path)
+
+        try:
+            if policy:
+                # Update existing
+                policy.client = client
+                policy.policy_number = policy_number
+                policy.policy_type = data.get("policy_type")
+                policy.payment_mode = data.get("payment_mode")
+                policy.coverage_level = data.get("coverage_level")
+                policy.nric_or_passport = data.get("nric_or_passport")
+                policy.start_date = data.get("start_date")
+                policy.expiry_date = data.get("expiry_date")
+                policy.premium = data.get("premium")
+                policy.is_active = data.get("is_active") == "on"
+                policy.coverage_details = data.get("coverage_details", "")
+                policy.max_claim_limit = data.get("max_claim_limit") or 0
+                policy.waiting_period_days = data.get("waiting_period_days") or 0
+                policy.save()
+                messages.success(request, f"Policy '{policy.policy_number}' updated successfully.")
+            else:
+                # Create new
+                policy = Policy.objects.create(
+                    client=client,
+                    policy_number=policy_number,
+                    policy_type=data.get("policy_type"),
+                    payment_mode=data.get("payment_mode"),
+                    coverage_level=data.get("coverage_level"),
+                    nric_or_passport=data.get("nric_or_passport"),
+                    start_date=data.get("start_date"),
+                    expiry_date=data.get("expiry_date"),
+                    premium=data.get("premium"),
+                    is_active=data.get("is_active") == "on",
+                    coverage_details=data.get("coverage_details", ""),
+                    max_claim_limit=data.get("max_claim_limit") or 0,
+                    waiting_period_days=data.get("waiting_period_days") or 0,
+                    created_by=request.user,
+                )
+                messages.success(request, f"Policy '{policy_number}' added successfully.")
+
+            return redirect("policies:policy_detail", pk=policy.pk)
+
+        except IntegrityError:
+            messages.error(request, "Policy number already exists.")
+
+    return render(request, "policies/policy_form.html", {
+        "policy": policy,
+        "clients": clients,
+        "selected_client": selected_client,  # <-- this is new
+        "policy_types": Policy.POLICY_TYPE,
+        "payment_modes": PAYMENT_MODE_CHOICES,
+        "coverage_levels": COVERAGE_LEVEL_CHOICES,
+        "dashboard_title": "Edit Policy" if policy else "Add New Policy",
+        "auto_policy_number": auto_policy_number,
+        "today": today,
+        "next_year": next_year,
+        "GENDER_CHOICES": GENDER_CHOICES,
+    })
+
+
+
+@login_required
+@roles_required("admin", "finance_officer")
+def add_policy_redirect(request):
+    client_id = request.GET.get("client")
+    if client_id:
+        return redirect('policies:add_policy') + f"?client={client_id}"
+    messages.error(request, "Please select a client first.")
+    return redirect('policies:policy_list')

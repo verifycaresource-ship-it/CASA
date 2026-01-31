@@ -83,7 +83,7 @@ def login_view(request):
                 login(request, user)
                 messages.success(request, f"Welcome back, {user.username}!")
                 redirect_map = {
-                    "hospital": "claims:hospital_claim_dashboard",
+                    "hospital": "claims:hospital_dashboard",
                     "agent": "accounts:agent_dashboard"
                 }
                 return redirect(redirect_map.get(user.role, "accounts:dashboard"))

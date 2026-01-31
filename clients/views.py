@@ -21,6 +21,7 @@ from .decorators import roles_required
 from .fingerprint_service import enroll_client_from_base64
 from policies.models import Policy
 from .serializers import ClientSerializer
+from clients.models import Client  # adjust "clients" to your app name
 
 User = get_user_model()
 

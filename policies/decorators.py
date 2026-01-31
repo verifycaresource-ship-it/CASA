@@ -12,3 +12,18 @@ def roles_required(*allowed_roles):
             return view_func(request, *args, **kwargs)
         return _wrapped_view
     return decorator
+
+from django.shortcuts import redirect
+from functools import wraps
+
+def roles_required(*roles):
+    """Allow access only to users with specific roles."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            user_role = getattr(request.user, "role", None)
+            if user_role not in roles:
+                return redirect("/")  # or a "Permission Denied" page
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator

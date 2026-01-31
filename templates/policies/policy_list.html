@@ -4,7 +4,7 @@
 {% block title %}Policy Dashboard{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans text-gray-900 dark:text-gray-100">
+<div x-data="{ showAddPolicy: false }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans text-gray-900 dark:text-gray-100">
 
   <!-- HEADER -->
   <div class="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
@@ -15,7 +15,7 @@
 
     <div class="flex gap-2 sm:gap-3 flex-wrap mt-2 md:mt-0">
       <a href="{% url 'hospitals:assign_policyholder' %}" class="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow text-sm sm:text-base flex items-center gap-1">📝 Assign</a>
-      <a href="{% url 'policies:add_policy' %}" class="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow text-sm sm:text-base flex items-center gap-1">➕ Add Policy</a>
+      <button @click="showAddPolicy = true" class="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow text-sm sm:text-base flex items-center gap-1">➕ Add Policy</button>
       <a href="{% url 'policies:archived_policies' %}" class="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-800 text-white shadow text-sm sm:text-base flex items-center gap-1">🗄 Archived</a>
       <button id="export-btn" class="px-3 py-2 rounded-lg bg-gray-800 hover:bg-black text-white shadow text-sm sm:text-base flex items-center gap-1">📤 Export CSV</button>
     </div>
@@ -23,19 +23,26 @@
 
   <!-- KPI CARDS -->
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-    {% for card in kpi_cards %}
-    <div class="bg-gradient-to-tr {{ card.bg_from }} {{ card.bg_to }} rounded-2xl shadow-lg p-4 sm:p-5 hover:scale-105 transform transition duration-300">
-      <div class="flex items-center justify-between">
-        <span class="text-xs sm:text-sm uppercase opacity-80 text-white">{{ card.title }}</span>
-        {% if card.icon %}
-        <svg class="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ card.icon }}" />
-        </svg>
-        {% endif %}
-      </div>
-      <h2 class="mt-2 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">{{ card.value }}</h2>
+    <div class="bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl shadow-lg p-4 sm:p-5">
+      <span class="text-xs sm:text-sm uppercase opacity-80 text-white">Total Policies</span>
+      <h2 class="mt-2 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">{{ total_count }}</h2>
     </div>
-    {% endfor %}
+    <div class="bg-gradient-to-tr from-green-500 to-emerald-500 rounded-2xl shadow-lg p-4 sm:p-5">
+      <span class="text-xs sm:text-sm uppercase opacity-80 text-white">Active Policies</span>
+      <h2 class="mt-2 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">{{ active_count }}</h2>
+    </div>
+    <div class="bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-2xl shadow-lg p-4 sm:p-5">
+      <span class="text-xs sm:text-sm uppercase opacity-80 text-white">Monthly Policies</span>
+      <h2 class="mt-2 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">{{ monthly_count }}</h2>
+    </div>
+    <div class="bg-gradient-to-tr from-indigo-500 to-blue-600 rounded-2xl shadow-lg p-4 sm:p-5">
+      <span class="text-xs sm:text-sm uppercase opacity-80 text-white">Total Revenue ($)</span>
+      <h2 class="mt-2 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">{{ total_revenue }}</h2>
+    </div>
+    <div class="bg-gradient-to-tr from-teal-400 to-cyan-500 rounded-2xl shadow-lg p-4 sm:p-5">
+      <span class="text-xs sm:text-sm uppercase opacity-80 text-white">Monthly Revenue ($)</span>
+      <h2 class="mt-2 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">{{ monthly_revenue }}</h2>
+    </div>
   </div>
 
   <!-- ANALYTICS + RENEWALS -->
@@ -50,12 +57,10 @@
     <!-- Renewal Alerts -->
     <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4">
       <h3 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">Renewal Alerts</h3>
-
       <div class="flex justify-between bg-red-100 dark:bg-red-900/20 p-2 rounded-lg text-sm sm:text-base font-medium">
         <span>Expired</span>
         <span class="text-red-800 dark:text-red-300">{{ expired_alerts.count }}</span>
       </div>
-
       <ul class="space-y-1 sm:space-y-2 text-sm sm:text-base max-h-56 overflow-auto mt-2">
         {% for p in expired_alerts %}
         <li class="flex justify-between border-b pb-1 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded px-2 py-1 transition">
@@ -64,7 +69,6 @@
           <div class="flex gap-1">
             {% if not p.is_archived %}
               <a href="{% url 'policies:archive_policy' p.id %}" class="text-gray-600 hover:underline text-xs sm:text-sm">Archive</a>
-              <span class="text-gray-400 text-xs sm:text-sm">Renew after archive</span>
             {% else %}
               <a href="{% url 'policies:renew_policy' p.id %}" class="text-green-600 hover:underline text-xs sm:text-sm">Renew</a>
             {% endif %}
@@ -77,25 +81,6 @@
     </div>
 
   </div>
-
-  <!-- FILTER PANEL -->
-  <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 p-4 sm:p-5 bg-white dark:bg-zinc-900 rounded-2xl shadow mt-6">
-    <input name="search" value="{{ search }}" placeholder="Search policy or client" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 w-full text-gray-900 dark:text-gray-100 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-400 focus:outline-none transition">
-    <select name="type" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 w-full text-gray-900 dark:text-gray-100 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-400 focus:outline-none transition">
-      <option value="">Policy Type</option>
-      {% for t,v in policies.model.POLICY_TYPE %}
-        <option value="{{ t }}" {% if t == policy_type %}selected{% endif %}>{{ v }}</option>
-      {% endfor %}
-    </select>
-    <select name="active" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 w-full text-gray-900 dark:text-gray-100 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-400 focus:outline-none transition">
-      <option value="">Status</option>
-      <option value="true" {% if active == "true" %}selected{% endif %}>Active</option>
-      <option value="false" {% if active == "false" %}selected{% endif %}>Inactive</option>
-    </select>
-    <input type="date" name="start" value="{{ start }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 w-full text-gray-900 dark:text-gray-100 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-400 focus:outline-none transition">
-    <input type="date" name="end" value="{{ end }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 w-full text-gray-900 dark:text-gray-100 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-400 focus:outline-none transition">
-    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow px-4 py-2 w-full transition">🔎 Apply</button>
-  </form>
 
   <!-- POLICY TABLE -->
   <div class="bg-white dark:bg-zinc-900 shadow-lg rounded-2xl overflow-x-auto mt-6">
@@ -129,14 +114,9 @@
             {% endif %}
           </td>
           <td class="p-2 sm:p-3">{% if p.days_left >= 0 %}{{ p.days_left }} d{% else %}<span class="text-red-600 dark:text-red-400">Expired</span>{% endif %}</td>
-          <td class="p-2 sm:p-3 space-x-1 sm:space-x-2 flex flex-wrap justify-start">
+          <td class="p-2 sm:p-3 flex flex-wrap gap-2">
             <a href="{% url 'policies:policy_detail' p.id %}" class="text-blue-600 hover:underline text-xs sm:text-sm">View</a>
             <a href="{% url 'policies:edit_policy' p.id %}" class="text-yellow-600 hover:underline text-xs sm:text-sm">Edit</a>
-            {% if p.is_archived %}
-              <a href="{% url 'policies:renew_policy' p.id %}" class="text-green-600 hover:underline text-xs sm:text-sm">Renew</a>
-            {% else %}
-              <span class="text-gray-400 text-xs sm:text-sm">Renew after archive</span>
-            {% endif %}
             <a href="{% url 'policies:archive_policy' p.id %}" class="text-gray-600 hover:underline text-xs sm:text-sm">Archive</a>
           </td>
         </tr>
@@ -161,7 +141,29 @@
     {% endif %}
   </div>
 
+  <!-- ADD POLICY MODAL -->
+ <!-- ADD POLICY MODAL -->
+<div x-show="showAddPolicy" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-zinc-900 rounded-xl p-6 w-full max-w-lg shadow-lg relative">
+    <button @click="showAddPolicy = false" class="absolute top-3 right-3 text-gray-600 dark:text-gray-300">✖</button>
+    <h2 class="text-xl font-bold mb-4">Select Client to Add Policy</h2>
+    <form method="GET" action="{% url 'policies:add_policy' %}">
+      <select name="client" required class="w-full border rounded-lg px-3 py-2 mb-4">
+        <option value="">-- Select Client --</option>
+        {% for client in clients %}
+          <option value="{{ client.id }}">{{ client.id }} – {{ client.first_name }} {{ client.last_name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Next ➤</button>
+    </form>
+  </div>
 </div>
+
+
+</div>
+
+<!-- Alpine.js -->
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
