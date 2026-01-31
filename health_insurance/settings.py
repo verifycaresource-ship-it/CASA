@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "claims",
     "hospitals",
     "tasks",
+    'django.contrib.humanize',
 ]
 
 # ----------------------------

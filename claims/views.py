@@ -255,33 +255,101 @@ def hospital_dashboard(request):
 
 
 
-# ========================
-# 🧩 Claim List (All Roles)
-# ========================
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, Q, FloatField
+from django.db.models.functions import Coalesce
+from .models import Claim
+from accounts.utils import roles_required
+from django.core.paginator import Paginator
+
 @login_required
 def claim_list(request):
     user = request.user
     role = getattr(user, "role", None)
 
+    # -----------------
+    # Base queryset by role
+    # -----------------
     if user.is_superuser or role in ["admin", "claim_officer"]:
         claims = Claim.objects.select_related("client", "hospital", "policy").all()
-        title = "All Hospital Claims"
     elif role == "agent":
         claims = Claim.objects.filter(client__agent=user)
-        title = "My Clients' Claims"
     elif role == "hospital":
         hospital = getattr(user, "hospital_profile", None)
         claims = Claim.objects.filter(hospital=hospital) if hospital else Claim.objects.none()
-        title = "My Hospital Claims"
     else:
         claims = Claim.objects.none()
-        title = "Claims"
 
-    return render(request, "claims/claim_list.html", {
-        "claims": claims,
-        "dashboard_title": title,
+    # -----------------
+    # Filters
+    # -----------------
+    search_query = request.GET.get("search", "")
+    status_filter = request.GET.get("status", "")
+    hospital_filter = request.GET.get("hospital", "")
+    policy_filter = request.GET.get("policy", "")
+
+    if search_query:
+        claims = claims.filter(
+            Q(claim_number__icontains=search_query) |
+            Q(client__first_name__icontains=search_query) |
+            Q(client__last_name__icontains=search_query)
+        )
+
+    if status_filter:
+        claims = claims.filter(status=status_filter)
+
+    if hospital_filter:
+        claims = claims.filter(hospital__id=hospital_filter)
+
+    if policy_filter:
+        claims = claims.filter(policy__id=policy_filter)
+
+    # -----------------
+    # Pagination
+    # -----------------
+    paginator = Paginator(claims.order_by("-created_at"), 15)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    # -----------------
+    # KPIs
+    # -----------------
+    total_claims = claims.count()
+    pending_claims = claims.filter(status="pending").count()
+    approved_claims = claims.filter(status="approved").count()
+    rejected_claims = claims.filter(status="rejected").count()
+    reimbursed_claims = claims.filter(status="reimbursed").count()
+    revenue_collected = claims.filter(status__in=["approved", "reimbursed"]).aggregate(
+        total=Coalesce(Sum("amount", output_field=FloatField()), 0.0)
+    )["total"]
+
+    # -----------------
+    # Filters dropdown options
+    # -----------------
+    hospitals = Claim.objects.values("hospital__id", "hospital__name").distinct()
+    policies = Claim.objects.values("policy__id", "policy__policy_number").distinct()
+
+    context = {
+        "claims": page_obj,
+        "dashboard_title": "Claims",
         "role": role,
-    })
+        # KPIs
+        "total_claims": total_claims,
+        "pending_claims": pending_claims,
+        "approved_claims": approved_claims,
+        "rejected_claims": rejected_claims,
+        "reimbursed_claims": reimbursed_claims,
+        "revenue_collected": revenue_collected,
+        # Filters
+        "search_query": search_query,
+        "status_filter": status_filter,
+        "hospital_filter": hospital_filter,
+        "policy_filter": policy_filter,
+        "hospitals": hospitals,
+        "policies": policies,
+    }
+    return render(request, "claims/claim_list.html", context)
 
 
 # ========================

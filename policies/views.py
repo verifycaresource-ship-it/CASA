@@ -207,27 +207,43 @@ def policy_list(request):
 
 
 
+from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
+from claims.models import Claim  # <-- correct import
 @login_required
 @roles_required("admin", "finance_officer", "hospital")
 def policy_detail(request, pk):
     policy = get_object_or_404(Policy, pk=pk)
 
+    # Assigned clients for this policy
     assigned_clients = policy.hospital_assignments.select_related(
         "client", "hospital", "assigned_by"
     )
 
+    # Insured persons linked to this policy
     insured_persons = policy.insured_persons.all()
 
-    # 🔴 NEW: fetch claims linked to this policy
+    # 🔴 Fetch claims linked to this policy
     claims = Claim.objects.select_related(
         "client", "hospital"
     ).filter(policy=policy).order_by("-created_at")
+
+    # 🔴 Calculate total claimed amount
+    total_claims = claims.aggregate(total=Sum("amount"))["total"] or 0
+
+    # 🔴 Calculate remaining balance (premium - claimed)
+    remaining_balance = policy.premium - total_claims
+    if remaining_balance < 0:
+        remaining_balance = 0  # Avoid negative balance
 
     return render(request, "policies/policy_detail.html", {
         "policy": policy,
         "assigned_clients": assigned_clients,
         "insured_persons": insured_persons,
-        "claims": claims,  # 👈 IMPORTANT
+        "claims": claims,              # 👈 For listing claims
+        "remaining_balance": remaining_balance,  # 👈 For showing balance
+        "total_claims": total_claims,  # Optional, if you want to show total claimed
     })
 
 
@@ -1394,6 +1410,7 @@ def archive_policy(request, pk):
 
     messages.success(request, f"Policy {policy.policy_number} archived successfully.")
     return redirect("policies:policy_list")  # Adjust redirect as needed
+
 @login_required
 @roles_required("admin", "finance_officer")
 def policy_form(request, pk=None):

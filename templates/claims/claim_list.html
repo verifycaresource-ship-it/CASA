@@ -1,54 +1,105 @@
 {% extends 'dashboard/base.html' %}
 {% load static %}
 
-{% block title %}Claims | Health Insurance{% endblock %}
-{% block header_title %}Claims{% endblock %}
+{% block title %}Claims | HealthInsure{% endblock %}
+{% block header_title %}Claims Dashboard{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-lg mt-8 font-sans text-gray-900 dark:text-gray-100">
+<div class="max-w-7xl mx-auto space-y-6">
 
-  <!-- Header -->
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{{ dashboard_title }}</h1>
-    {% if role == "hospital" %}
-      
-    {% endif %}
+  <!-- ===================== -->
+  <!-- KPI CARDS -->
+  <!-- ===================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div class="glass p-4 flex flex-col items-center justify-center">
+      <span class="text-gray-400 text-sm">Total Claims</span>
+      <span class="text-2xl font-bold">{{ total_claims }}</span>
+    </div>
+    <div class="glass p-4 flex flex-col items-center justify-center">
+      <span class="text-gray-400 text-sm">Pending</span>
+      <span class="text-2xl font-bold">{{ pending_claims }}</span>
+    </div>
+    <div class="glass p-4 flex flex-col items-center justify-center">
+      <span class="text-gray-400 text-sm">Approved</span>
+      <span class="text-2xl font-bold">{{ approved_claims }}</span>
+    </div>
+    <div class="glass p-4 flex flex-col items-center justify-center">
+      <span class="text-gray-400 text-sm">Rejected</span>
+      <span class="text-2xl font-bold">{{ rejected_claims }}</span>
+    </div>
+    <div class="glass p-4 flex flex-col items-center justify-center">
+      <span class="text-gray-400 text-sm">Reimbursed</span>
+      <span class="text-2xl font-bold">{{ reimbursed_claims }}</span>
+    </div>
+    <div class="glass p-4 flex flex-col items-center justify-center">
+      <span class="text-gray-400 text-sm">Revenue Collected ($)</span>
+      <span class="text-2xl font-bold">{{ revenue_collected|floatformat:2 }}</span>
+    </div>
   </div>
 
-  <!-- Messages -->
-  {% if messages %}
-    <div class="space-y-2 mb-6">
-      {% for message in messages %}
-        <div class="px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-gray-100' }}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+  <!-- ===================== -->
+  <!-- FILTERS -->
+  <!-- ===================== -->
+  <div class="glass p-4 flex flex-col sm:flex-row gap-3 items-center">
+    <form method="get" class="flex flex-col sm:flex-row gap-3 w-full">
+      <input type="text" name="search" value="{{ search_query }}" placeholder="Search Claim / Client"
+             class="flex-1 px-4 py-2 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-cyan-400" />
 
-  <!-- Claims Table -->
-  <div class="overflow-x-auto">
-    <table class="min-w-full border border-gray-200 dark:border-zinc-700 rounded-lg text-sm">
-      <thead class="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-gray-200">
+      <select name="status" class="px-4 py-2 rounded-lg bg-gray-800 text-white">
+        <option value="">All Status</option>
+        <option value="pending" {% if status_filter == "pending" %}selected{% endif %}>Pending</option>
+        <option value="approved" {% if status_filter == "approved" %}selected{% endif %}>Approved</option>
+        <option value="rejected" {% if status_filter == "rejected" %}selected{% endif %}>Rejected</option>
+        <option value="reimbursed" {% if status_filter == "reimbursed" %}selected{% endif %}>Reimbursed</option>
+      </select>
+
+      <select name="hospital" class="px-4 py-2 rounded-lg bg-gray-800 text-white">
+        <option value="">All Hospitals</option>
+        {% for h in hospitals %}
+        <option value="{{ h.hospital__id }}" {% if hospital_filter == h.hospital__id|stringformat:"s" %}selected{% endif %}>
+          {{ h.hospital__name }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <select name="policy" class="px-4 py-2 rounded-lg bg-gray-800 text-white">
+        <option value="">All Policies</option>
+        {% for p in policies %}
+        <option value="{{ p.policy__id }}" {% if policy_filter == p.policy__id|stringformat:"s" %}selected{% endif %}>
+          {{ p.policy__policy_number }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 rounded-lg text-white font-semibold">Filter</button>
+    </form>
+  </div>
+
+  <!-- ===================== -->
+  <!-- CLAIMS TABLE -->
+  <!-- ===================== -->
+  <div class="glass overflow-x-auto rounded-lg">
+    <table class="min-w-full text-sm divide-y divide-gray-700">
+      <thead class="bg-gray-800 text-gray-200">
         <tr>
-          <th class="px-4 py-3 text-left">Claim #</th>
-          <th class="px-4 py-3 text-left">Client</th>
-          <th class="px-4 py-3 text-left">Policy #</th>
-          <th class="px-4 py-3 text-left">Hospital</th>
-          <th class="px-4 py-3 text-left">Amount ($)</th>
-          <th class="px-4 py-3 text-left">Status</th>
-          <th class="px-4 py-3 text-left">Created At</th>
-          <th class="px-4 py-3 text-left">Actions</th>
+          <th class="px-4 py-2 text-left">Claim #</th>
+          <th class="px-4 py-2 text-left">Client</th>
+          <th class="px-4 py-2 text-left">Policy #</th>
+          <th class="px-4 py-2 text-left">Hospital</th>
+          <th class="px-4 py-2 text-left">Amount ($)</th>
+          <th class="px-4 py-2 text-left">Status</th>
+          <th class="px-4 py-2 text-left">Created At</th>
+          <th class="px-4 py-2 text-left">Actions</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-zinc-700">
+      <tbody class="divide-y divide-gray-700">
         {% for claim in claims %}
-        <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800 transition">
+        <tr class="hover:bg-gray-700 transition">
           <td class="px-4 py-2">{{ claim.claim_number }}</td>
           <td class="px-4 py-2">{{ claim.client.first_name }} {{ claim.client.last_name }}</td>
           <td class="px-4 py-2">{{ claim.policy.policy_number }}</td>
           <td class="px-4 py-2">{{ claim.hospital.name }}</td>
-          <td class="px-4 py-2">${{ claim.amount }}</td>
+          <td class="px-4 py-2">${{ claim.amount|floatformat:2 }}</td>
           <td class="px-4 py-2">
             {% if claim.status == "pending" %}
               <span class="px-2 py-1 rounded-lg bg-yellow-500 text-white font-semibold">Pending</span>
@@ -64,51 +115,37 @@
           </td>
           <td class="px-4 py-2">{{ claim.created_at|date:"Y-m-d H:i" }}</td>
           <td class="px-4 py-2 space-x-2">
-            <a href="{% url 'claims:claim_detail' claim.id %}" 
-               class="text-blue-600 hover:underline font-semibold">View</a>
+            <a href="{% url 'claims:claim_detail' claim.id %}" class="text-cyan-400 hover:underline">View</a>
             {% if role == "admin" or role == "claim_officer" %}
-              <a href="{% url 'claims:edit_claim' claim.id %}" 
-                 class="text-yellow-600 hover:underline font-semibold">Edit</a>
+            <a href="{% url 'claims:edit_claim' claim.id %}" class="text-yellow-400 hover:underline">Edit</a>
             {% endif %}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8" class="text-center py-6 text-gray-500 dark:text-gray-400">
-            No claims found.
-          </td>
+          <td colspan="8" class="text-center py-6 text-gray-400">No claims found.</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <!-- Back Button -->
-  <div class="mt-6">
-    <a href="{% url 'policies:policy_list' %}"
-       class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-lg transition">
-       ← Back to Policies
-    </a>
+  <!-- ===================== -->
+  <!-- PAGINATION -->
+  <!-- ===================== -->
+  {% if claims.has_other_pages %}
+  <div class="flex justify-center items-center mt-4 space-x-2">
+    {% if claims.has_previous %}
+    <a href="?page={{ claims.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}&hospital={{ hospital_filter }}&policy={{ policy_filter }}"
+       class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700">Prev</a>
+    {% endif %}
+    <span class="px-3 py-1 rounded-lg bg-gray-700">{{ claims.number }}</span>
+    {% if claims.has_next %}
+    <a href="?page={{ claims.next_page_number }}&search={{ search_query }}&status={{ status_filter }}&hospital={{ hospital_filter }}&policy={{ policy_filter }}"
+       class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700">Next</a>
+    {% endif %}
   </div>
+  {% endif %}
 
 </div>
-
-<style>
-  /* Modern Focus */
-  table th, table td {
-    white-space: nowrap;
-  }
-  table td span {
-    display: inline-block;
-    min-width: 70px;
-    text-align: center;
-  }
-
-  @media (max-width: 768px) {
-    table th, table td {
-      padding: 0.5rem;
-    }
-    .max-w-7xl { padding: 1rem; }
-  }
-</style>
 {% endblock %}
