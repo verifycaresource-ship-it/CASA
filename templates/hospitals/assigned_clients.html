@@ -133,6 +133,8 @@
                     View Claim
                   </a>
                 {% endif %}
+                <!-- Print Certificate -->
+        <a href="{% url 'hospitals:print_claim_certificate' a.id %}" target="_blank" class="btn btn-purple w-full sm:w-auto">🖨️ Print</a>
 
                 <a href="{% url 'hospitals:assignment_detail' a.id %}" class="btn btn-muted">
                   Details

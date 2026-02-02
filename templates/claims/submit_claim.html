@@ -2,74 +2,137 @@
 {% block title %}Submit Claim | HealthInsure{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-6 mt-8">
+<div class="relative min-h-screen flex justify-center items-start pt-16 px-4 bg-gray-900 text-gray-100 font-inter">
 
-  <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">🧾 Submit Claim</h2>
+  <!-- Floating neon blobs -->
+  <div class="absolute top-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 rounded-full filter blur-3xl opacity-20 animate-blob"></div>
+  <div class="absolute bottom-10 right-10 w-48 h-48 bg-gradient-to-tr from-green-400 via-teal-400 to-cyan-400 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
 
-  <!-- Messages -->
-  {% if messages %}
-    {% for message in messages %}
-      <div class="px-4 py-2 rounded {{ message.tags|default:'bg-gray-100 text-gray-800' }}">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
-
-  <form method="post" enctype="multipart/form-data" class="space-y-4">
+  <!-- Form -->
+  <form method="post" enctype="multipart/form-data" id="claimForm"
+        class="relative z-10 glass p-8 rounded-2xl shadow-xl max-w-4xl w-full space-y-6 animate-fade-in">
     {% csrf_token %}
+    {% if assignment %}
+      <input type="hidden" name="assignment" value="{{ assignment.id }}">
+    {% endif %}
 
-    <!-- Client -->
+    <!-- Automatic: Client & Policy -->
+    <input type="hidden" name="client" value="{{ assignment.client.id }}">
+    <input type="hidden" name="policy" value="{{ assignment.policy.id }}">
+
+    <!-- Fingerprint verification -->
+    <input type="hidden" name="fingerprint_verified" id="fingerprint_verified" value="false">
+
     <div>
-      <label class="block text-gray-700 dark:text-gray-200 font-semibold mb-1">Client</label>
-      <select name="client" required class="w-full border rounded p-2 focus:ring-blue-500 focus:border-blue-500">
-        <option value="">-- Select Client --</option>
-        {% for client in clients %}
-          <option value="{{ client.id }}">{{ client.full_name }}</option>
+      <h2 class="text-3xl font-bold text-white">🧾 Submit Claim</h2>
+      <p class="text-gray-300 mt-1">
+        Policyholder: {{ assignment.client.full_name }}<br>
+        Policy #: {{ assignment.policy.policy_number }} ({{ assignment.policy.policy_type }})
+      </p>
+    </div>
+
+    {% if messages %}
+      <div class="space-y-3">
+        {% for message in messages %}
+          <div class="glass px-4 py-3 rounded-lg text-sm {{ message.tags }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Patient selection -->
+    <div class="flex flex-col gap-2">
+      <label class="font-semibold mb-1">Patient (Mother or Child)</label>
+      <select name="patient" class="w-full rounded-lg p-3 border bg-gray-800 text-white" required>
+        <option value="">-- Select Patient --</option>
+        {% for patient in insured_persons %}
+          <option value="{{ patient.id }}">
+            {{ patient.full_name }} {% if patient.relationship %}({{ patient.relationship }}){% endif %}
+          </option>
         {% endfor %}
       </select>
     </div>
 
-    <!-- Policy -->
-    <div>
-      <label class="block text-gray-700 dark:text-gray-200 font-semibold mb-1">Policy</label>
-      <select name="policy" required class="w-full border rounded p-2 focus:ring-blue-500 focus:border-blue-500">
-        <option value="">-- Select Policy --</option>
-        {% for policy in policies %}
-          <option value="{{ policy.id }}">{{ policy.policy_number }} ({{ policy.get_policy_type_display }})</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <!-- Amount -->
-    <div>
-      <label class="block text-gray-700 dark:text-gray-200 font-semibold mb-1">Amount ($)</label>
-      <input type="number" name="amount" step="0.01" min="0" required
-             class="w-full border rounded p-2 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Enter claim amount">
+    <!-- Claim Amount -->
+    <div class="flex flex-col gap-2">
+      <label class="font-semibold mb-1">Claim Amount</label>
+      <input type="number" name="amount" step="0.01"
+             placeholder="Enter claim amount"
+             class="w-full rounded-lg p-3 border bg-gray-800 text-white" required>
     </div>
 
     <!-- Notes -->
-    <div>
-      <label class="block text-gray-700 dark:text-gray-200 font-semibold mb-1">Notes (Optional)</label>
-      <textarea name="notes" rows="3" class="w-full border rounded p-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Add any notes or description for the claim"></textarea>
+    <div class="flex flex-col gap-2">
+      <label class="font-semibold mb-1">Notes (Optional)</label>
+      <textarea name="notes" rows="4"
+                placeholder="Add any notes..."
+                class="w-full rounded-lg p-3 border bg-gray-800 text-white"></textarea>
     </div>
 
-    <!-- Document Upload -->
-    <div>
-      <label class="block text-gray-700 dark:text-gray-200 font-semibold mb-1">Upload Document (Optional)</label>
-      <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png"
-             class="w-full border rounded p-2 focus:ring-blue-500 focus:border-blue-500">
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Attach supporting documents for the claim.</p>
+    <!-- Document -->
+    <div class="flex flex-col gap-2">
+      <label class="font-semibold mb-1">Attach Document (Optional)</label>
+      <input type="file" name="document" class="w-full rounded-lg p-3 border bg-gray-800 text-white">
+    </div>
+
+    <!-- Biometric Verification -->
+    <div class="flex flex-col gap-3">
+      <button type="button"
+              id="verifyBiometricBtn"
+              class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg
+                     bg-yellow-500 hover:bg-yellow-600 text-white font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">
+        <span id="verifyIcon">🔒</span>
+        <span id="verifyText">Verify Face & Fingerprint</span>
+      </button>
+
+      <span id="biometricStatus" class="hidden text-green-400 font-semibold flex items-center gap-1">
+        ✔ Verified
+      </span>
     </div>
 
     <!-- Submit -->
     <div class="flex justify-end">
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
-        💾 Submit Claim
+      <button type="submit" id="submitBtn"
+              class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition">
+        Submit Claim
       </button>
     </div>
 
   </form>
 </div>
+
+<script>
+const verifyBtn = document.getElementById("verifyBiometricBtn");
+const verifyText = document.getElementById("verifyText");
+const verifyIcon = document.getElementById("verifyIcon");
+const statusText = document.getElementById("biometricStatus");
+const submitBtn = document.getElementById("submitBtn");
+const fingerprintInput = document.getElementById("fingerprint_verified");
+
+verifyBtn.addEventListener("click", () => {
+    verifyBtn.disabled = true;
+    verifyText.textContent = "Scanning fingerprint...";
+    verifyIcon.textContent = "🖐️";
+
+    setTimeout(() => {
+        verifyText.textContent = "Fingerprint Verified";
+        verifyIcon.textContent = "✅";
+        statusText.classList.remove("hidden");
+        fingerprintInput.value = "true";
+        submitBtn.disabled = false;
+        alert("Fingerprint & Face verified successfully (simulated).");
+    }, 1800);
+});
+</script>
+
+<style>
+  .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.1); }
+  .animate-fade-in { animation: fade-in 0.5s ease-out; }
+  @keyframes fade-in { from { opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+  @keyframes blob { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(30px,-20px) scale(1.1);} 66%{transform:translate(-20px,30px) scale(0.9);} }
+  .animate-blob { animation: blob 8s infinite; }
+  .animation-delay-2000 { animation-delay: 2s; }
+  body, input, select, textarea, button { font-family: 'Inter', sans-serif; }
+</style>
 {% endblock %}

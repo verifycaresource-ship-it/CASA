@@ -2,20 +2,18 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from django.db.models import FloatField
+from django.db.models import Sum, F, FloatField
 from django.db.models.functions import Coalesce
-from django.db.models import Sum, F
 
 from clients.models import Client
-from policies.models import Policy
+from policies.models import Policy, InsuredPerson
 from hospitals.models import Hospital
-
 
 # =======================
 # CLAIM MODEL
 # =======================
 class Claim(models.Model):
-    CLAIM_STATUS = [
+    STATUS_CHOICES = [
         ("pending", "Pending"),
         ("approved", "Approved"),
         ("rejected", "Rejected"),
@@ -23,26 +21,24 @@ class Claim(models.Model):
     ]
 
     claim_number = models.CharField(max_length=50, unique=True)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    policy = models.ForeignKey(Policy, on_delete=models.CASCADE)
-    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="claims")
+    patient = models.ForeignKey(InsuredPerson, on_delete=models.SET_NULL, null=True, blank=True, related_name="claims")
+    policy = models.ForeignKey(Policy, on_delete=models.CASCADE, related_name="claims")
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="claims")
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=20, choices=CLAIM_STATUS, default="pending")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     document = models.FileField(upload_to="claims/documents/", blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
-    )
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
     # Shariah Compliance
-    shariah_approved = models.BooleanField(default=False, help_text="Approved by Shariah board")
+    shariah_approved = models.BooleanField(default=False)
     shariah_approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="shariah_approvals",
-        help_text="User who approved claim from Shariah board"
+        related_name="shariah_approvals"
     )
     shariah_review_notes = models.TextField(blank=True, null=True)
 
@@ -52,8 +48,7 @@ class Claim(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="financial_approvals",
-        help_text="Admin / Claim Officer / Finance who approved the claim"
+        related_name="financial_approvals"
     )
     approved_at = models.DateTimeField(null=True, blank=True)
 
@@ -65,22 +60,22 @@ class Claim(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.claim_number} - {self.client.full_name}"
+        patient_name = f" ({self.patient.full_name})" if self.patient else ""
+        return f"{self.claim_number} - {self.client.full_name}{patient_name}"
 
-    # =======================
-    # Workflow Properties
-    # =======================
+    # -----------------------
+    # Workflow properties
+    # -----------------------
     @property
     def workflow_status(self):
         if not self.shariah_approved:
             return "pending_shariah_approval"
         return self.status
 
-    # =======================
-    # Workflow Methods
-    # =======================
+    # -----------------------
+    # Workflow methods
+    # -----------------------
     def approve_shariah(self, reviewer=None, notes=None):
-        """Mark claim approved by Shariah board."""
         self.shariah_approved = True
         if reviewer:
             self.shariah_approved_by = reviewer
@@ -89,10 +84,6 @@ class Claim(models.Model):
         self.save(update_fields=["shariah_approved", "shariah_approved_by", "shariah_review_notes", "updated_at"])
 
     def approve_claim(self, user=None):
-        """
-        Financial approval: Admin, Claim Officer, Finance only.
-        Raises ValidationError if Shariah not approved or user unauthorized.
-        """
         if not self.shariah_approved:
             raise ValidationError("Claim must be approved by Shariah board first")
 
@@ -129,17 +120,21 @@ class ClinicalEvent(models.Model):
     ]
 
     claim = models.ForeignKey(Claim, on_delete=models.CASCADE, related_name="clinical_events")
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="clinical_events")
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="clinical_events")
+    patient = models.ForeignKey(InsuredPerson, on_delete=models.SET_NULL, null=True, blank=True, related_name="clinical_events")
+
     visit_type = models.CharField(max_length=20, choices=VISIT_TYPES)
     event_datetime = models.DateTimeField(auto_now_add=True)
-    source = models.CharField(max_length=50, default="manual_entry")  # e.g., claim_submission
+    source = models.CharField(max_length=50, default="manual_entry")
     notes = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ["-event_datetime"]
 
     def __str__(self):
+        if self.patient:
+            return f"{self.patient.full_name} ({self.patient.relationship}) - {self.visit_type} on {self.event_datetime.date()}"
         return f"{self.client.full_name} - {self.visit_type} on {self.event_datetime.date()}"
 
     @property

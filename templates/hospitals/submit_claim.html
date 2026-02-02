@@ -1,10 +1,11 @@
 {% extends "dashboard/base.html" %}
+{% load static %}
 {% block title %}Submit Claim | HealthInsure{% endblock %}
 
 {% block content %}
 <div class="relative min-h-screen flex justify-center items-start pt-16 px-4 bg-gray-900 text-gray-100 font-inter">
 
-  <!-- Floating neon blobs -->
+  <!-- Floating neon blobs for style -->
   <div class="absolute top-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 rounded-full filter blur-3xl opacity-20 animate-blob"></div>
   <div class="absolute bottom-10 right-10 w-48 h-48 bg-gradient-to-tr from-green-400 via-teal-400 to-cyan-400 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
 
@@ -15,9 +16,11 @@
     {% csrf_token %}
     {% if assignment %}
       <input type="hidden" name="assignment" value="{{ assignment.id }}">
+      <input type="hidden" name="client" value="{{ assignment.client.id }}">
+      <input type="hidden" name="policy" value="{{ assignment.policy.id }}">
     {% endif %}
 
-    <!-- 🔹 Hidden fake fingerprint field -->
+    <!-- Fake fingerprint verification -->
     <input type="hidden" name="fingerprint_verified" id="fingerprint_verified" value="false">
 
     <!-- Header -->
@@ -37,50 +40,48 @@
       </div>
     {% endif %}
 
-    <!-- Client -->
+    <!-- Client Info (readonly) -->
     <div class="flex flex-col gap-2">
       <label class="font-semibold mb-1">Client (Policyholder)</label>
-      {% if selected_client %}
-        <input type="text"
-               value="{{ selected_client.first_name }} {{ selected_client.last_name }}"
-               class="w-full rounded-lg p-3 border bg-gray-800 text-white"
-               readonly>
-        <input type="hidden" name="client" value="{{ selected_client.id }}">
-      {% else %}
-        <select name="client" class="w-full rounded-lg p-3 border bg-gray-800 text-white" required>
-          <option value="">-- Select Client --</option>
-          {% for c in clients %}
-            <option value="{{ c.id }}" {% if selected_client and selected_client.id == c.id %}selected{% endif %}>
-              {{ c.first_name }} {{ c.last_name }}
-            </option>
-          {% endfor %}
-        </select>
-      {% endif %}
+      <input type="text"
+             value="{{ assignment.client.full_name }}"
+             class="w-full rounded-lg p-3 border bg-gray-800 text-white"
+             readonly>
     </div>
 
-    <!-- Policy (Visible) -->
+    <!-- Policy Info (readonly) -->
     <div class="flex flex-col gap-2">
       <label class="font-semibold mb-1">Policy Details</label>
-      {% if selected_policy %}
-        <div class="flex flex-col md:flex-row gap-4 items-center p-4 rounded-lg border bg-gray-800 text-white shadow-md hover:shadow-lg transition">
-          <span class="font-bold text-lg">Policy #: {{ selected_policy.policy_number }}</span>
-          <span class="px-2 py-1 rounded bg-blue-600 text-white text-sm">Type: {{ selected_policy.policy_type }}</span>
-          <span class="px-2 py-1 rounded bg-green-600 text-white text-sm">Premium: {{ selected_policy.premium }}</span>
-          <span class="px-2 py-1 rounded bg-gray-700 text-gray-200 text-sm">
-            {{ selected_policy.start_date|date:"M d, Y" }} → {{ selected_policy.expiry_date|date:"M d, Y" }}
-          </span>
-        </div>
-        <input type="hidden" name="policy" value="{{ selected_policy.id }}">
-      {% else %}
-        <select name="policy" class="w-full rounded-lg p-3 border bg-gray-800 text-white" required>
-          <option value="">-- Select Policy --</option>
-          {% for p in policies %}
-            <option value="{{ p.id }}" {% if selected_policy and selected_policy.id == p.id %}selected{% endif %}>
-              {{ p.policy_number }} | {{ p.policy_type }} | Premium: {{ p.premium }}
+      <div class="flex flex-col md:flex-row gap-4 items-center p-4 rounded-lg border bg-gray-800 text-white shadow-md hover:shadow-lg transition">
+        <span class="font-bold text-lg">Policy #: {{ assignment.policy.policy_number }}</span>
+        <span class="px-2 py-1 rounded bg-blue-600 text-white text-sm">Type: {{ assignment.policy.policy_type }}</span>
+        <span class="px-2 py-1 rounded bg-green-600 text-white text-sm">Premium: {{ assignment.policy.premium }}</span>
+        <span class="px-2 py-1 rounded bg-gray-700 text-gray-200 text-sm">
+          {{ assignment.policy.start_date|date:"M d, Y" }} → {{ assignment.policy.expiry_date|date:"M d, Y" }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Patient Selection -->
+    <div class="flex flex-col gap-2">
+      <label class="font-semibold mb-1">Patient (Mother or Child)</label>
+      <select name="patient" class="w-full rounded-lg p-3 border bg-gray-800 text-white" required>
+        <option value="">-- Select Patient --</option>
+
+        <!-- Policyholder first -->
+        <option value="{{ assignment.policy.holder.id }}">
+          {{ assignment.policy.holder.full_name }} (Policyholder)
+        </option>
+
+        <!-- All insured persons -->
+        {% for patient in insured_persons %}
+          {% if patient.id != assignment.policy.holder.id %}
+            <option value="{{ patient.id }}">
+              {{ patient.full_name }}{% if patient.relationship %} ({{ patient.relationship }}){% endif %}
             </option>
-          {% endfor %}
-        </select>
-      {% endif %}
+          {% endif %}
+        {% endfor %}
+      </select>
     </div>
 
     <!-- Claim Amount -->
@@ -99,13 +100,13 @@
                 class="w-full rounded-lg p-3 border bg-gray-800 text-white"></textarea>
     </div>
 
-    <!-- Document -->
+    <!-- Document Upload -->
     <div class="flex flex-col gap-2">
       <label class="font-semibold mb-1">Attach Document (Optional)</label>
       <input type="file" name="document" class="w-full rounded-lg p-3 border bg-gray-800 text-white">
     </div>
 
-    <!-- Biometric Verification (Fake) -->
+    <!-- Biometric Verification -->
     <div class="flex flex-col gap-3">
       <button type="button"
               id="verifyBiometricBtn"
@@ -122,7 +123,7 @@
 
     <!-- Submit -->
     <div class="flex justify-end">
-      <button type="submit" id="submitBtn"
+      <button type="submit" id="submitBtn" disabled
               class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition">
         Submit Claim
       </button>
@@ -153,7 +154,7 @@ verifyBtn.addEventListener("click", () => {
         // Fake capture
         fingerprintInput.value = "true";
 
-        // Enable submit (important!)
+        // Enable submit
         submitBtn.disabled = false;
 
         alert("Fingerprint & Face verified successfully (simulated).");

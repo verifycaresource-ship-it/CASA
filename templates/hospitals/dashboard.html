@@ -1,118 +1,108 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}{{ dashboard_title }} | HealthInsure{% endblock %}
-{% block header_title %}{{ dashboard_title }}{% endblock %}
-
+{% block title %}{{ dashboard_title }}{% endblock %}
 {% block content %}
+
 <div class="space-y-10 animate-fade-in px-4 md:px-6 lg:px-10">
 
-  <!-- ================== -->
   <!-- KPI CARDS -->
-  <!-- ================== -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
-    <!-- Total Claims -->
     <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-gray-300 text-sm uppercase tracking-wide">Total Claims</p>
+        <p class="text-gray-300 text-sm uppercase">Total Claims</p>
         <span class="text-cyan-400 text-3xl">📄</span>
       </div>
-      <h3 class="text-3xl font-bold text-white mt-2">{{ total_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-white mt-2">{{ total_claims }}</h3>
     </div>
 
-    <!-- Pending -->
     <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-gray-300 text-sm uppercase tracking-wide">Pending</p>
+        <p class="text-gray-300 text-sm uppercase">Pending</p>
         <span class="text-yellow-400 text-3xl">⏳</span>
       </div>
-      <h3 class="text-3xl font-bold text-yellow-400 mt-2">{{ pending_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-yellow-400 mt-2">{{ pending_claims }}</h3>
     </div>
 
-    <!-- Approved -->
     <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-gray-300 text-sm uppercase tracking-wide">Approved</p>
+        <p class="text-gray-300 text-sm uppercase">Approved</p>
         <span class="text-green-400 text-3xl">✅</span>
       </div>
-      <h3 class="text-3xl font-bold text-green-400 mt-2">{{ approved_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-green-400 mt-2">{{ approved_claims }}</h3>
     </div>
 
-    <!-- Rejected -->
     <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-gray-300 text-sm uppercase tracking-wide">Rejected</p>
+        <p class="text-gray-300 text-sm uppercase">Rejected</p>
         <span class="text-red-400 text-3xl">❌</span>
       </div>
-      <h3 class="text-3xl font-bold text-red-400 mt-2">{{ rejected_claims|default:"0" }}</h3>
+      <h3 class="text-3xl font-bold text-red-400 mt-2">{{ rejected_claims }}</h3>
     </div>
 
-    <!-- Revenue -->
     <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-gray-300 text-sm uppercase tracking-wide">Revenue Collected</p>
+        <p class="text-gray-300 text-sm uppercase">Revenue</p>
         <span class="text-teal-400 text-3xl">💰</span>
       </div>
-      <h3 class="text-3xl font-bold text-teal-400 mt-2">${{ revenue_collected|floatformat:2|default:"0.00" }}</h3>
+      <h3 class="text-3xl font-bold text-teal-400 mt-2">${{ revenue_collected|floatformat:2 }}</h3>
     </div>
 
-    <!-- Pending Amount -->
     <div class="glass p-5 rounded-2xl hover:scale-105 transition-transform">
       <div class="flex justify-between items-center">
-        <p class="text-gray-300 text-sm uppercase tracking-wide">Pending Amount</p>
+        <p class="text-gray-300 text-sm uppercase">Pending Amount</p>
         <span class="text-orange-400 text-3xl">🕒</span>
       </div>
-      <h3 class="text-3xl font-bold text-orange-400 mt-2">${{ pending_amount|floatformat:2|default:"0.00" }}</h3>
+      <h3 class="text-3xl font-bold text-orange-400 mt-2">${{ pending_amount|floatformat:2 }}</h3>
     </div>
   </div>
 
-  <!-- ================== -->
-  <!-- ANALYTICS CHARTS -->
-  <!-- ================== -->
+  <!-- Charts -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-    <!-- Claims Trend -->
     <div class="glass p-6 rounded-2xl shadow-lg">
       <h3 class="text-xl font-semibold text-white mb-4">📈 Monthly Claims Trend</h3>
       <canvas id="claimsChart" class="w-full h-64"></canvas>
     </div>
 
-    <!-- Visit Types -->
     <div class="glass p-6 rounded-2xl shadow-lg">
       <h3 class="text-xl font-semibold text-white mb-4">🏥 Visit Types Distribution</h3>
       <canvas id="visitChart" class="w-full h-64"></canvas>
     </div>
 
-    <!-- Risk Levels -->
     <div class="glass p-6 rounded-2xl shadow-lg md:col-span-2">
       <h3 class="text-xl font-semibold text-white mb-4">⚠️ Risk Level Distribution</h3>
       <canvas id="riskChart" class="w-full h-64"></canvas>
     </div>
   </div>
 
-  <!-- ================== -->
-  <!-- RECENT CLINICAL EVENTS -->
-  <!-- ================== -->
+  <!-- Recent Clinical Events -->
   <div class="glass p-6 rounded-2xl shadow-lg">
     <h3 class="text-xl font-semibold text-white mb-4">🩺 Recent Clinical Events</h3>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-white/10">
         <thead class="bg-white/5">
           <tr>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Client</th>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Visit Type</th>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Date/Time</th>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Notes</th>
+            <th>Patient</th>
+            <th>Visit Type</th>
+            <th>Date/Time</th>
+            <th>Notes</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-white/10">
           {% for event in recent_clinical_events %}
-          <tr class="hover:bg-white/5 transition">
-            <td class="px-4 py-3 text-gray-200">{{ event.client.full_name }}</td>
-            <td class="px-4 py-3 text-gray-200">{{ event.visit_type }}</td>
-            <td class="px-4 py-3 text-gray-400">{{ event.event_datetime|date:"Y-m-d H:i" }}</td>
-            <td class="px-4 py-3 text-gray-300">{{ event.notes|default:"-" }}</td>
+          <tr class="hover:bg-white/5">
+            <td>
+              {% if event.patient %}
+                {{ event.patient.full_name }}
+              {% else %}
+                {{ event.client.full_name }}
+              {% endif %}
+            </td>
+            <td>{{ event.visit_type }}</td>
+            <td>{{ event.event_datetime|date:"Y-m-d H:i" }}</td>
+            <td>{{ event.notes|default:"-" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="4" class="text-center text-gray-400 py-6 italic">No recent clinical events.</td>
+            <td colspan="4" class="text-center text-gray-400 py-4 italic">No clinical events yet.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -120,40 +110,81 @@
     </div>
   </div>
 
-  <!-- ================== -->
-  <!-- RECENT RISK SCORES -->
-  <!-- ================== -->
+  <!-- Recent Risk Scores -->
   <div class="glass p-6 rounded-2xl shadow-lg">
     <h3 class="text-xl font-semibold text-white mb-4">⚠️ Recent Risk Scores</h3>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-white/10">
         <thead class="bg-white/5">
           <tr>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Client</th>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Type</th>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Score</th>
-            <th class="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-300">Level</th>
+            <th>Patient</th>
+            <th>Type</th>
+            <th>Score</th>
+            <th>Level</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-white/10">
           {% for risk in recent_risk_scores %}
-          <tr class="hover:bg-white/5 transition">
-            <td class="px-4 py-3 text-gray-200">{{ risk.event.client.full_name }}</td>
-            <td class="px-4 py-3 text-gray-200">{{ risk.type|capfirst }}</td>
-            <td class="px-4 py-3 text-teal-400 font-semibold">{{ risk.score }}</td>
-            <td class="px-4 py-3">
-              {% if risk.level == "LOW" %}
-                <span class="text-green-400 font-semibold">Low</span>
-              {% elif risk.level == "MEDIUM" %}
-                <span class="text-yellow-400 font-semibold">Medium</span>
+          <tr class="hover:bg-white/5">
+            <td>
+              {% if risk.event.patient %}
+                {{ risk.event.patient.full_name }}
               {% else %}
-                <span class="text-red-400 font-semibold">High</span>
+                {{ risk.event.client.full_name }}
               {% endif %}
+            </td>
+            <td>{{ risk.type|capfirst }}</td>
+            <td class="text-teal-400 font-semibold">{{ risk.score }}</td>
+            <td>
+              {% if risk.level == "LOW" %}<span class="text-green-400">Low</span>
+              {% elif risk.level == "MEDIUM" %}<span class="text-yellow-400">Medium</span>
+              {% else %}<span class="text-red-400">High</span>{% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="4" class="text-center text-gray-400 py-6 italic">No recent risk scores available.</td>
+            <td colspan="4" class="text-center text-gray-400 py-4 italic">No risk scores yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent Health Metrics -->
+  <div class="glass p-6 rounded-2xl shadow-lg">
+    <h3 class="text-xl font-semibold text-white mb-4">📊 Recent Health Metrics</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/5">
+          <tr>
+            <th>Patient</th>
+            <th>Metric</th>
+            <th>Value</th>
+            <th>Unit</th>
+            <th>Category</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+          {% for metric in recent_health_metrics %}
+          <tr class="hover:bg-white/5">
+            <td>
+              {% if metric.event.patient %}
+                {{ metric.event.patient.full_name }}
+              {% else %}
+                {{ metric.event.client.full_name }}
+              {% endif %}
+            </td>
+            <td>{{ metric.name }}</td>
+            <td>{{ metric.value }}</td>
+            <td>{{ metric.unit|default:"-" }}</td>
+            <td>{{ metric.category|capfirst|default:"-" }}</td>
+            <td>{{ metric.created_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-gray-400 py-4 italic">No health metrics yet.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -163,26 +194,16 @@
 
 </div>
 
-<!-- ================== -->
-<!-- CHART.JS SCRIPTS -->
-<!-- ================== -->
+<!-- Charts JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const claimsLabels = {{ claims_chart_labels|safe }};
-const claimsData = {{ claims_chart_data|safe }};
-const visitLabels = {{ visit_labels|safe }};
-const visitData = {{ visit_data|safe }};
-const riskLabels = {{ risk_labels|safe }};
-const riskData = {{ risk_data|safe }};
-
-// Claims Line Chart
-new Chart(document.getElementById("claimsChart"), {
+const claimsChart = new Chart(document.getElementById("claimsChart"), {
     type: "line",
     data: {
-        labels: claimsLabels,
+        labels: {{ claims_chart_labels|safe }},
         datasets: [{
             label: "Claims",
-            data: claimsData,
+            data: {{ claims_chart_data|safe }},
             backgroundColor: "rgba(14, 116, 144, 0.2)",
             borderColor: "rgba(14, 116, 144, 1)",
             borderWidth: 2,
@@ -193,33 +214,37 @@ new Chart(document.getElementById("claimsChart"), {
     options: { responsive: true }
 });
 
-// Visit Doughnut
-new Chart(document.getElementById("visitChart"), {
+const visitChart = new Chart(document.getElementById("visitChart"), {
     type: "doughnut",
     data: {
-        labels: visitLabels,
+        labels: {{ visit_labels|safe }},
         datasets: [{
-            label: "Visits",
-            data: visitData,
+            label: "Visit Types",
+            data: {{ visit_data|safe }},
             backgroundColor: ["#0ea4c4","#facc15","#10b981","#f87171","#8b5cf6"]
         }]
     },
     options: { responsive: true }
 });
 
-// Risk Bar Chart
-new Chart(document.getElementById("riskChart"), {
+const riskChart = new Chart(document.getElementById("riskChart"), {
     type: "bar",
     data: {
-        labels: riskLabels,
+        labels: {{ risk_labels|safe }},
         datasets: [{
             label: "Risk Cases",
-            data: riskData,
+            data: {{ risk_data|safe }},
             backgroundColor: ["#10b981","#facc15","#f87171"]
         }]
     },
     options: { responsive: true }
 });
 </script>
+
+<style>
+.animate-fade-in { animation: fade-in 0.5s ease-out; }
+@keyframes fade-in { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+.glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border-radius:1.5rem; border:1px solid rgba(255,255,255,0.1); }
+</style>
 
 {% endblock %}

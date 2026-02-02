@@ -246,34 +246,72 @@ def policy_detail(request, pk):
         "total_claims": total_claims,  # Optional, if you want to show total claimed
     })
 
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from accounts.utils import roles_required
+from hospitals.models import Hospital, HospitalAssignment
+from policies.models import Policy
 
-# -------------------------------------------------------------------
-# ASSIGN POLICY TO HOSPITAL
-# -------------------------------------------------------------------
 @login_required
 @roles_required("admin", "finance_officer")
 def assign_to_hospital(request, pk):
+    """
+    Assign a policy to a hospital.
+    - Handles first-time assignment
+    - Handles reassignment with confirmation
+    - Displays all assignments for this policy
+    """
     policy = get_object_or_404(Policy, pk=pk)
     hospitals = Hospital.objects.filter(verified=True)
+    assignments = HospitalAssignment.objects.filter(policy=policy).order_by("-assigned_at")
 
     if request.method == "POST":
         hospital = get_object_or_404(Hospital, id=request.POST.get("hospital"))
-        assignment, created = HospitalAssignment.objects.get_or_create(
+        notes = request.POST.get("notes", "").strip()
+        confirm_reassign = request.POST.get("confirm_reassign") == "true"
+
+        existing_assignment = HospitalAssignment.objects.filter(client=policy.client, policy=policy).first()
+
+        # Case: already assigned to a different hospital
+        if existing_assignment and existing_assignment.hospital != hospital and not confirm_reassign:
+            # Ask for confirmation
+            messages.warning(
+                request,
+                f"{policy.client} is already assigned to {existing_assignment.hospital.name}. "
+                "Please confirm reassignment."
+            )
+            return render(request, "policies/assign_hospital_confirm.html", {
+                "policy": policy,
+                "hospitals": hospitals,
+                "selected_hospital": hospital,
+                "existing_assignment": existing_assignment,
+                "dashboard_title": f"Reassign Hospital for {policy.policy_number}",
+            })
+
+        # Create or update assignment
+        assignment, created = HospitalAssignment.objects.update_or_create(
             client=policy.client,
             policy=policy,
-            hospital=hospital,
-            defaults={"assigned_by": request.user}
+            defaults={
+                "hospital": hospital,
+                "notes": notes,
+                "assigned_by": request.user,
+                "status": "accepted"
+            }
         )
+
         if created:
             messages.success(request, f"{policy.client} assigned to {hospital.name}.")
         else:
-            messages.info(request, f"{policy.client} is already assigned to {hospital.name}.")
+            messages.success(request, f"{policy.client} reassigned to {hospital.name}.")
 
-        return redirect("policies:policy_detail", pk=policy.pk)
+        return redirect("policies:assign_to_hospital", pk=policy.pk)
 
     return render(request, "policies/assign_hospital.html", {
         "policy": policy,
         "hospitals": hospitals,
+        "assignments": assignments,
         "dashboard_title": f"Assign Hospital for {policy.policy_number}",
     })
 

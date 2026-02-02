@@ -28,4 +28,6 @@ urlpatterns = [
 
     # FINGERPRINT API
     path("api/verify-fingerprint/<int:client_id>/", views.verify_fingerprint, name="verify_fingerprint"),
+    path("print/<int:assignment_id>/", views.print_claim_certificate, name="print_claim_certificate")
+
 ]

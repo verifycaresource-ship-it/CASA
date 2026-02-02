@@ -113,9 +113,8 @@ def hospital_form(request, pk=None):
     })
 
 
-# =========================
-# 🏥 HOSPITAL DASHBOARD (Modern Flux UI)
-# =========================
+# claims/views.py or hospitals/views.py
+
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -123,26 +122,27 @@ from django.db.models import Sum, F, FloatField
 from django.db.models.functions import Coalesce
 from datetime import datetime, timedelta
 from accounts.utils import roles_required
-from claims.models import Claim, ClinicalEvent, RiskScore
+
+from claims.models import Claim, ClinicalEvent, RiskScore, HealthMetric
 
 @login_required
 @roles_required("hospital")
 def hospital_dashboard(request):
     """
     Modern hospital dashboard:
-    - KPIs: claims totals, revenue
+    - KPIs: claims totals, revenue, pending amount
     - High-risk maternal & neonatal
-    - Recent claims
-    - Charts: claims trends, visit types, risk levels, high-risk heatmap
+    - Recent claims, clinical events, risk scores, health metrics
+    - Charts: claims trends, visit types, risk levels
     """
     hospital = getattr(request.user, "hospital_profile", None)
     if not hospital:
         messages.error(request, "Hospital profile not found.")
         return redirect("accounts:dashboard")
 
-    # =======================
-    # CLAIMS METRICS
-    # =======================
+    # -----------------------
+    # CLAIMS & METRICS
+    # -----------------------
     claims = Claim.objects.filter(hospital=hospital)
     total_claims = claims.count()
     pending_claims = claims.filter(status="pending").count()
@@ -155,32 +155,40 @@ def hospital_dashboard(request):
         total=Coalesce(Sum(F("amount"), output_field=FloatField()), 0.0)
     )["total"]
 
-    # =======================
-    # HIGH-RISK COUNTS
-    # =======================
-    high_risk_scores = RiskScore.objects.filter(event__hospital=hospital, level="HIGH")
-    high_risk_maternal = high_risk_scores.filter(type="maternal").count() or 0
-    high_risk_neonatal = high_risk_scores.filter(type="neonatal").count() or 0
-
-    # =======================
+    # -----------------------
     # RECENT DATA
-    # =======================
+    # -----------------------
     recent_claims = claims.select_related("client", "policy").order_by("-created_at")[:5]
-    recent_clinical_events = ClinicalEvent.objects.filter(hospital=hospital).order_by("-event_datetime")[:5]
-    recent_risk_scores = RiskScore.objects.filter(event__in=recent_clinical_events).order_by("-created_at")[:5]
+    recent_clinical_events = ClinicalEvent.objects.filter(hospital=hospital).select_related(
+        "client", "patient"
+    ).order_by("-event_datetime")[:5]
+    recent_risk_scores = RiskScore.objects.filter(event__hospital=hospital).select_related(
+        "event", "event__patient"
+    ).order_by("-created_at")[:5]
+    recent_health_metrics = HealthMetric.objects.filter(event__hospital=hospital).select_related(
+        "event", "event__patient"
+    ).order_by("-created_at")[:10]
 
-    # =======================
+    # -----------------------
+    # HIGH-RISK DATA
+    # -----------------------
+    high_risk_scores = RiskScore.objects.filter(event__hospital=hospital, level="HIGH")
+    high_risk_maternal = high_risk_scores.filter(type="maternal").count()
+    high_risk_neonatal = high_risk_scores.filter(type="neonatal").count()
+
+    # -----------------------
     # CHART DATA
-    # =======================
-    # 1️⃣ Claims Trend (last 6 months)
+    # -----------------------
     today = datetime.today()
+
+    # 1️⃣ Claims Trend (last 6 months)
     months = [(today - timedelta(days=30*i)).strftime("%b %Y") for i in reversed(range(6))]
-    claims_chart_data = []
-    for i in reversed(range(6)):
-        month_start = datetime(today.year, today.month, 1) - timedelta(days=30*i)
-        month_end = month_start + timedelta(days=30)
-        count = claims.filter(created_at__gte=month_start, created_at__lt=month_end).count()
-        claims_chart_data.append(count)
+    claims_chart_data = [
+        claims.filter(
+            created_at__gte=(today - timedelta(days=30*i)).replace(day=1),
+            created_at__lt=(today - timedelta(days=30*(i-1))).replace(day=1) if i > 0 else today
+        ).count() for i in reversed(range(6))
+    ]
 
     # 2️⃣ Visit Type Distribution
     visit_types = ClinicalEvent.VISIT_TYPES
@@ -192,16 +200,11 @@ def hospital_dashboard(request):
     risk_labels = risk_levels
     risk_data = [RiskScore.objects.filter(event__hospital=hospital, level=level).count() for level in risk_levels]
 
-    # 4️⃣ High-Risk Heatmap
-    heatmap_labels = ["Maternal", "Neonatal"]
-    heatmap_data = [high_risk_maternal, high_risk_neonatal]
-
-    # =======================
+    # -----------------------
     # CONTEXT
-    # =======================
+    # -----------------------
     context = {
         "dashboard_title": f"{hospital.name} Dashboard",
-        "hospital": hospital,
         # KPIs
         "total_claims": total_claims,
         "pending_claims": pending_claims,
@@ -212,10 +215,11 @@ def hospital_dashboard(request):
         # High Risk
         "high_risk_maternal": high_risk_maternal,
         "high_risk_neonatal": high_risk_neonatal,
-        # Recent
+        # Recent data
         "recent_claims": recent_claims,
         "recent_clinical_events": recent_clinical_events,
         "recent_risk_scores": recent_risk_scores,
+        "recent_health_metrics": recent_health_metrics,
         # Charts
         "claims_chart_labels": months,
         "claims_chart_data": claims_chart_data,
@@ -223,13 +227,11 @@ def hospital_dashboard(request):
         "visit_data": visit_data,
         "risk_labels": risk_labels,
         "risk_data": risk_data,
-        "heatmap_labels": heatmap_labels,
-        "heatmap_data": heatmap_data,
         # User
         "user": request.user,
     }
-
     return render(request, "hospitals/dashboard.html", context)
+
 
 
 
@@ -404,7 +406,57 @@ def assigned_clients(request):
         "dashboard_title": "Assigned Policyholders",
         "hospital": hospital,
     })
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+from weasyprint import HTML
+from django.utils.timezone import now
 
+from hospitals.models import HospitalAssignment
+from claims.models import Claim
+from policies.models import InsuredPerson
+
+
+@login_required
+def print_claim_certificate(request, assignment_id):
+    assignment = get_object_or_404(
+        HospitalAssignment,
+        id=assignment_id,
+        hospital=request.user.hospital_profile
+    )
+
+    hospital = assignment.hospital
+    policy = assignment.policy
+    client = assignment.client
+
+    # Get latest claim if exists
+    claim = Claim.objects.filter(
+        policy=policy,
+        hospital=hospital
+    ).order_by("-created_at").first()
+
+    insured_person = InsuredPerson.objects.filter(policy=policy).first()
+
+    context = {
+        "hospital": hospital,
+        "policy": policy,
+        "client": client,
+        "claim": claim,
+        "patient": insured_person,
+        "today": now().date(),
+    }
+
+    html_string = render_to_string("claims/claim_certificate_pdf.html", context)
+
+    pdf = HTML(string=html_string).write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="Claim_Certificate_{policy.policy_number}.pdf"'
+    )
+
+    return response
 
 # =========================
 # 💬 ACCEPT / REJECT ASSIGNMENT
@@ -429,10 +481,16 @@ def reject_assignment(request, pk):
     messages.warning(request, f"Assignment for {assignment.client} rejected.")
     return redirect("hospitals:assigned_clients")
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from .models import HospitalAssignment, Hospital
+from clients.models import Client, Patient
+from policies.models import Policy
+from claims.models import Claim, ClinicalEvent
+from accounts.utils import roles_required
 
-# =========================
-# 🧾 CLAIMS WITH FINGERPRINT
-# =========================
 @login_required
 @roles_required("hospital")
 def submit_claim(request):
@@ -441,22 +499,27 @@ def submit_claim(request):
         messages.error(request, "Your hospital profile is missing.")
         return redirect("accounts:dashboard")
 
+    # GET parameters for preselection
     client_id = request.GET.get("client")
+    patient_id = request.GET.get("patient")
     policy_id = request.GET.get("policy")
     assignment_id = request.GET.get("assignment")
-    client = Client.objects.filter(id=client_id).first() if client_id else None
-    policy = Policy.objects.filter(id=policy_id).first() if policy_id else None
+
+    selected_client = Client.objects.filter(id=client_id).first() if client_id else None
+    selected_policy = Policy.objects.filter(id=policy_id).first() if policy_id else None
+    selected_patient = InsuredPerson.objects.filter(id=patient_id).first() if patient_id else None
     assignment = HospitalAssignment.objects.filter(id=assignment_id).first() if assignment_id else None
 
     if request.method == "POST":
         client_id = request.POST.get("client")
+        patient_id = request.POST.get("patient")
         policy_id = request.POST.get("policy")
         amount = request.POST.get("amount")
         notes = request.POST.get("notes")
         document = request.FILES.get("document")
         fingerprint_verified = request.POST.get("fingerprint_verified") == "true"
 
-        if not all([client_id, policy_id, amount]):
+        if not all([client_id, patient_id, policy_id, amount]):
             messages.error(request, "All required fields must be filled.")
             return redirect(request.path)
 
@@ -465,12 +528,14 @@ def submit_claim(request):
             return redirect(request.path)
 
         client = get_object_or_404(Client, id=client_id)
+        patient = get_object_or_404(InsuredPerson, id=patient_id)
         policy = get_object_or_404(Policy, id=policy_id)
 
         claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
         claim = Claim.objects.create(
             claim_number=claim_number,
             client=client,
+            patient=patient,
             policy=policy,
             hospital=hospital,
             amount=amount,
@@ -480,6 +545,7 @@ def submit_claim(request):
             status="pending",
         )
 
+        # Update assignment if exists
         if assignment:
             assignment.status = "claimed"
             assignment.claim = claim
@@ -488,27 +554,147 @@ def submit_claim(request):
         messages.success(request, f"Claim {claim.claim_number} submitted successfully.")
         return redirect("hospitals:assigned_clients")
 
+    # Lists for form dropdowns
     clients = Client.objects.filter(hospital_assignments__hospital=hospital).distinct().order_by("first_name")
+    patients = InsuredPerson.objects.filter(client=selected_client).order_by("full_name") if selected_client else InsuredPerson.objects.none()
     policies = Policy.objects.filter(client__in=clients, is_active=True).distinct().order_by("policy_number")
 
     context = {
         "dashboard_title": "Submit Claim",
         "hospital": hospital,
         "clients": clients,
+        "patients": patients,
         "policies": policies,
-        "selected_client": client,
-        "selected_policy": policy,
+        "selected_client": selected_client,
+        "selected_patient": selected_patient,
+        "selected_policy": selected_policy,
         "assignment": assignment,
     }
     return render(request, "hospitals/submit_claim.html", context)
 
 
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.utils import timezone
+
+from accounts.utils import roles_required
+from hospitals.models import HospitalAssignment
+from claims.models import Claim, ClinicalEvent, RiskScore
+from policies.models import InsuredPerson
+from clients.models import Client
+
 @login_required
 @roles_required("hospital")
 def submit_claim_for_assignment(request, assignment_id):
-    assignment = get_object_or_404(HospitalAssignment, id=assignment_id)
-    url = reverse("hospitals:submit_claim") + f"?client={assignment.client.id}&policy={assignment.policy.id}&assignment={assignment.id}"
-    return redirect(url)
+    """
+    Hospital submits a claim for an accepted assignment.
+    Patient-based: Mother or Child
+    Workflow:
+    Assignment → Patient → Claim → ClinicalEvent → RiskScore
+    """
+    hospital = getattr(request.user, "hospital_profile", None)
+    if not hospital:
+        messages.error(request, "Hospital profile not found.")
+        return redirect("accounts:dashboard")
+
+    # Fetch accepted assignment
+    assignment = get_object_or_404(
+        HospitalAssignment,
+        pk=assignment_id,
+        hospital=hospital,
+        status="accepted"
+    )
+    client = assignment.client
+    policy = assignment.policy
+
+    # All insured persons under this policy (mother + children)
+    insured_persons = InsuredPerson.objects.filter(policy=policy)
+
+    if request.method == "POST":
+        patient_id = request.POST.get("patient")
+        amount = request.POST.get("amount")
+        notes = request.POST.get("notes", "")
+        document = request.FILES.get("document")
+        fingerprint_verified = request.POST.get("fingerprint_verified") == "true"
+
+        # ----------------------
+        # Validation
+        # ----------------------
+        if not patient_id:
+            messages.error(request, "Please select a patient (mother or child).")
+            return redirect(request.path)
+
+        if not amount:
+            messages.error(request, "Claim amount is required.")
+            return redirect(request.path)
+
+        if not fingerprint_verified:
+            messages.error(request, "Fingerprint verification is required before submitting the claim.")
+            return redirect(request.path)
+
+        patient = get_object_or_404(InsuredPerson, id=patient_id, policy=policy)
+
+        claim_number = f"CLM-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+
+        try:
+            with transaction.atomic():
+                # 1️⃣ Create Claim
+                claim = Claim.objects.create(
+                    claim_number=claim_number,
+                    hospital=hospital,
+                    client=client,
+                    policy=policy,
+                    amount=amount,
+                    notes=notes,
+                    document=document,
+                    status="pending",
+                    created_by=request.user,
+                )
+
+                # 2️⃣ Create Clinical Event linked to patient
+                clinical_event = ClinicalEvent.objects.create(
+                    claim=claim,
+                    hospital=hospital,
+                    client=client,
+                    patient=patient,
+                    visit_type="OTHER",
+                    notes="Initial claim submission",
+                    source="manual_entry",
+                    event_datetime=timezone.now()
+                )
+
+                # 3️⃣ Initialize default risk scores
+                RiskScore.objects.bulk_create([
+                    RiskScore(event=clinical_event, type="maternal", score=0.0, level="LOW"),
+                    RiskScore(event=clinical_event, type="neonatal", score=0.0, level="LOW"),
+                ])
+
+                # 4️⃣ Mark assignment as completed
+                assignment.status = "completed"
+                assignment.save(update_fields=["status", "updated_at"])
+
+        except Exception as e:
+            messages.error(request, f"Error submitting claim: {str(e)}")
+            return redirect(request.path)
+
+        messages.success(
+            request,
+            f"Claim {claim_number} submitted for {patient.full_name} ({patient.relationship})."
+        )
+        return redirect("hospitals:assigned_clients")
+
+    # GET: Render form
+    context = {
+        "dashboard_title": "Submit Claim",
+        "assignment": assignment,
+        "insured_persons": insured_persons,  # mother + children
+        "hospital": hospital,
+        "client": client,
+        "policy": policy,
+    }
+    return render(request, "hospitals/submit_claim.html", context)
 
 
 # =========================
