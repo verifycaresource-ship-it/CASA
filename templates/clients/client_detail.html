@@ -21,12 +21,12 @@
   </div>
 
   <!-- FRONT CARD -->
-  <div class="print-card w-full max-w-[620px] sm:h-[390px] rounded-3xl bg-white shadow-2xl border border-blue-200 overflow-hidden">
+  <div class="print-card w-full max-w-[620px] sm:h-[390px] rounded-3xlcertificate-bg shadow-2xl border border-blue-200 overflow-hidden">
 
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-center px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-900 via-blue-700 to-blue-600 text-white">
       <div class="flex items-center gap-3 mb-2 sm:mb-0">
-        <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1769514405/Screenshot_from_2026-01-27_14-46-31_iq38ui.png"
+        <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1769957042/ChatGPT_Image_Feb_1_2026_06_27_22_AM_fojeui.png"
              class="h-12 w-12 rounded-full border border-white shadow">
         <div>
           <h1 class="text-xl font-bold">Ihsan Care</h1>
@@ -72,7 +72,7 @@
       <div class="w-full md:w-3/5 md:pl-6 text-sm space-y-2 text-gray-800 relative">
 
         <!-- Decorative Logo -->
-        <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1769514405/Screenshot_from_2026-01-27_14-46-31_iq38ui.png"
+        <img src="https://res.cloudinary.com/dzflw2ka9/image/upload/v1769957042/ChatGPT_Image_Feb_1_2026_06_27_22_AM_fojeui.png"
              class="absolute right-2 top-2 w-12 h-20 sm:w-16 sm:h-24 object-cover rounded-lg pointer-events-none opacity-20">
 
         <p class="relative z-10">
@@ -132,7 +132,7 @@
   </div>
 
   <!-- BACK CARD -->
-  <div class="print-card w-full max-w-[620px] sm:h-[390px] rounded-3xl bg-white shadow-2xl border border-blue-200 overflow-hidden">
+  <div class="print-card w-full max-w-[620px] sm:h-[390px] rounded-3xl certificate-bg shadow-2xl border border-blue-200 overflow-hidden">
 
     <div class="px-4 sm:px-6 py-4 bg-blue-900 text-white">
       <h2 class="text-lg font-bold">Member Verification</h2>
@@ -157,14 +157,16 @@
       </div>
 
       <!-- QR CODE -->
-      <div class="w-full md:w-1/3 flex flex-col items-center justify-center">
-        <div class="bg-white p-4 rounded-xl border border-gray-300 shadow-md">
-          {% qr_from_text client.get_secure_url size="160" image_format="png" error_correction="L" %}
-        </div>
-        <p class="mt-3 text-xs font-bold tracking-widest text-blue-900">
-          SCAN TO VERIFY
-        </p>
-      </div>
+  <!-- QR CODE -->
+<div class="w-full md:w-1/3 flex flex-col items-center justify-center">
+  <div class="bg-white p-4 rounded-xl border border-gray-300 shadow-md">
+    {% qr_from_text secure_url size="160" image_format="png" error_correction="L" %}
+  </div>
+  <p class="mt-3 text-xs font-bold tracking-widest text-blue-900">
+    SCAN TO VERIFY
+  </p>
+</div>
+
 
     </div>
 
@@ -194,6 +196,50 @@
     display: none !important;
   }
 }
+.certificate-bg {
+  position: relative;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(220,38,38,0.08), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(37,99,235,0.08), transparent 40%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(0,0,0,0.02),
+      rgba(0,0,0,0.02) 2px,
+      transparent 2px,
+      transparent 6px
+    ),
+    #ffffff;
+}
+
+.certificate-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Guilloch%C3%A9_pattern.svg/1024px-Guilloch%C3%A9_pattern.svg.png");
+  background-size: cover;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.certificate-bg::after {
+  content: "IHSAN CARE • OFFICIAL";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 0.4rem;
+  color: rgba(30,58,138,0.08);
+  transform: rotate(-30deg);
+  pointer-events: none;
+}
+.security-border {
+  border: 4px double rgba(220,38,38,0.6);
+}
+
+
 </style>
 
 {% endblock %}

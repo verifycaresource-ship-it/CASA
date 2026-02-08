@@ -1,193 +1,136 @@
 {% extends "dashboard/base.html" %}
 {% load static %}
-{% block title %}Assigned Policyholders | HealthInsure{% endblock %}
+{% block title %}Assigned Policyholders Report{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+<div class="max-w-7xl mx-auto bg-white px-12 py-10 rounded-md shadow-md">
 
-  <!-- Header -->
-  <div class="flex flex-col gap-2">
-    <h2 class="text-3xl font-bold tracking-tight flex items-center gap-2">
-      📋 Assigned Policyholders
-    </h2>
-    <p class="text-sm text-gray-400">
-      Manage assigned clients, policy details, and claims
-    </p>
+  <!-- HEADER -->
+  <div class="flex justify-between items-center border-b-2 border-gray-400 pb-6 mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">
+        Assigned Policyholders
+      </h1>
+      <p class="text-gray-600 text-lg mt-1">
+        Insurance coverage & hospital assignment report
+      </p>
+    </div>
+    <img src="{% static 'images/logo.png' %}" class="h-16" alt="Logo">
   </div>
 
-  <!-- Messages -->
-  {% if messages %}
-    <div class="space-y-3">
-      {% for message in messages %}
-        <div class="glass px-5 py-3 rounded-xl text-sm border border-white/10 {{ message.tags }}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+  <!-- SEARCH -->
+  <div class="mb-6">
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Search by name, policy number, hospital…"
+      class="w-full md:w-1/2 px-5 py-3 text-lg border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-700"
+      onkeyup="filterTable()"
+    >
+  </div>
 
   {% if assignments %}
-  <!-- Table Card -->
-  <div class="glass rounded-2xl shadow-xl overflow-hidden">
+  <div class="overflow-x-auto">
+    <table id="assignmentsTable" class="w-full border border-gray-400 text-gray-900 text-lg">
+      <thead class="bg-gray-200 border-b-2 border-gray-400">
+        <tr>
+          <th class="px-6 py-4 text-left">Client & Policy</th>
+          <th class="px-6 py-4 text-left">Hospital</th>
+          <th class="px-6 py-4 text-left">Assignment</th>
+          <th class="px-6 py-4 text-left">Claim</th>
+          <th class="px-6 py-4 text-left">Assigned By</th>
+          <th class="px-6 py-4 text-left">Date</th>
+          <th class="px-6 py-4 text-left">Actions</th>
+        </tr>
+      </thead>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-white/5 text-gray-300 border-b border-white/10">
-          <tr>
-            <th class="px-6 py-4 text-left font-semibold">Client & Policy</th>
-            <th class="px-6 py-4 text-left font-semibold">Hospital</th>
-            <th class="px-6 py-4 text-left font-semibold">Assignment</th>
-            <th class="px-6 py-4 text-left font-semibold">Claim</th>
-            <th class="px-6 py-4 text-left font-semibold">Assigned By</th>
-            <th class="px-6 py-4 text-left font-semibold">Date</th>
-            <th class="px-6 py-4 text-left font-semibold">Actions</th>
-          </tr>
-        </thead>
+      <tbody>
+      {% for a in assignments %}
+        <tr class="border-b border-gray-300 hover:bg-gray-50">
 
-        <tbody class="divide-y divide-white/10">
-        {% for a in assignments %}
-          <tr class="hover:bg-white/5 transition">
-
-            <!-- Client -->
-            <td class="px-6 py-4">
-              <div class="font-semibold text-white">
-                {{ a.client.first_name }} {{ a.client.last_name }}
+          <!-- CLIENT -->
+          <td class="px-6 py-6">
+            <div class="font-bold text-xl">
+              {{ a.client.first_name }} {{ a.client.last_name }}
+            </div>
+            <div class="mt-2 text-base text-gray-700 leading-relaxed">
+              <div><strong>Policy No:</strong> {{ a.policy.policy_number }}</div>
+              <div>
+                <strong>Coverage:</strong>
+                {{ a.policy.start_date|date:"M d, Y" }} –
+                {{ a.policy.expiry_date|date:"M d, Y" }}
               </div>
-              <div class="text-xs text-gray-400 mt-1 space-y-1">
-                <div>Policy #{{ a.policy.policy_number }}</div>
-                <div>
-                  {{ a.policy.start_date|date:"M d, Y" }}
-                  → {{ a.policy.expiry_date|date:"M d, Y" }}
-                </div>
-              </div>
-            </td>
+            </div>
+          </td>
 
-            <!-- Hospital -->
-            <td class="px-6 py-4 text-gray-200">
-              {{ a.hospital.name }}
-            </td>
+          <!-- HOSPITAL -->
+          <td class="px-6 py-6 font-medium">
+            {{ a.hospital.name }}
+          </td>
 
-            <!-- Assignment Status -->
-            <td class="px-6 py-4">
-              {% if a.status == "pending" %}
-                <span class="badge badge-yellow">Pending</span>
-              {% elif a.status == "accepted" %}
-                <span class="badge badge-blue">Accepted</span>
-              {% elif a.status == "claimed" %}
-                <span class="badge badge-purple">Claimed</span>
-              {% elif a.status == "completed" %}
-                <span class="badge badge-green">Completed</span>
-              {% elif a.status == "rejected" %}
-                <span class="badge badge-red">Rejected</span>
-              {% endif %}
-            </td>
+          <!-- ASSIGNMENT -->
+          <td class="px-6 py-6 font-semibold">
+            {{ a.status|title }}
+          </td>
 
-            <!-- Claim Status -->
-            <td class="px-6 py-4">
-              {% if a.claim %}
-                {% if a.claim.status == "pending" %}
-                  <span class="badge badge-yellow">Pending</span>
-                {% elif a.claim.status == "approved" %}
-                  <span class="badge badge-green">Approved</span>
-                {% elif a.claim.status == "rejected" %}
-                  <span class="badge badge-red">Rejected</span>
-                {% elif a.claim.status == "reimbursed" %}
-                  <span class="badge badge-blue">Reimbursed</span>
-                {% endif %}
-              {% else %}
-                <span class="text-xs italic text-gray-500">No Claim</span>
-              {% endif %}
-            </td>
+          <!-- CLAIM -->
+          <td class="px-6 py-6">
+            {% if a.claim %}
+              <span class="font-semibold">{{ a.claim.status|title }}</span>
+            {% else %}
+              <span class="italic text-gray-500">No Claim</span>
+            {% endif %}
+          </td>
 
-            <!-- Assigned By -->
-            <td class="px-6 py-4 text-gray-300">
-              {{ a.assigned_by.username|default:"System" }}
-            </td>
+          <!-- ASSIGNED BY -->
+          <td class="px-6 py-6">
+            {{ a.assigned_by.username|default:"System" }}
+          </td>
 
-            <!-- Date -->
-            <td class="px-6 py-4 text-xs text-gray-400">
-              {{ a.assigned_at|date:"M d, Y H:i" }}
-            </td>
+          <!-- DATE -->
+          <td class="px-6 py-6">
+            {{ a.assigned_at|date:"M d, Y H:i" }}
+          </td>
 
-            <!-- Actions -->
-            <td class="px-6 py-4">
-              <div class="flex flex-wrap gap-2">
+          <!-- ACTIONS -->
+          <td class="px-6 py-6">
+            <div class="flex flex-col gap-3">
+              <a
+                href="{% url 'hospitals:assignment_detail' a.id %}"
+                class="px-4 py-3 text-center text-lg font-semibold bg-gray-800 text-white rounded-md hover:bg-black"
+              >
+                View Details
+              </a>
+              <a
+                href="{% url 'hospitals:print_claim_certificate' a.id %}"
+                target="_blank"
+                class="px-4 py-3 text-center text-lg font-semibold bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                🖨️ Print Document
+              </a>
+            </div>
+          </td>
 
-                {% if a.status == "pending" %}
-                  <a href="{% url 'hospitals:approve_assignment' a.id %}" class="btn btn-green">Approve</a>
-                  <a href="{% url 'hospitals:reject_assignment' a.id %}" class="btn btn-red">Reject</a>
-
-                {% elif a.status == "accepted" %}
-                  {% if not a.claim %}
-                    <a href="{% url 'hospitals:submit_claim_for_assignment' a.id %}" class="btn btn-blue">
-                      Submit Claim
-                    </a>
-                  {% else %}
-                    <a href="{% url 'claims:claim_detail' a.claim.id %}" class="btn btn-indigo">
-                      View Claim
-                    </a>
-                  {% endif %}
-
-                {% elif a.claim %}
-                  <a href="{% url 'claims:claim_detail' a.claim.id %}" class="btn btn-indigo">
-                    View Claim
-                  </a>
-                {% endif %}
-                <!-- Print Certificate -->
-        <a href="{% url 'hospitals:print_claim_certificate' a.id %}" target="_blank" class="btn btn-purple w-full sm:w-auto">🖨️ Print</a>
-
-                <a href="{% url 'hospitals:assignment_detail' a.id %}" class="btn btn-muted">
-                  Details
-                </a>
-              </div>
-            </td>
-
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 
   {% else %}
-    <div class="glass rounded-2xl p-12 text-center text-gray-400">
+    <div class="text-center text-gray-600 text-xl py-16">
       No policyholders assigned yet.
     </div>
   {% endif %}
 
 </div>
 
-<!-- UI Utilities -->
-<style>
-  .badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-  .badge-yellow { background: rgba(234,179,8,.2); color: #fde047; }
-  .badge-blue { background: rgba(59,130,246,.2); color: #93c5fd; }
-  .badge-purple { background: rgba(168,85,247,.2); color: #d8b4fe; }
-  .badge-green { background: rgba(16,185,129,.2); color: #6ee7b7; }
-  .badge-red { background: rgba(239,68,68,.2); color: #fca5a5; }
-
-  .btn {
-    padding: .35rem .75rem;
-    border-radius: .5rem;
-    font-size: .75rem;
-    font-weight: 600;
-    transition: all .2s;
-    color: white;
-  }
-  .btn-blue { background:#2563eb; }
-  .btn-blue:hover { background:#1d4ed8; }
-  .btn-green { background:#16a34a; }
-  .btn-green:hover { background:#15803d; }
-  .btn-red { background:#dc2626; }
-  .btn-red:hover { background:#b91c1c; }
-  .btn-indigo { background:#4f46e5; }
-  .btn-indigo:hover { background:#4338ca; }
-  .btn-muted { background:#374151; }
-  .btn-muted:hover { background:#4b5563; }
-</style>
+<script>
+function filterTable() {
+  const input = document.getElementById("searchInput").value.toLowerCase();
+  document.querySelectorAll("#assignmentsTable tbody tr").forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(input) ? "" : "none";
+  });
+}
+</script>
 {% endblock %}

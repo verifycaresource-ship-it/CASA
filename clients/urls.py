@@ -1,5 +1,6 @@
 from django.urls import path, include
 from rest_framework import routers
+
 from .views import (
     client_list,
     add_client,
@@ -8,7 +9,8 @@ from .views import (
     capture_fingerprint,
     ClientViewSet,
     generate_qr,
-    verify_qr
+    verify_client,
+    verify_qr_api,
 )
 
 app_name = "clients"
@@ -29,13 +31,20 @@ urlpatterns = [
     path("edit/<int:pk>/", edit_client, name="edit_client"),
     path("detail/<int:pk>/", client_detail, name="client_detail"),
 
-    # Fingerprint AJAX Capture (used in client_form.html)
+    # Fingerprint AJAX Capture
     path("capture_fingerprint/", capture_fingerprint, name="capture_fingerprint"),
 
-    # QR Code Endpoints (only agents)
+    # QR Code (image generator for agents)
     path("qr/generate/<int:client_id>/", generate_qr, name="generate_qr"),
-    path("qr/verify/", verify_qr, name="verify_qr"),
+
+    # Hospital verification page (QR points here)
+    path("verify/<str:token>/", verify_client, name="verify_client"),
+
+    # Optional API for mobile scanners / hardware
+    path("qr/verify/", verify_qr_api, name="verify_qr_api"),
 
     # DRF API Endpoints
     path("api/", include(router.urls)),
+    path("verify/<uuid:token>/", verify_client, name="verify_client"),
+
 ]
