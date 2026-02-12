@@ -45,6 +45,4 @@ urlpatterns = [
 
     # DRF API Endpoints
     path("api/", include(router.urls)),
-    path("verify/<uuid:token>/", verify_client, name="verify_client"),
-
 ]
